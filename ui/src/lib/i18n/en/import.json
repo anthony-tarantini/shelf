@@ -1,0 +1,128 @@
+{
+  "ingest": {
+    "eyebrow": "Import",
+    "title": "Import Books",
+    "subtitle": "Upload an EPUB directly or scan a server directory to stage a batch.",
+    "direct_upload": {
+      "eyebrow": "Direct upload",
+      "title": "Add one EPUB right now",
+      "description": "The file goes straight into staging so you can review metadata, merge duplicates, and publish it into the catalog.",
+      "field_label": "EPUB File",
+      "error_missing_file": "Please select a file",
+      "failed_title": "Upload failed",
+      "success_title": "Upload complete",
+      "success_message": "Book uploaded successfully.",
+      "success_action": "Go to Staging",
+      "loading": "Uploading...",
+      "action": "Upload Book"
+    },
+    "scan": {
+      "eyebrow": "Server scan",
+      "title": "Queue a batch from import roots",
+      "description": "Scanning is useful when the server already has a mounted folder of EPUBs. The backend only accepts configured import roots and this action is restricted to permitted paths.",
+      "field_label": "Server Directory Path",
+      "field_hint": "Use an absolute server path inside `IMPORT_SCAN_ROOTS`.",
+      "field_placeholder": "/path/to/books",
+      "error_missing_path": "Please enter a path",
+      "failed_title": "Scan failed",
+      "success_title": "Scan started",
+      "success_message": "Books will appear in staging soon.",
+      "success_action": "Check Staging Area",
+      "loading": "Scanning...",
+      "action": "Scan Directory"
+    },
+    "workflow": {
+      "eyebrow": "Workflow",
+      "title": "What happens next",
+      "stage_title": "1. Stage the file",
+      "stage_description": "Every import lands in staging first so metadata can be reviewed before it becomes visible in the catalog.",
+      "resolve_title": "2. Resolve duplicates",
+      "resolve_description": "Use merge tools and staged details to reconcile books that already exist.",
+      "publish_title": "3. Publish to the library",
+      "publish_description": "Once staged data looks right, publish it into the shared catalog for signed-in readers."
+    },
+    "queue_cta": {
+      "eyebrow": "Need the queue?",
+      "title": "Review staged imports after each batch.",
+      "message": "The staging area is where metadata cleanup, duplicate handling, and publishing decisions should happen.",
+      "action": "Open Staging"
+    }
+  },
+  "page_title": "Staged Books",
+  "page_subtitle": "Review, edit, and promote uploaded books to your library.",
+  "button_upload_books": "Upload Books",
+  "empty_state": "No books in the staging area.",
+  "link_go_to_import": "Go to Import",
+  "eyebrow": "Staging",
+  "view_label": "View",
+  "summary": {
+    "queued_description": "Books waiting for promotion into the shared catalog.",
+    "filter_active": "Showing matches for “{{author}}”.",
+    "filter_inactive": "Browsing the full staging queue.",
+    "selection_description": "Use batch actions when you already know the queue is clean.",
+    "count": "{{count}} staged books",
+    "count_matching": "{{count}} matching books"
+  },
+  "actions": {
+    "promote_selected": "Promote Selected",
+    "delete_selected": "Delete Selected",
+    "promote_all": "Promote All",
+    "promote_all_matching": "Promote All Matching"
+  },
+  "progress": {
+    "title": "Scan Progress",
+    "status_running": "Scan in progress",
+    "status_failed": "Scan ended early",
+    "status_completed_with_failures": "Scan finished with failures",
+    "status_completed": "Scan complete",
+    "for": "for",
+    "processed": "{{count}} / {{total}}",
+    "percent_processed": "{{percent}}% processed",
+    "auto_refresh": "New staged books will appear automatically.",
+    "refresh_complete": "Final staging refresh complete.",
+    "show_failures": "Show details",
+    "hide_failures": "Hide details",
+    "show_warnings": "Show warnings",
+    "hide_warnings": "Hide warnings"
+  },
+  "staged": {
+    "eyebrow": "Staging",
+    "fetch": "Fetch Metadata",
+    "expansion": {
+      "edit": "Edit Details",
+      "metadata": "External Metadata",
+      "close": "Close"
+    },
+    "fetch_metadata": "Fetch Metadata",
+    "uploaded": "Uploaded on {{date}}",
+    "edit": "Edit",
+    "promote": "Promote",
+    "delete": "Delete",
+    "merge": "Merge",
+    "merge_existing": "Merge with Existing",
+    "merge_help": "Search the shared catalog for the book that should absorb this staged entry, then merge the staged metadata into that record.",
+    "item_eyebrow": "Staged Item",
+    "no_match": "No staged books matched “{{author}}”. Clear the filter or upload a new batch.",
+    "empty_filtered_title": "No matching staged books",
+    "empty_title": "Nothing waiting in staging",
+    "empty_filtered_message": "Try another author name or clear the filter to see the full queue.",
+    "delete_selected_title_one": "Delete {{count}} staged book?",
+    "delete_selected_title_other": "Delete {{count}} staged books?",
+    "delete_selected_message": "This removes the selected items from staging. Use this when the imports are definitely not worth keeping.",
+    "promote_all_title": "Promote all staged books?",
+    "promote_all_matching_title": "Promote all matching staged books?",
+    "promote_all_message": "This publishes every currently matched staged book into the shared catalog. Only do this when the queue is already clean.",
+    "editor": {
+      "eyebrow": "Metadata editor",
+      "description": "Review and normalize the staged metadata before publishing it into the shared catalog.",
+      "publish_year_placeholder": "YYYY",
+      "ebook_details": "Ebook Details",
+      "audiobook_details": "Audiobook Details"
+    }
+  },
+  "confirmations": {
+    "delete_staged": "Delete staged book?",
+    "delete_staged_message": "This removes the staged entry and its current staging metadata. Use this when the import is bad, duplicated, or no longer needed.",
+    "delete_staged_from_queue_message": "This removes the staged entry from the queue. Use this when the import should not continue to review or publication."
+  }
+}

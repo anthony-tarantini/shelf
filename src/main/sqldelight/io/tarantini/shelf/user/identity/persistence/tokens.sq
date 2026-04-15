@@ -1,0 +1,30 @@
+import io.tarantini.shelf.user.identity.domain.UserId;
+import io.tarantini.shelf.user.identity.domain.TokenId;
+import io.tarantini.shelf.user.identity.domain.TokenHash;
+
+CREATE TABLE IF NOT EXISTS api_tokens (
+    id UUID AS TokenId PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID AS UserId NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash BYTEA AS TokenHash NOT NULL UNIQUE,
+    description VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens(user_id);
+
+selectByUserId:
+SELECT * FROM api_tokens WHERE user_id = :userId;
+
+selectByHash:
+SELECT * FROM api_tokens WHERE token_hash = :tokenHash;
+
+insert:
+INSERT INTO api_tokens (user_id, token_hash, description)
+VALUES (:userId, :tokenHash, :description)
+RETURNING id;
+
+deleteById:
+DELETE FROM api_tokens WHERE id = :tokenId;
+
+deleteByIdForUser:
+DELETE FROM api_tokens WHERE id = :tokenId AND user_id = :userId;

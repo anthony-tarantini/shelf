@@ -1,0 +1,103 @@
+services:
+  database:
+    build:
+      context: .
+      dockerfile: database.Dockerfile
+    restart: always
+    ports:
+      - "5432:5432"
+    container_name: shelf-db
+    volumes:
+      - ./data/postgres:/var/lib/postgresql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-setup-fuzzy-search.sql
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=shelf
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d shelf" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    restart: always
+    depends_on:
+      database:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/readiness >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+    environment:
+      POSTGRES_URL: jdbc:postgresql://database:5432/shelf
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-Shelf}
+      JWT_DURATION: ${JWT_DURATION:-30}
+      HARDCOVER_URL: ${HARDCOVER_URL:-https://api.hardcover.app/v1/graphql}
+      HARDCOVER_API_KEY: ${HARDCOVER_API_KEY}
+      IMPORT_SCAN_ROOTS: ${COMPOSE_IMPORT_SCAN_ROOTS:-/storage}
+      STORAGE_PATH: ${COMPOSE_STORAGE_PATH:-/storage}
+      VALKEY_URL: ${COMPOSE_VALKEY_URL:-redis://valkey:6379}
+      HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      CORS_ALLOWED_HOSTS: ${COMPOSE_CORS_ALLOWED_HOSTS:-localhost:3000}
+      PUBLIC_ROOT_URL: ${COMPOSE_PUBLIC_ROOT_URL:-http://localhost:3000}
+      OBSERVABILITY_ENABLED: ${OBSERVABILITY_ENABLED:-true}
+      OBSERVABILITY_ENVIRONMENT: ${OBSERVABILITY_ENVIRONMENT:-docker}
+      OBSERVABILITY_METRICS_ENABLED: ${OBSERVABILITY_METRICS_ENABLED:-true}
+      OBSERVABILITY_PROMETHEUS_ENABLED: ${OBSERVABILITY_PROMETHEUS_ENABLED:-true}
+      OBSERVABILITY_OTLP_METRICS_ENABLED: ${OBSERVABILITY_OTLP_METRICS_ENABLED:-true}
+      OBSERVABILITY_TRACING_ENABLED: ${OBSERVABILITY_TRACING_ENABLED:-true}
+      OBSERVABILITY_TRACE_OWNER: ${OBSERVABILITY_TRACE_OWNER:-app}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-shelf-backend}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${COMPOSE_OTEL_EXPORTER_OTLP_ENDPOINT:-http://lgtm:4317}
+      OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-grpc}
+      OTEL_JAVAAGENT_ENABLED: ${OTEL_JAVAAGENT_ENABLED:-false}
+      OTEL_JAVAAGENT_PATH: /opt/opentelemetry-javaagent.jar
+      OTEL_INSTRUMENTATION_KTOR_ENABLED: ${OTEL_INSTRUMENTATION_KTOR_ENABLED:-}
+    volumes:
+      - ./storage:${COMPOSE_STORAGE_PATH:-/storage}
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    restart: always
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      BACKEND_URL: ${COMPOSE_BACKEND_URL:-http://backend:8080}
+
+  valkey:
+    image: valkey/valkey:8.0
+    restart: always
+    ports:
+      - "6379:6379"
+    container_name: shelf-valkey
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    restart: always
+    ports:
+      - "3001:3000"
+      - "4317:4317"
+      - "4318:4318"

@@ -1,0 +1,54 @@
+import io.tarantini.shelf.user.identity.domain.UserId;
+import io.tarantini.shelf.catalog.book.domain.BookId;
+
+-- Table
+CREATE TABLE IF NOT EXISTS reading_progress (
+    user_id UUID AS UserId NOT NULL REFERENCES users(id),
+    book_id UUID AS BookId NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    progress TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
+    PRIMARY KEY (user_id, book_id)
+);
+
+-- Queries
+selectProgress:
+SELECT progress FROM reading_progress
+WHERE user_id = :userId AND book_id = :bookId;
+
+upsertProgress:
+INSERT INTO reading_progress (user_id, book_id, progress, updated_at)
+VALUES (:userId, :bookId, :progress, current_timestamp)
+ON CONFLICT (user_id, book_id) DO UPDATE SET
+    progress = EXCLUDED.progress,
+    updated_at = EXCLUDED.updated_at;
+
+deleteProgress:
+DELETE FROM reading_progress
+WHERE user_id = :userId AND book_id = :bookId;
+
+CREATE TABLE IF NOT EXISTS book_read_status (
+    user_id UUID AS UserId NOT NULL REFERENCES users(id),
+    book_id UUID AS BookId NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
+    PRIMARY KEY (user_id, book_id)
+);
+
+selectReadStatus:
+SELECT status FROM book_read_status
+WHERE user_id = :userId AND book_id = :bookId;
+
+selectReadStatuses:
+SELECT book_id, status FROM book_read_status
+WHERE user_id = :userId AND book_id IN :bookIds;
+
+upsertReadStatus:
+INSERT INTO book_read_status (user_id, book_id, status, updated_at)
+VALUES (:userId, :bookId, :status, current_timestamp)
+ON CONFLICT (user_id, book_id) DO UPDATE SET
+    status = EXCLUDED.status,
+    updated_at = EXCLUDED.updated_at;
+
+deleteReadStatus:
+DELETE FROM book_read_status
+WHERE user_id = :userId AND book_id = :bookId;

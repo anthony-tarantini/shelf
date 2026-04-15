@@ -1,0 +1,159 @@
+[versions]
+apollo = "4.4.2"
+arrow = "2.2.2.1"
+cohort = "2.8.3"
+detekt = "1.23.8"
+hikari = "7.0.2"
+kjwt = "1.0.0"
+klogging = "8.0.01"
+kotest = "5.9.1"
+kotest-arrow = "2.0.0"
+kotest-ktor = "2.0.0"
+kotest-testcontainers = "2.0.2"
+kotlin = "2.3.20"
+kotlinx-datetime = "0.7.1"
+kotlinx-coroutines-slf4j = "1.10.2"
+ktor = "3.4.2"
+lettuce = "7.5.1.RELEASE"
+logback = "1.5.32"
+logstash-logback = "8.1"
+micrometer = "1.15.0"
+opentelemetry = "1.54.1"
+opentelemetry-instrumentation = "2.18.1-alpha"
+postgresql = "42.7.10"
+slugify = "3.0.7"
+spotless = "8.4.0"
+sqldelight = "2.3.2"
+tasks = "2.3.0"
+testcontainers = "1.19.8"
+thumbnailator = "0.4.20"
+twelvemonkeys = "3.10.1"
+version-catalog-update = "1.1.0"
+xmlutil = "0.91.3"
+
+[libraries]
+apollo = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
+arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
+arrow-fx = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
+cohort-hikari = { module = "com.sksamuel.cohort:cohort-hikari", version.ref = "cohort" }
+cohort-ktor = { module = "com.sksamuel.cohort:cohort-ktor", version.ref = "cohort" }
+hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
+kjwt-core = { module = "io.github.nefilim.kjwt:kjwt-core", version.ref = "kjwt" }
+klogging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "klogging" }
+kotest-arrow-assert = { module = "io.kotest.extensions:kotest-assertions-arrow", version.ref = "kotest-arrow" }
+kotest-arrow-extend = { module = "io.kotest.extensions:kotest-assertions-arrow-fx-coroutines", version.ref = "kotest-arrow" }
+kotest-assertionsCore = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotest-frameworkEngine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotest" }
+kotest-ktor = { module = "io.kotest.extensions:kotest-assertions-ktor", version.ref = "kotest-ktor" }
+kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
+kotest-runnerJUnit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
+kotest-testcontainers = { module = "io.kotest.extensions:kotest-extensions-testcontainers", version.ref = "kotest-testcontainers" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kotlinx-coroutines-slf4j = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-slf4j", version.ref = "kotlinx-coroutines-slf4j" }
+logstash-logback = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback" }
+micrometer-registry-otlp = { module = "io.micrometer:micrometer-registry-otlp", version.ref = "micrometer" }
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
+opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
+opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp", version.ref = "opentelemetry" }
+opentelemetry-sdk-extension-autoconfigure = { module = "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure", version.ref = "opentelemetry" }
+opentelemetry-ktor = { module = "io.opentelemetry.instrumentation:opentelemetry-ktor-3.0", version.ref = "opentelemetry-instrumentation" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-resources = { module = "io.ktor:ktor-client-resources", version.ref = "ktor" }
+ktor-client-serialization = { module = "io.ktor:ktor-client-serialization", version.ref = "ktor" }
+ktor-serialization = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-serialization-xml = { module = "io.ktor:ktor-serialization-kotlinx-xml", version.ref = "ktor" }
+ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
+ktor-server-call-logging = { module = "io.ktor:ktor-server-call-logging", version.ref = "ktor" }
+ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
+ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
+ktor-server-defaultheaders = { module = "io.ktor:ktor-server-default-headers", version.ref = "ktor" }
+ktor-server-metrics-micrometer = { module = "io.ktor:ktor-server-metrics-micrometer", version.ref = "ktor" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
+ktor-server-partial-content = { module = "io.ktor:ktor-server-partial-content", version.ref = "ktor" }
+ktor-server-resources = { module = "io.ktor:ktor-server-resources", version.ref = "ktor" }
+ktor-server-tests = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
+lettuce-core = { module = "io.lettuce:lettuce-core", version.ref = "lettuce" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+slugify = { module = "com.github.slugify:slugify", version.ref = "slugify" }
+sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+sqldelight-jdbc = { module = "app.cash.sqldelight:jdbc-driver", version.ref = "sqldelight" }
+sqldelight-postgresql = { module = "app.cash.sqldelight:postgresql-dialect", version.ref = "sqldelight" }
+suspendapp = { module = "io.arrow-kt:suspendapp", version.ref = "arrow" }
+suspendapp-ktor = { module = "io.arrow-kt:suspendapp-ktor", version.ref = "arrow" }
+tasks = { module = "io.github.flaxoos:ktor-server-task-scheduling-redis", version.ref = "tasks" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+thumbnailator = { module = "net.coobird:thumbnailator", version.ref = "thumbnailator" }
+twelvemonkeys-imageio-core = { module = "com.twelvemonkeys.imageio:imageio-core", version.ref = "twelvemonkeys" }
+twelvemonkeys-imageio-jpeg = { module = "com.twelvemonkeys.imageio:imageio-jpeg", version.ref = "twelvemonkeys" }
+twelvemonkeys-imageio-metadata = { module = "com.twelvemonkeys.imageio:imageio-metadata", version.ref = "twelvemonkeys" }
+twelvemonkeys-imageio-tiff = { module = "com.twelvemonkeys.imageio:imageio-tiff", version.ref = "twelvemonkeys" }
+twelvemonkeys-imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }
+xmlutil-serialization = { module = "io.github.pdvrieze.xmlutil:serialization", version.ref = "xmlutil" }
+
+[bundles]
+arrow = [
+    "arrow-core",
+    "arrow-fx",
+]
+cohort = [
+    "cohort-hikari",
+    "cohort-ktor",
+]
+images = [
+    "thumbnailator",
+    "twelvemonkeys-imageio-core",
+    "twelvemonkeys-imageio-jpeg",
+    "twelvemonkeys-imageio-metadata",
+    "twelvemonkeys-imageio-tiff",
+    "twelvemonkeys-imageio-webp"
+]
+kotest = [
+    "kotest-arrow-assert",
+    "kotest-arrow-extend",
+    "kotest-assertionsCore",
+    "kotest-frameworkEngine",
+    "kotest-ktor",
+    "kotest-property",
+    "kotest-runnerJUnit5",
+    "kotest-testcontainers",
+]
+ktor-client = [
+    "ktor-client-content-negotiation",
+    "ktor-client-resources",
+    "ktor-client-serialization",
+]
+ktor-server = [
+    "ktor-serialization",
+    "ktor-server-auth",
+    "ktor-server-call-logging",
+    "ktor-server-content-negotiation",
+    "ktor-server-core",
+    "ktor-server-cors",
+    "ktor-server-defaultheaders",
+    "ktor-server-metrics-micrometer",
+    "ktor-server-netty",
+    "ktor-server-partial-content",
+    "ktor-server-resources",
+]
+suspendapp = [
+    "suspendapp",
+    "suspendapp-ktor",
+]
+sqldelight = [
+    "sqldelight-coroutines",
+    "sqldelight-jdbc",
+    "sqldelight-postgresql"
+]
+
+[plugins]
+apollo = { id = "com.apollographql.apollo", version.ref = "apollo" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+kotlin-assert = { id = "org.jetbrains.kotlin.plugin.power-assert", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+vcu = { id = "nl.littlerobots.version-catalog-update", version.ref = "version-catalog-update" }
