@@ -31,11 +31,12 @@ private fun commandAvailable(command: String): Boolean =
 class AudiobookParserTest :
     StringSpec({
         val parser = audiobookParser()
-        lateinit var tempAudioFile: Path
+        val hasAudioTooling = commandAvailable("ffmpeg") && commandAvailable("ffprobe")
+        var tempAudioFile: Path? = null
 
         beforeSpec {
-            if (!commandAvailable("ffmpeg") || !commandAvailable("ffprobe")) {
-                throw TestAbortedException("ffmpeg/ffprobe not available in test environment")
+            if (!hasAudioTooling) {
+                return@beforeSpec
             }
 
             tempAudioFile = Files.createTempFile("shelf-test-audio", ".mp3")
@@ -62,22 +63,26 @@ class AudiobookParserTest :
                         "date=2024-01-01",
                         "-metadata",
                         "comment=Test Description",
-                        tempAudioFile.absolutePathString(),
+                        tempAudioFile!!.absolutePathString(),
                     )
                     .start()
             process.waitFor()
         }
 
-        afterSpec { tempAudioFile.deleteIfExists() }
+        afterSpec { tempAudioFile?.deleteIfExists() }
 
         "parse should extract metadata from mp3" {
+            if (!hasAudioTooling) {
+                throw TestAbortedException("ffmpeg/ffprobe not available in test environment")
+            }
+
             resourceScope {
                 recover({
                     val bookId = BookId.fromRaw(Uuid.random())
                     val (metadata, coverPath) =
                         parser.parse(
                             this@resourceScope,
-                            tempAudioFile,
+                            checkNotNull(tempAudioFile),
                             "mp3",
                             "test-audiobook.mp3",
                             bookId,

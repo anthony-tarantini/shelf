@@ -7,6 +7,7 @@ COPY gradle gradle
 COPY build.gradle.kts .
 COPY settings.gradle.kts .
 COPY gradle.properties .
+COPY version.txt .
 COPY config config
 
 # Download dependencies (caching layer)
