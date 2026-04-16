@@ -10,7 +10,6 @@ import io.tarantini.shelf.user.identity.domain.TokenId
 import io.tarantini.shelf.user.identity.domain.UserId
 import io.tarantini.shelf.user.identity.persistence.TokensQueries
 import java.security.SecureRandom
-import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -82,13 +81,120 @@ fun tokenService(tokensQueries: TokensQueries) =
             }
 
         private fun generateRawToken(): String {
-            val bytes = ByteArray(32)
-            secureRandom.nextBytes(bytes)
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+            val words =
+                (1..4).joinToString("-") { tokenWords[secureRandom.nextInt(tokenWords.size)] }
+            val suffix = secureRandom.nextInt(0x10000).toString(16).padStart(4, '0')
+            return "$words-$suffix"
         }
 
         private fun hashToken(token: String): ByteArray {
             val md = java.security.MessageDigest.getInstance("SHA-256")
             return md.digest(token.toByteArray())
         }
+
+        private val tokenWords =
+            listOf(
+                "amber",
+                "april",
+                "atlas",
+                "basil",
+                "beacon",
+                "birch",
+                "bloom",
+                "brisk",
+                "cedar",
+                "chime",
+                "cinder",
+                "cliff",
+                "cloud",
+                "cobalt",
+                "comet",
+                "coral",
+                "crane",
+                "creek",
+                "crisp",
+                "dawn",
+                "delta",
+                "dune",
+                "echo",
+                "ember",
+                "fable",
+                "fern",
+                "fjord",
+                "flare",
+                "flint",
+                "frost",
+                "glade",
+                "glint",
+                "grove",
+                "harbor",
+                "hazel",
+                "hollow",
+                "indigo",
+                "iris",
+                "jade",
+                "jasper",
+                "kestrel",
+                "lagoon",
+                "laurel",
+                "linen",
+                "lotus",
+                "lumen",
+                "maple",
+                "meadow",
+                "merit",
+                "meteor",
+                "mint",
+                "mist",
+                "morrow",
+                "moss",
+                "nectar",
+                "nova",
+                "oak",
+                "olive",
+                "onyx",
+                "opal",
+                "orbit",
+                "pearl",
+                "piper",
+                "plume",
+                "prairie",
+                "quartz",
+                "quest",
+                "raven",
+                "reef",
+                "ripple",
+                "river",
+                "robin",
+                "sable",
+                "sage",
+                "sail",
+                "scarlet",
+                "shale",
+                "shore",
+                "sierra",
+                "silk",
+                "slate",
+                "solstice",
+                "sparrow",
+                "spruce",
+                "star",
+                "stone",
+                "sunset",
+                "swift",
+                "talon",
+                "teal",
+                "thistle",
+                "timber",
+                "topaz",
+                "trail",
+                "valley",
+                "velvet",
+                "violet",
+                "willow",
+                "winter",
+                "wren",
+                "zephyr",
+                "zinc",
+            )
     }

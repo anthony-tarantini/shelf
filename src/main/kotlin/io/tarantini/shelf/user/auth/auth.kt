@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package io.tarantini.shelf.user.auth
 
 import arrow.core.raise.context.either
@@ -9,6 +11,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.parseAuthorizationHeader
+import io.ktor.server.request.httpMethod
+import io.ktor.server.request.uri
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
@@ -23,12 +27,16 @@ import io.tarantini.shelf.user.identity.domain.LoginUserRequest
 import io.tarantini.shelf.user.identity.domain.UserId
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import kotlin.uuid.ExperimentalUuidApi
+import org.slf4j.LoggerFactory
 
 @JvmInline value class JwtToken(val value: String)
 
 data class JwtContext(val token: JwtToken, val userId: UserId)
 
 data class KoreaderContext(val userId: UserId)
+
+val logger = LoggerFactory.getLogger("io.tarantini.shelf.koreader.auth")
 
 suspend inline fun RoutingContext.jwtAuth(
     jwtService: JwtService,
@@ -94,10 +102,31 @@ suspend inline fun RoutingContext.koreaderTokenAuth(
         }
         .fold(
             {
-                observability.counter("shelf.koreader.auth", "result", "failure").increment()
+                val failureReason =
+                    when {
+                        call.request.headers["x-auth-user"].isNullOrBlank() -> "missing_user_header"
+                        call.request.headers["x-auth-key"].isNullOrBlank() -> "missing_key_header"
+                        else -> "invalid_credentials"
+                    }
+                logger.warn(
+                    "KOReader auth failed method={} uri={} reason={} username={}",
+                    call.request.httpMethod.value,
+                    call.request.uri,
+                    failureReason,
+                    call.request.headers["x-auth-user"] ?: "<missing>",
+                )
+                observability
+                    .counter("shelf.koreader.auth", "result", "failure", "reason", failureReason)
+                    .increment()
                 call.respond(HttpStatusCode.Unauthorized)
             },
             { context ->
+                logger.info(
+                    "KOReader auth succeeded method={} uri={} userId={}",
+                    call.request.httpMethod.value,
+                    call.request.uri,
+                    context.userId.value,
+                )
                 observability.counter("shelf.koreader.auth", "result", "success").increment()
                 body(this, context)
             },
