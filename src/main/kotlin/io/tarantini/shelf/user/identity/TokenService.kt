@@ -9,6 +9,7 @@ import io.tarantini.shelf.user.identity.domain.TokenHash
 import io.tarantini.shelf.user.identity.domain.TokenId
 import io.tarantini.shelf.user.identity.domain.UserId
 import io.tarantini.shelf.user.identity.persistence.TokensQueries
+import java.security.MessageDigest
 import java.security.SecureRandom
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
@@ -38,9 +39,16 @@ interface TokenService {
     suspend fun validateToken(token: String): UserId?
 }
 
+private const val TOKEN_WORD_COUNT = 4
+private const val TOKEN_SUFFIX_BOUND = 0x10000
+private const val TOKEN_SUFFIX_WIDTH = 4
+private const val TOKEN_SUFFIX_RADIX = 16
+private const val TOKEN_WORDS_RESOURCE = "token-words.txt"
+
 fun tokenService(tokensQueries: TokensQueries) =
     object : TokenService {
         private val secureRandom = SecureRandom()
+        private val tokenWords: List<String> by lazy { loadTokenWords() }
 
         context(_: RaiseContext)
         override suspend fun createToken(userId: UserId, description: String): ApiToken =
@@ -51,8 +59,6 @@ fun tokenService(tokensQueries: TokensQueries) =
                     tokensQueries
                         .insert(userId, TokenHash.fromRaw(hash), description)
                         .executeAsOne()
-                // We don't have created_at here from RETURNING id, but we can just use now
-                // or refetch. For simplicity, since it's just created now:
                 ApiToken(tokenId, userId, rawToken, description, java.time.Instant.now().toString())
             }
 
@@ -82,119 +88,30 @@ fun tokenService(tokensQueries: TokensQueries) =
 
         private fun generateRawToken(): String {
             val words =
-                (1..4).joinToString("-") { tokenWords[secureRandom.nextInt(tokenWords.size)] }
-            val suffix = secureRandom.nextInt(0x10000).toString(16).padStart(4, '0')
+                (1..TOKEN_WORD_COUNT).joinToString("-") {
+                    tokenWords[secureRandom.nextInt(tokenWords.size)]
+                }
+            val suffix =
+                secureRandom
+                    .nextInt(TOKEN_SUFFIX_BOUND)
+                    .toString(TOKEN_SUFFIX_RADIX)
+                    .padStart(TOKEN_SUFFIX_WIDTH, '0')
             return "$words-$suffix"
         }
 
-        private fun hashToken(token: String): ByteArray {
-            val md = java.security.MessageDigest.getInstance("SHA-256")
-            return md.digest(token.toByteArray())
-        }
+        private fun hashToken(token: String): ByteArray =
+            MessageDigest.getInstance("SHA-256").digest(token.toByteArray())
 
-        private val tokenWords =
-            listOf(
-                "amber",
-                "april",
-                "atlas",
-                "basil",
-                "beacon",
-                "birch",
-                "bloom",
-                "brisk",
-                "cedar",
-                "chime",
-                "cinder",
-                "cliff",
-                "cloud",
-                "cobalt",
-                "comet",
-                "coral",
-                "crane",
-                "creek",
-                "crisp",
-                "dawn",
-                "delta",
-                "dune",
-                "echo",
-                "ember",
-                "fable",
-                "fern",
-                "fjord",
-                "flare",
-                "flint",
-                "frost",
-                "glade",
-                "glint",
-                "grove",
-                "harbor",
-                "hazel",
-                "hollow",
-                "indigo",
-                "iris",
-                "jade",
-                "jasper",
-                "kestrel",
-                "lagoon",
-                "laurel",
-                "linen",
-                "lotus",
-                "lumen",
-                "maple",
-                "meadow",
-                "merit",
-                "meteor",
-                "mint",
-                "mist",
-                "morrow",
-                "moss",
-                "nectar",
-                "nova",
-                "oak",
-                "olive",
-                "onyx",
-                "opal",
-                "orbit",
-                "pearl",
-                "piper",
-                "plume",
-                "prairie",
-                "quartz",
-                "quest",
-                "raven",
-                "reef",
-                "ripple",
-                "river",
-                "robin",
-                "sable",
-                "sage",
-                "sail",
-                "scarlet",
-                "shale",
-                "shore",
-                "sierra",
-                "silk",
-                "slate",
-                "solstice",
-                "sparrow",
-                "spruce",
-                "star",
-                "stone",
-                "sunset",
-                "swift",
-                "talon",
-                "teal",
-                "thistle",
-                "timber",
-                "topaz",
-                "trail",
-                "valley",
-                "velvet",
-                "violet",
-                "willow",
-                "winter",
-                "wren",
-                "zephyr",
-                "zinc",
-            )
+        private fun loadTokenWords(): List<String> {
+            val stream =
+                checkNotNull(javaClass.classLoader.getResourceAsStream(TOKEN_WORDS_RESOURCE)) {
+                    "Missing token words resource: $TOKEN_WORDS_RESOURCE"
+                }
+            val words =
+                stream.bufferedReader().useLines { lines ->
+                    lines.map { it.trim() }.filter { it.isNotEmpty() }.toList()
+                }
+            check(words.isNotEmpty()) { "Token words resource is empty: $TOKEN_WORDS_RESOURCE" }
+            return words
+        }
     }
