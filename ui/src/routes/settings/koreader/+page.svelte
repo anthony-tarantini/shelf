@@ -1,9 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { browser } from '$app/environment';
     import { t } from '$lib/i18n';
     import { auth } from '$lib/auth.svelte';
     import { api } from '$lib/api/client';
     import { resolve } from '$app/paths';
+    import { env as publicEnv } from '$env/dynamic/public';
     import { toast } from '$lib/state/toast.svelte';
     import FormField from '$lib/components/ui/FormField.svelte';
     import LoadingState from '$lib/components/ui/LoadingState/LoadingState.svelte';
@@ -22,8 +24,12 @@
     let createdToken = $state<ApiToken | null>(null);
     let loading = $state(true);
 
-    const syncServerUrl = $derived(`${window.location.origin}/koreader/sync`);
-    const webdavUrl = $derived(`${window.location.origin}/koreader/webdav/`);
+    const origin = $derived(browser ? window.location.origin : '');
+    const koreaderBaseUrl = $derived(
+        (publicEnv.PUBLIC_KOREADER_BASE_URL || `${origin}/koreader`).replace(/\/+$/, '')
+    );
+    const syncServerUrl = $derived(`${koreaderBaseUrl}/sync`);
+    const webdavUrl = $derived(`${koreaderBaseUrl}/webdav/`);
 
     async function fetchTokens() {
         try {

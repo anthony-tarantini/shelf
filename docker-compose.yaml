@@ -81,6 +81,7 @@ services:
       - "3000:3000"
     environment:
       BACKEND_URL: ${COMPOSE_BACKEND_URL:-http://backend:8080}
+      PUBLIC_KOREADER_BASE_URL: ${PUBLIC_KOREADER_BASE_URL:-}
 
   valkey:
     image: valkey/valkey:8.0

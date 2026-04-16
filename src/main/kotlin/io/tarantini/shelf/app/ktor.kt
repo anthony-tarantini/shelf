@@ -22,8 +22,6 @@ import io.ktor.server.plugins.partialcontent.PartialContent
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
 import io.ktor.server.resources.Resources
-import io.opentelemetry.instrumentation.ktor.v3_0.KtorServerTelemetry
-import io.tarantini.shelf.observability.appOwnsServerTraces
 import io.tarantini.shelf.user.identity.domain.LoginUserRequest
 import java.security.MessageDigest
 import kotlin.uuid.ExperimentalUuidApi
@@ -38,18 +36,20 @@ private fun String.sha256(): String =
         "%02x".format(it)
     }
 
+private val noisyHealthPaths = setOf("/readiness", "/health", "/healthz", "/readyz", "/livez")
+
+private fun isNoisyHealthPath(path: String): Boolean = noisyHealthPaths.contains(path)
+
 fun Application.configure(deps: Dependencies) {
     install(DefaultHeaders)
     install(PartialContent) { maxRangeCount = 10 }
     install(Resources)
-    if (deps.observability.config.appOwnsServerTraces()) {
-        install(KtorServerTelemetry) { setOpenTelemetry(deps.observability.openTelemetry) }
-    }
     if (deps.observability.config.metricsEnabled) {
         install(MicrometerMetrics) { registry = deps.observability.meterRegistry }
     }
     install(CallLogging) {
         level = Level.INFO
+        filter { call -> !isNoisyHealthPath(call.request.path()) }
         mdc("trace_id") { deps.observability.currentTraceId() }
         mdc("span_id") { deps.observability.currentSpanId() }
         mdc("http_method") { it.request.httpMethod.value }

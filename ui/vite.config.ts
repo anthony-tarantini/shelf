@@ -60,7 +60,11 @@ export default defineConfig({
 			'/api': {
 				target: BACKEND_URL,
 				changeOrigin: true,
-			}
+			},
+			'/koreader': {
+				target: BACKEND_URL,
+				changeOrigin: true,
+			},
 		}
 	},
 	test: {

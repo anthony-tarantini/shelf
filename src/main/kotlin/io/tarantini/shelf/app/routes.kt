@@ -5,6 +5,7 @@ package io.tarantini.shelf.app
 import io.ktor.resources.Resource
 import io.ktor.server.application.Application
 import io.ktor.server.routing.routing
+import io.opentelemetry.instrumentation.ktor.v3_0.KtorServerTelemetry
 import io.tarantini.shelf.catalog.author.authorRoutes
 import io.tarantini.shelf.catalog.book.bookRoutes
 import io.tarantini.shelf.catalog.metadata.metadataRoutes
@@ -12,6 +13,7 @@ import io.tarantini.shelf.catalog.opds.opdsRoutes
 import io.tarantini.shelf.catalog.search.searchRoutes
 import io.tarantini.shelf.catalog.series.seriesRoutes
 import io.tarantini.shelf.integration.koreader.koreaderRoutes
+import io.tarantini.shelf.observability.appOwnsServerTraces
 import io.tarantini.shelf.observability.observabilityRoutes
 import io.tarantini.shelf.organization.library.libraryRoutes
 import io.tarantini.shelf.processing.import.importRoutes
@@ -24,6 +26,9 @@ import kotlinx.serialization.ExperimentalSerializationApi
 @Resource("/api") data object RootResource
 
 fun Application.routes(deps: Dependencies) = routing {
+    if (deps.observability.config.appOwnsServerTraces()) {
+        install(KtorServerTelemetry) { setOpenTelemetry(deps.observability.openTelemetry) }
+    }
     observabilityRoutes(deps.observability)
     userRoutes(deps.userService, deps.jwtService)
     adminRoutes(deps.userService, deps.jwtService)
