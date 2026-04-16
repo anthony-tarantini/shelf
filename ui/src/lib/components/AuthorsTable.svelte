@@ -26,7 +26,7 @@
 	}
 </script>
 
-<div class="overflow-x-auto rounded-lg border border-border shadow-xl">
+<div class="w-full overflow-x-auto rounded-lg border border-border shadow-xl">
 	<table class="w-full border-collapse text-left text-sm">
 		<thead class="sticky top-0 z-10 bg-card/95 text-muted-foreground backdrop-blur">
 			<tr>

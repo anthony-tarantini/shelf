@@ -116,7 +116,7 @@
     }
 </script>
 
-<div class="overflow-x-auto rounded-[1.5rem] border border-border bg-card/80 shadow-xl shadow-black/5">
+<div class="w-full overflow-x-auto rounded-[1.5rem] border border-border bg-card/80 shadow-xl shadow-black/5">
     <table class="w-full text-left text-sm border-collapse">
         <thead class="sticky top-0 z-10 bg-card/95 text-muted-foreground backdrop-blur">
         <tr>

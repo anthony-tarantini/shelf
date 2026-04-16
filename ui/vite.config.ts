@@ -28,6 +28,11 @@ export default defineConfig({
 				categories: ['books', 'productivity', 'utilities'],
 				icons: [
 					{
+						src: 'pwa-maskable.svg',
+						sizes: '512x512',
+						type: 'image/svg+xml'
+					},
+					{
 						src: 'pwa-192x192.png',
 						sizes: '192x192',
 						type: 'image/png'

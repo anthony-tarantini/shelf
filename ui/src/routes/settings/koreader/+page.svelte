@@ -105,6 +105,17 @@
                     <code class="block p-2 bg-muted rounded text-sm">{auth.currentUser?.username}</code>
                 </div>
             </div>
+
+            <div class="rounded-lg border border-border bg-muted/30 p-4">
+                <h3 class="font-semibold">{$t('settings.koreader.instructions.title')}</h3>
+                <ol class="mt-2 list-decimal list-inside text-sm space-y-2 text-muted-foreground">
+                    <li>{$t('settings.koreader.instructions.step_1')}</li>
+                    <li>{$t('settings.koreader.instructions.step_2')}</li>
+                    <li>{$t('settings.koreader.instructions.step_3')}</li>
+                    <li>{$t('settings.koreader.instructions.step_4')}</li>
+                    <li>{$t('settings.koreader.instructions.step_5')}</li>
+                </ol>
+            </div>
         </section>
 
         <!-- Token Management -->
@@ -176,14 +187,4 @@
         </section>
     </div>
 
-    <section class="bg-muted/30 p-6 rounded-lg border border-border space-y-2">
-        <h2 class="font-semibold">{$t('settings.koreader.instructions.title')}</h2>
-        <ol class="list-decimal list-inside text-sm space-y-2 text-muted-foreground">
-            <li>{$t('settings.koreader.instructions.step_1')}</li>
-            <li>{$t('settings.koreader.instructions.step_2')}</li>
-            <li>{$t('settings.koreader.instructions.step_3')}</li>
-            <li>{$t('settings.koreader.instructions.step_4')}</li>
-            <li>{$t('settings.koreader.instructions.step_5')}</li>
-        </ol>
-    </section>
 </div>

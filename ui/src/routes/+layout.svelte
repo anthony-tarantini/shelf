@@ -118,8 +118,8 @@
 				{@render children()}
 			</main>
 		{:else}
-			<div class="min-h-dvh bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,var(--primary)_16%,transparent),transparent_26rem)] lg:flex">
-				<aside class="hidden w-72 shrink-0 border-r border-border bg-card/90 backdrop-blur-md lg:flex lg:min-h-dvh lg:flex-col">
+			<div class="min-h-dvh bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,var(--primary)_16%,transparent),transparent_26rem)] lg:flex lg:h-dvh lg:overflow-hidden">
+				<aside class="hidden w-72 shrink-0 border-r border-border bg-card/90 backdrop-blur-md lg:flex lg:h-dvh lg:flex-col lg:overflow-hidden">
 					<div class="p-6 pb-4">
 						<p class="mb-3 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
 							{$t('common.app_shell.sidebar_eyebrow')}
@@ -143,7 +143,7 @@
 							</kbd>
 						</button>
 					</div>
-					<nav class="flex-1 space-y-1 px-4">
+					<nav class="flex-1 space-y-1 overflow-y-auto px-4">
 						{#each catalogNavItems as item (item.href)}
 							<a
 								href={item.href}
@@ -202,7 +202,7 @@
 					</div>
 				</aside>
 
-				<div class="flex min-h-dvh min-w-0 flex-1 flex-col">
+				<div class="flex min-h-dvh min-w-0 flex-1 flex-col lg:min-h-0 lg:h-dvh">
 					<header class="sticky top-0 z-30 border-b border-border/70 bg-background/85 backdrop-blur-md lg:hidden" style="padding-top: max(0.75rem, env(safe-area-inset-top));">
 						<div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pb-3">
 							<div class="min-w-0">
@@ -236,7 +236,7 @@
 						</div>
 					</header>
 
-					<main class="min-w-0 flex-1 overflow-y-auto">
+					<main class="min-w-0 flex-1 overflow-y-auto lg:min-h-0">
 						<div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-6 md:gap-8 md:px-8 lg:px-10 lg:py-8 lg:pb-10">
 							<div class="hidden lg:block">
 								<PwaInstallPrompt />

@@ -67,7 +67,7 @@
 
 </script>
 
-<div class="mx-auto max-w-6xl">
+<div class="mx-auto w-full">
     <header class="mb-6 rounded-[1.5rem] border border-border/70 bg-card/70 p-4 shadow-xl shadow-black/5 backdrop-blur-md sm:mb-8 sm:p-6">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
