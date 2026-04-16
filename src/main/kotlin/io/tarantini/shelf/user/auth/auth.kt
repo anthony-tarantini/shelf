@@ -18,9 +18,9 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.AccessDenied
+import io.tarantini.shelf.app.id
 import io.tarantini.shelf.app.respond
 import io.tarantini.shelf.observability.Observability
-import io.tarantini.shelf.user.identity.TokenService
 import io.tarantini.shelf.user.identity.UserService
 import io.tarantini.shelf.user.identity.domain.JwtMissing
 import io.tarantini.shelf.user.identity.domain.LoginUserRequest
@@ -87,17 +87,19 @@ suspend inline fun RoutingContext.sharedCatalogMutation(
 }
 
 suspend inline fun RoutingContext.koreaderTokenAuth(
-    tokenService: TokenService,
     userService: UserService,
     observability: Observability,
     crossinline body: suspend RoutingContext.(KoreaderContext) -> Unit,
 ) {
     either {
             val username = ensureNotNull(call.request.headers["x-auth-user"]) { AccessDenied }
-            val token = ensureNotNull(call.request.headers["x-auth-key"]) { AccessDenied }
-            val userId = ensureNotNull(tokenService.validateToken(token)) { AccessDenied }
+            val token = ensureNotNull(call.request.headers["x-auth-key"]) { AccessDenied }.trim()
+            val userId =
+                ensureNotNull(resolveKoreaderUserId(userService, token, username.trim())) {
+                    AccessDenied
+                }
             val user = userService.getUserById(userId)
-            ensure(user.username.value == username) { AccessDenied }
+            ensure(user.username.value == username.trim()) { AccessDenied }
             KoreaderContext(userId)
         }
         .fold(
@@ -132,6 +134,23 @@ suspend inline fun RoutingContext.koreaderTokenAuth(
             },
         )
 }
+
+@OptIn(ExperimentalEncodingApi::class)
+context(_: RaiseContext)
+suspend fun resolveKoreaderUserId(
+    userService: UserService,
+    rawToken: String,
+    username: String,
+): UserId? {
+    val normalized = rawToken.trim()
+    if (normalized.isEmpty()) return null
+    val loginResult = either {
+        userService.login(LoginUserRequest(koreaderEmail(username), normalized))
+    }
+    return loginResult.fold({ null }, { (_, user) -> user.id.id })
+}
+
+private fun koreaderEmail(username: String): String = "$username@koreader.local"
 
 fun Route.sharedCatalogFeedAuth(build: Route.() -> Unit) {
     authenticate("opds-auth", build = build)

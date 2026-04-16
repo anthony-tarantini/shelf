@@ -47,7 +47,6 @@ class TokenApiTest :
                 val newToken = createResponse.body<Response<ApiToken>>().data
                 newToken.description shouldBe "My Kindle"
                 newToken.token shouldNotBe ""
-                val rawToken = newToken.token
 
                 // 3. List tokens
                 val listResponse =
@@ -58,28 +57,20 @@ class TokenApiTest :
                 tokens[0].description shouldBe "My Kindle"
                 tokens[0].token shouldBe "" // Should be empty in list for security
 
-                // 4. Validate the token via KOReader auth endpoint
-                val authResponse =
-                    client.get("/koreader/sync/users/auth") {
-                        header("x-auth-user", "tokentest")
-                        header("x-auth-key", rawToken)
-                    }
-                authResponse.status shouldBe HttpStatusCode.OK
-
-                // 5. Delete/Revoke the token
+                // 4. Delete/Revoke the token
                 val deleteResponse =
                     client.delete("/api/tokens/${newToken.id.value}") {
                         header(HttpHeaders.Authorization, "Bearer $jwt")
                     }
                 deleteResponse.status shouldBe HttpStatusCode.NoContent
 
-                // 6. Verify token is now invalid
-                val invalidAuthResponse =
-                    client.get("/koreader/sync/users/auth") {
-                        header("x-auth-user", "tokentest")
-                        header("x-auth-key", rawToken)
-                    }
-                invalidAuthResponse.status shouldBe HttpStatusCode.Unauthorized
+                // 5. Verify token is now gone
+                val listAfterDeleteResponse =
+                    client.get("/api/tokens") { header(HttpHeaders.Authorization, "Bearer $jwt") }
+                listAfterDeleteResponse.status shouldBe HttpStatusCode.OK
+                val tokensAfterDelete =
+                    listAfterDeleteResponse.body<Response<List<ApiToken>>>().data
+                tokensAfterDelete shouldHaveSize 0
             }
         }
 

@@ -11,10 +11,15 @@ import io.tarantini.shelf.app.Dependencies
 import io.tarantini.shelf.app.toHttpResponse
 import io.tarantini.shelf.integration.koreader.domain.ProgressPayload
 import io.tarantini.shelf.user.auth.koreaderTokenAuth
+import io.tarantini.shelf.user.identity.domain.NewUserRequest
+import io.tarantini.shelf.user.identity.domain.UserName
+import io.tarantini.shelf.user.identity.domain.UserNotFound
+import io.tarantini.shelf.user.identity.domain.UsernameAlreadyExists
 import java.nio.file.Paths
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.uuid.ExperimentalUuidApi
+import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 
 internal val logger = LoggerFactory.getLogger("io.tarantini.shelf.koreader.routes")
@@ -37,16 +42,80 @@ private fun Route.configureKoreaderSyncRoutes(deps: Dependencies) {
 
 private fun Route.registerUsersCreateRoute(deps: Dependencies) {
     post("/users/create") {
-        koreaderTokenAuth(deps.tokenService, deps.userService, deps.observability) {
-            logger.info("KOReader users/create accepted")
-            call.respond(HttpStatusCode.OK, mapOf("username" to "shelf-user"))
+        val request =
+            runCatching { call.receive<KoreaderCreateUserRequest>() }
+                .getOrElse {
+                    logger.warn("KOReader users/create rejected reason=invalid_payload")
+                    return@post call.respond(HttpStatusCode.BadRequest)
+                }
+        val username = request.username.trim()
+        val password = request.password.trim()
+        if (username.isEmpty() || password.isEmpty()) {
+            logger.warn("KOReader users/create rejected reason=empty_username_or_password")
+            return@post call.respond(HttpStatusCode.BadRequest)
         }
+        handleKoreaderUserCreate(deps, username, password)
     }
+}
+
+@Serializable
+private data class KoreaderCreateUserRequest(val username: String = "", val password: String = "")
+
+private suspend fun RoutingContext.handleKoreaderUserCreate(
+    deps: Dependencies,
+    username: String,
+    password: String,
+) {
+    val existingCheck = either { deps.userService.getUserByName(UserName(username)) }
+    if (existingCheck.isRight()) {
+        logger.info("KOReader users/create rejected reason=username_exists username={}", username)
+        return call.respond(HttpStatusCode.PaymentRequired)
+    }
+    if (existingCheck.swap().getOrNull() != UserNotFound) {
+        logger.warn(
+            "KOReader users/create failed username={} error={}",
+            username,
+            existingCheck.swap().getOrNull()?.let { it::class.simpleName } ?: "unknown",
+        )
+        return call.respond(HttpStatusCode.BadRequest)
+    }
+
+    either {
+            deps.userService.register(
+                NewUserRequest(
+                    email = "$username@koreader.local",
+                    username = username,
+                    password = password,
+                )
+            )
+        }
+        .fold(
+            { error ->
+                if (error == UsernameAlreadyExists) {
+                    logger.info(
+                        "KOReader users/create rejected reason=username_exists username={}",
+                        username,
+                    )
+                    call.respond(HttpStatusCode.PaymentRequired)
+                } else {
+                    logger.warn(
+                        "KOReader users/create failed username={} error={}",
+                        username,
+                        error::class.simpleName,
+                    )
+                    call.respond(HttpStatusCode.BadRequest)
+                }
+            },
+            {
+                logger.info("KOReader users/create accepted username={}", username)
+                call.respond(HttpStatusCode.Created, mapOf("username" to username))
+            },
+        )
 }
 
 private fun Route.registerUsersAuthRoute(deps: Dependencies) {
     get("/users/auth") {
-        koreaderTokenAuth(deps.tokenService, deps.userService, deps.observability) {
+        koreaderTokenAuth(deps.userService, deps.observability) {
             logger.info("KOReader users/auth accepted")
             call.respond(HttpStatusCode.OK)
         }
@@ -55,7 +124,7 @@ private fun Route.registerUsersAuthRoute(deps: Dependencies) {
 
 private fun Route.registerProgressReadRoute(deps: Dependencies) {
     get("/syncs/progress/{document_id}") {
-        koreaderTokenAuth(deps.tokenService, deps.userService, deps.observability) { auth ->
+        koreaderTokenAuth(deps.userService, deps.observability) { auth ->
             val documentId =
                 call.parameters["document_id"]
                     ?: return@koreaderTokenAuth run {
@@ -103,7 +172,7 @@ private fun Route.registerProgressReadRoute(deps: Dependencies) {
 
 private fun Route.registerProgressUpdateRoute(deps: Dependencies) {
     put("/syncs/progress") {
-        koreaderTokenAuth(deps.tokenService, deps.userService, deps.observability) { auth ->
+        koreaderTokenAuth(deps.userService, deps.observability) { auth ->
             val payload =
                 runCatching { call.receive<ProgressPayload>() }
                     .getOrElse {
@@ -157,7 +226,7 @@ private fun Route.configureKoreaderWebdavRoutes(deps: Dependencies) {
     route("/webdav") {
         val storageRoot = deps.env.storage.path
         handle {
-            koreaderTokenAuth(deps.tokenService, deps.userService, deps.observability) { auth ->
+            koreaderTokenAuth(deps.userService, deps.observability) { auth ->
                 val userStorageDir =
                     Paths.get(storageRoot, "users", auth.userId.value.toString(), "koreader")
                 userStorageDir.createDirectories()
