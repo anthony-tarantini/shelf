@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 FROM eclipse-temurin:21-jdk AS builder
 WORKDIR /app
 
@@ -10,12 +12,10 @@ COPY gradle.properties .
 COPY version.txt .
 COPY config config
 
-# Download dependencies (caching layer)
-RUN ./gradlew --no-daemon dependencies
-
 # Copy source code and build
 COPY src src
-RUN ./gradlew installDist --no-daemon
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew installDist --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 ARG OTEL_JAVA_AGENT_VERSION=2.18.1
