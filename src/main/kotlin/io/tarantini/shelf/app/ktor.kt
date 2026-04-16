@@ -21,6 +21,7 @@ import io.ktor.server.plugins.defaultheaders.DefaultHeaders
 import io.ktor.server.plugins.partialcontent.PartialContent
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
+import io.ktor.server.request.userAgent
 import io.ktor.server.resources.Resources
 import io.tarantini.shelf.user.identity.domain.LoginUserRequest
 import java.security.MessageDigest
@@ -54,6 +55,11 @@ fun Application.configure(deps: Dependencies) {
         mdc("span_id") { deps.observability.currentSpanId() }
         mdc("http_method") { it.request.httpMethod.value }
         mdc("http_path") { it.request.path() }
+        mdc("remote_host") { it.request.local.remoteHost }
+        mdc("x_forwarded_for") { it.request.headers["x-forwarded-for"] ?: "" }
+        mdc("x_real_ip") { it.request.headers["x-real-ip"] ?: "" }
+        mdc("x_envoy_external_address") { it.request.headers["x-envoy-external-address"] ?: "" }
+        mdc("user_agent") { it.request.userAgent() ?: "" }
     }
     install(ContentNegotiation) {
         json(
