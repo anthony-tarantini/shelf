@@ -1,0 +1,16 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>true</withJansi>
+        <encoder>
+            <pattern>%d{ISO8601} level=%-5level trace_id=%X{trace_id} span_id=%X{span_id} method=%X{http_method} path=%X{http_path} remote_host=%X{remote_host} x_forwarded_for=%X{x_forwarded_for} x_real_ip=%X{x_real_ip} x_envoy_external_address=%X{x_envoy_external_address} user_agent=%X{user_agent} logger=%logger{36} thread=%thread msg=%msg%n%ex</pattern>
+        </encoder>
+    </appender>
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+    <logger name="org.eclipse.jetty" level="ERROR"/>
+    <logger name="io.netty" level="ERROR"/>
+
+    <logger name="org.testcontainers" level="ERROR"/>
+    <logger name="com.github.dockerjava" level="ERROR"/>
+</configuration>

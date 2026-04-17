@@ -1,0 +1,23 @@
+package io.tarantini.shelf.catalog.series.domain
+
+import io.tarantini.shelf.processing.storage.StoragePath
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class SeriesSummary(
+    val id: SeriesId,
+    val name: String,
+    val coverPath: StoragePath? = null,
+    val bookCount: Int = 0,
+    val ebookCount: Int = 0,
+)
+
+@Serializable data class SeriesRequest(val id: String? = null, val title: String? = null)
+
+@Serializable
+data class SeriesPage(
+    val items: List<SeriesSummary>,
+    val totalCount: Long,
+    val page: Int,
+    val size: Int,
+)

@@ -1,0 +1,19 @@
+{
+  "eyebrow": "Join shelf",
+  "page_title": "Create Account",
+  "page_subtitle": "Join Shelf to manage your book collection",
+  "label_username": "Username",
+  "placeholder_username": "johndoe",
+  "label_email": "Email Address",
+  "placeholder_email": "name@example.com",
+  "label_password": "Password",
+  "placeholder_password": "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+  "label_confirm_password": "Confirm Password",
+  "error_fill_fields": "Please fill in all fields",
+  "error_password_mismatch": "Passwords do not match",
+  "error_failed": "Registration failed",
+  "button_register": "Register",
+  "loading_creating_account": "Creating account...",
+  "footer_prompt": "Already have an account?",
+  "link_sign_in": "Sign in"
+}

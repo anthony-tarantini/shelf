@@ -1,0 +1,75 @@
+{
+  "about": "About this book",
+  "loading": "Loading book details...",
+  "loading_detail": "Book detail",
+  "loading_reader": "Loading reader...",
+  "not_found": "Book not found",
+  "update_failed": "Book update failed",
+  "header": {
+    "back": "Back to Library",
+    "eyebrow": "Book Detail",
+    "by": "by",
+    "unknown_author": "Unknown Author",
+    "narrated_by": "Narrated by",
+    "edit_metadata": "Edit Metadata"
+  },
+  "sidebar": {
+    "publisher": "Publisher",
+    "published_year": "Published Year",
+    "identifiers": "Identifiers",
+    "genres": "Genres",
+    "not_set": "Not set",
+    "no_identifiers": "No identifiers"
+  },
+  "audio": {
+    "title": "Audiobook Player",
+    "unsupported": "Your browser does not support the audio element."
+  },
+  "chapters": {
+    "title": "Chapters",
+    "column_title": "Title",
+    "column_start_time": "Start Time",
+    "column_length": "Length"
+  },
+  "read_status": {
+    "label": "Read Status",
+    "update_failed": "Read status update failed",
+    "options": {
+      "unread": "Unread",
+      "reading": "Reading",
+      "finished": "Finished",
+      "abandoned": "Abandoned",
+      "queued": "Queued"
+    }
+  },
+  "metadata": {
+    "title": "Title",
+    "publisher": "Publisher",
+    "publish_year": "Publish Year",
+    "genres": "Genres (comma separated)",
+    "save_changes": "Save Changes",
+    "cancel": "Cancel",
+    "author": {
+      "title": "Authors (comma separated)",
+      "unlink": "Unlink Author",
+      "linked": "Linked",
+      "suggestions": "Suggestions:"
+    },
+    "series": {
+      "title": "Series",
+      "add": "+ Add Series",
+      "index": "Index",
+      "series_name": "Series Name",
+      "series_index": "Series Index",
+      "no_series": "No series added.",
+      "remove_series": "Remove Series"
+    },
+    "edition": {
+      "isbn13": "ISBN-13",
+      "isbn10": "ISBN-10",
+      "asin": "ASIN",
+      "pages": "Pages",
+      "narrator": "Narrator"
+    }
+  }
+}
