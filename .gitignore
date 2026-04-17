@@ -1,0 +1,54 @@
+# Environment and secrets
+.env
+.env.*
+.envrc
+!.env.example
+!example.env
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*.crt
+*.csr
+*.der
+*.sqlite
+*.sqlite3
+*.db
+*.rdb
+*.bak
+*.log
+
+# LLM
+.claude
+.gemini
+.junie
+.agents
+.opencode
+
+# Gradle
+.gradle/
+build/
+
+# Kotlin
+.kotlin/
+data/
+/storage/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# OS X
+.DS_Store
+
+# Temporary files
+.output.txt
+coverage/
+dist/
+
+# Local configuration
+local.properties

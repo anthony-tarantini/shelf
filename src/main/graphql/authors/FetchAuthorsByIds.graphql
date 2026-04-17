@@ -1,0 +1,9 @@
+query FetchAuthorsByIds($authorIds: [Int!]!) {
+  authors(where: {id: {_in: $authorIds}}, limit: 10) {
+    id
+    name
+    image {
+      url
+    }
+  }
+}

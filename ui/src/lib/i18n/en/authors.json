@@ -1,0 +1,28 @@
+{
+  "eyebrow": "People",
+  "detail_eyebrow": "Author Detail",
+  "back": "Back to Authors",
+  "detail_loading_title": "Author detail",
+  "page_title": "Authors",
+  "page_subtitle": "Manage authors in your library.",
+  "empty_state": "No authors found.",
+  "load_error_title": "Unable to refresh authors",
+  "loading": "Loading authors details...",
+  "dashboard": {
+    "count_label": "Authors",
+    "view_label": "View",
+    "view_hint": "Click to switch view",
+    "sort_label": "Sort",
+    "sort_hint": "Click to cycle sort",
+    "sort_alpha_asc": "A-Z",
+    "sort_alpha_desc": "Z-A",
+    "sort_count_desc": "Most Books",
+    "sort_count_asc": "Fewest Books"
+  },
+  "table": {
+    "image": "Image",
+    "name": "Name",
+    "books": "Books",
+    "no_image": "No Image"
+  }
+}
