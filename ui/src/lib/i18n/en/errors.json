@@ -1,0 +1,10 @@
+{
+  "api": {
+    "type": "ApiError",
+    "message": "An unexpected error occurred"
+  },
+  "network": {
+    "type": "NetworkError",
+    "message": "Unknown network error"
+  }
+}

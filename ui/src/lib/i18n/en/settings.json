@@ -1,0 +1,48 @@
+{
+  "koreader": {
+    "eyebrow": "KOReader",
+    "title": "KOReader Synchronization",
+    "subtitle": "Manage your KOReader sync tokens and connection details.",
+    "connection": {
+      "title": "Connection Details",
+      "sync_server_url": "Sync Server URL",
+      "sync_server_hint": "Enter this in KOReader Settings → Progress Sync → Custom sync server.",
+      "webdav_url": "WebDAV URL (Reading Stats)",
+      "webdav_hint": "Enter this in KOReader Menu → Tools → Reading statistics → Settings → Cloud sync.",
+      "username": "Username"
+    },
+    "tokens": {
+      "title": "Sync Tokens",
+      "eyebrow": "Tokens",
+      "loading_title": "Tokens",
+      "loading_message": "Loading tokens...",
+      "empty_title": "No active tokens",
+      "empty_message": "Create a token for each KOReader device or integration you want to connect.",
+      "new_token_title": "New token created",
+      "new_token_message": "Copy this token now. It will not be shown again.",
+      "clear_notice": "Clear notification",
+      "description_label": "Token description",
+      "description_hint": "Name the device or integration this token belongs to.",
+      "description_placeholder": "Token description (e.g. Kindle, Kobo)",
+      "generate": "Generate",
+      "revoke": "Revoke Token",
+      "added_on": "Added on {{date}}"
+    },
+    "toasts": {
+      "fetch_failed": "Failed to fetch tokens",
+      "network_error": "Network error",
+      "created": "Created a new KOReader sync token.",
+      "create_failed": "Failed to create token",
+      "revoked": "Revoked sync token.",
+      "delete_failed": "Failed to delete token"
+    },
+    "instructions": {
+      "title": "How to set up KOReader Sync",
+      "step_1": "Generate a Sync Token above for your device.",
+      "step_2": "In KOReader, go to Settings → Progress Sync → Custom sync server and enter the Sync Server URL.",
+      "step_3": "Select Register / Login and use your Shelf username and the Sync Token as the password.",
+      "step_4": "For Reading Statistics, go to Menu → Tools → Reading statistics → Settings → Cloud sync.",
+      "step_5": "Add a WebDAV service with the WebDAV URL, your username, and the same Sync Token."
+    }
+  }
+}

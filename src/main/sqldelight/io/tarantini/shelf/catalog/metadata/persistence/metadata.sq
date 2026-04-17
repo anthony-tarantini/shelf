@@ -1,0 +1,182 @@
+import io.tarantini.shelf.catalog.book.domain.BookId;
+import io.tarantini.shelf.catalog.metadata.domain.MetadataId;
+import io.tarantini.shelf.catalog.metadata.domain.EditionId;
+import io.tarantini.shelf.catalog.metadata.domain.ChapterId;
+import io.tarantini.shelf.catalog.metadata.domain.BookFormat;
+import io.tarantini.shelf.catalog.metadata.domain.ISBN10;
+import io.tarantini.shelf.catalog.metadata.domain.ISBN13;
+import io.tarantini.shelf.catalog.metadata.domain.ASIN;
+import io.tarantini.shelf.processing.storage.StoragePath;
+
+-- Core Metadata Table (The "Abstract" Book Info)
+CREATE TABLE IF NOT EXISTS metadata (
+    id UUID AS MetadataId PRIMARY KEY DEFAULT gen_random_uuid(),
+    book_id UUID AS BookId NOT NULL UNIQUE REFERENCES books(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    publisher TEXT REFERENCES publishers(id) ON DELETE SET NULL,
+    published INTEGER,
+    language TEXT REFERENCES languages(id) ON DELETE SET NULL,
+    sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL)
+);
+
+-- Editions (The "Physical/Digital" Book Info)
+CREATE TABLE IF NOT EXISTS editions (
+    id UUID AS EditionId PRIMARY KEY DEFAULT gen_random_uuid(),
+    book_id UUID AS BookId NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    format TEXT AS BookFormat NOT NULL,
+    path VARCHAR(255) AS StoragePath NOT NULL UNIQUE,
+    file_hash VARCHAR(32),
+    narrator TEXT,
+    translator TEXT,
+    isbn_10 CHAR(10) AS ISBN10,
+    isbn_13 CHAR(13) AS ISBN13,
+    asin CHAR(10) AS ASIN,
+    pages BIGINT,
+    total_time DOUBLE PRECISION,
+    size BIGINT NOT NULL,
+    sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL),
+    UNIQUE(book_id, format)
+);
+
+CREATE INDEX IF NOT EXISTS idx_editions_book_id ON editions(book_id);
+CREATE INDEX IF NOT EXISTS idx_editions_file_hash ON editions(file_hash);
+
+-- Chapters Table (Tied to the specific Edition)
+CREATE TABLE IF NOT EXISTS chapters (
+    id UUID AS ChapterId PRIMARY KEY DEFAULT gen_random_uuid(),
+    edition_id UUID AS EditionId NOT NULL REFERENCES editions(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    start_time DOUBLE PRECISION,
+    end_time DOUBLE PRECISION,
+    index_ BIGINT,
+    sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_chapters_edition_id ON chapters(edition_id);
+
+CREATE TABLE IF NOT EXISTS genres (id TEXT PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS languages (id TEXT PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS moods (id TEXT PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS publishers (id TEXT PRIMARY KEY);
+
+---
+--- Queries
+---
+
+selectMetadataByBookId:
+SELECT metadata.*, array_agg(DISTINCT genres.genre) AS genres, array_agg(DISTINCT moods.mood) AS moods
+FROM metadata
+LEFT JOIN book_genres genres ON genres.book = metadata.book_id
+LEFT JOIN book_moods moods ON moods.book = metadata.book_id
+WHERE book_id = :bookId
+GROUP BY metadata.id;
+
+selectMetadataByBookIds:
+SELECT metadata.*, array_agg(DISTINCT genres.genre) AS genres, array_agg(DISTINCT moods.mood) AS moods
+FROM metadata
+LEFT JOIN book_genres genres ON genres.book = metadata.book_id
+LEFT JOIN book_moods moods ON moods.book = metadata.book_id
+WHERE book_id IN :bookIds
+GROUP BY metadata.id;
+
+selectEditionsByBookId:
+SELECT * FROM editions WHERE book_id = :bookId;
+
+selectEditionsByBookIds:
+SELECT * FROM editions WHERE book_id IN :bookIds;
+
+selectEditionByFileHash:
+SELECT * FROM editions WHERE file_hash = :fileHash;
+
+selectChaptersByEditionId:
+SELECT * FROM chapters
+WHERE edition_id = :editionId
+ORDER BY index_ ASC, start_time ASC;
+
+selectChaptersByEditionIds:
+SELECT * FROM chapters
+WHERE edition_id IN :editionIds
+ORDER BY index_ ASC, start_time ASC;
+
+insertMetadata:
+INSERT INTO metadata (
+    book_id, title, description,
+    publisher, published, language
+) VALUES (
+    :bookId, :title, :description,
+    :publisher, :published, :language
+)
+ON CONFLICT (book_id)
+DO UPDATE SET
+    title = EXCLUDED.title,
+    description = EXCLUDED.description,
+    publisher = EXCLUDED.publisher,
+    published = EXCLUDED.published,
+    language = EXCLUDED.language
+RETURNING id;
+
+insertGenre:
+INSERT INTO genres (id) VALUES (:id) ON CONFLICT (id) DO NOTHING;
+
+insertMood:
+INSERT INTO moods (id) VALUES (:id) ON CONFLICT (id) DO NOTHING;
+
+insertPublisher:
+INSERT INTO publishers (id) VALUES (:id) ON CONFLICT (id) DO NOTHING;
+
+insertBookGenre:
+INSERT INTO book_genres (book, genre) VALUES (:bookId, :genre) ON CONFLICT (book, genre) DO NOTHING;
+
+insertBookMood:
+INSERT INTO book_moods (book, mood) VALUES (:bookId, :mood) ON CONFLICT (book, mood) DO NOTHING;
+
+insertEdition:
+INSERT INTO editions (
+    book_id, format, path, file_hash, narrator, translator,
+    isbn_10, isbn_13, asin, pages, total_time, size
+) VALUES (
+    :bookId, :format, :path, :fileHash, :narrator, :translator,
+    :isbn10, :isbn13, :asin, :pages, :totalTime, :size
+)
+ON CONFLICT (path)
+DO UPDATE SET
+    book_id = EXCLUDED.book_id,
+    format = EXCLUDED.format,
+    file_hash = EXCLUDED.file_hash,
+    narrator = EXCLUDED.narrator,
+    translator = EXCLUDED.translator,
+    isbn_10 = EXCLUDED.isbn_10,
+    isbn_13 = EXCLUDED.isbn_13,
+    asin = EXCLUDED.asin,
+    pages = EXCLUDED.pages,
+    total_time = EXCLUDED.total_time,
+    size = EXCLUDED.size
+RETURNING id;
+
+insertChapter:
+INSERT INTO chapters (edition_id, title, start_time, end_time, index_)
+VALUES (:editionId, :title, :startTime, :endTime, :index)
+RETURNING id;
+
+deleteGenresByBookId:
+DELETE FROM book_genres WHERE book = :bookId;
+
+deleteMoodsByBookId:
+DELETE FROM book_moods WHERE book = :bookId;
+
+deleteMetadataByBookId:
+DELETE FROM metadata WHERE book_id = :bookId;
+
+deleteEditionById:
+DELETE FROM editions WHERE id = :editionId;
+
+selectBookIdsByFormat:
+SELECT book_id FROM editions WHERE format = :format;
+
+deleteEditionsByBookId:
+DELETE FROM editions WHERE book_id = :bookId;
+
+deleteChaptersByEditionId:
+DELETE FROM chapters WHERE edition_id = :editionId;
+
