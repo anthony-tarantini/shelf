@@ -1,6 +1,12 @@
 import io.tarantini.shelf.user.identity.domain.UserId;
 import io.tarantini.shelf.catalog.metadata.domain.EditionId;
 
+CREATE TABLE IF NOT EXISTS koreader_users (
+    user_id UUID AS UserId NOT NULL PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    auth_key VARCHAR(255) NOT NULL,
+    sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL)
+);
+
 CREATE TABLE IF NOT EXISTS koreader_progress (
     user_id UUID AS UserId NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     edition_id UUID AS EditionId NOT NULL REFERENCES editions(id) ON DELETE CASCADE,
@@ -24,3 +30,13 @@ DO UPDATE SET
 selectProgress:
 SELECT * FROM koreader_progress
 WHERE user_id = :userId AND document_hash = :documentHash;
+
+upsertKoreaderUser:
+INSERT INTO koreader_users (user_id, auth_key)
+VALUES (:userId, :authKey)
+ON CONFLICT (user_id)
+DO UPDATE SET auth_key = EXCLUDED.auth_key;
+
+selectKoreaderUser:
+SELECT * FROM koreader_users
+WHERE user_id = :userId;

@@ -7,7 +7,6 @@
     <ID>ConstructorParameterNaming:models.kt$OpenSearchDescription$@XmlElement(true) val OutputEncoding: String = "UTF-8"</ID>
     <ID>ConstructorParameterNaming:models.kt$OpenSearchDescription$@XmlElement(true) val ShortName: String</ID>
     <ID>ConstructorParameterNaming:models.kt$OpenSearchDescription$@XmlElement(true) val Url: List&lt;OpenSearchUrl> = emptyList()</ID>
-    <ID>ConstructorParameterNaming:models.kt$ProgressPayload$val device_id: String</ID>
     <ID>CyclomaticComplexMethod:error.kt$private fun MetadataError.toHttpResponse(): Pair&lt;HttpStatusCode, String></ID>
     <ID>CyclomaticComplexMethod:error.kt$private fun UserError.toHttpResponse(): Pair&lt;HttpStatusCode, String></ID>
     <ID>CyclomaticComplexMethod:routes.kt$fun Route.stagedRoutes( jwtService: JwtService, stagedBookService: StagedBookService, storageService: StorageService, )</ID>
@@ -22,14 +21,12 @@
     <ID>LongMethod:persistence.kt$suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database</ID>
     <ID>LongMethod:routes.kt$fun Route.authorRoutes( authorService: AuthorService, bookService: BookService, activityService: ActivityService, jwtService: JwtService, storageService: StorageService, externalMetadataProvider: ExternalMetadataProvider, )</ID>
     <ID>LongMethod:routes.kt$fun Route.bookRoutes( bookService: BookService, storageService: StorageService, authorService: AuthorService, seriesService: SeriesService, activityService: ActivityService, jwtService: JwtService, userService: UserService, observability: Observability, )</ID>
-    <ID>LongMethod:routes.kt$fun Route.koreaderRoutes(deps: Dependencies)</ID>
     <ID>LongMethod:routes.kt$fun Route.libraryRoutes( jwtService: JwtService, libraryService: LibraryService, bookService: BookService, )</ID>
     <ID>LongMethod:routes.kt$fun Route.seriesRoutes( seriesService: SeriesService, bookProvider: SeriesBookProvider, authorProvider: SeriesAuthorProvider, activityService: ActivityService, storageService: StorageService, jwtService: JwtService, )</ID>
     <ID>LongMethod:routes.kt$fun Route.stagedRoutes( jwtService: JwtService, stagedBookService: StagedBookService, storageService: StorageService, )</ID>
     <ID>LongMethod:service.kt$&lt;no name provided>$override suspend fun update( stagedId: String, title: String?, description: String?, authors: List&lt;String>?, selectedAuthorIds: Map&lt;String, String?>?, publisher: String?, publishYear: Int?, genres: List&lt;String>?, moods: List&lt;String>?, series: List&lt;StagedSeries>?, ebookMetadata: StagedEditionMetadata?, audiobookMetadata: StagedEditionMetadata?, coverUrl: String?, )</ID>
     <ID>LongMethod:service.kt$&lt;no name provided>$private fun RaiseContext.promoteToBook( stagedBook: StagedBook, book: BookId, ): List&lt;WarningDetail></ID>
     <ID>LongParameterList:builders.kt$OpdsFeedBuilder$( id: String, title: String, selfHref: String, upHref: String? = null, type: String = OpdsMimeType.ATOM, entries: List&lt;OpdsEntry> = emptyList(), page: Int? = null, size: Int? = null, totalCount: Long? = null, includeSearch: Boolean = false, )</ID>
-    <ID>LongParameterList:dependencies.kt$Dependencies$( val healthCheck: HealthCheckRegistry, val userService: UserService, val tokenService: TokenService, val authorService: AuthorService, val bookService: BookService, val metadataService: MetadataService, val seriesService: SeriesService, val searchService: SearchService, val libraryService: LibraryService, val storageService: StorageService, val activityService: ActivityService, val importService: ImportService, val stagedBookService: StagedBookService, val koreaderSyncService: KoreaderSyncService, val opdsService: OpdsService, val jwtService: JwtService, val authCache: AuthCache, val storagePath: String, val database: Database, val env: Env, val externalMetadataProvider: ExternalMetadataProvider, val observability: Observability, )</ID>
     <ID>LongParameterList:persistence.kt$( author: AuthorId, id: SeriesId, title: String, bookCount: Long, ebookCount: Long, authorCount: Long, )</ID>
     <ID>LongParameterList:persistence.kt$( book: BookId, index: Double?, id: SeriesId, title: String, bookCount: Long, ebookCount: Long, authorCount: Long, )</ID>
     <ID>LongParameterList:routes.kt$( authorService: AuthorService, bookService: BookService, activityService: ActivityService, jwtService: JwtService, storageService: StorageService, externalMetadataProvider: ExternalMetadataProvider, )</ID>
@@ -40,10 +37,9 @@
     <ID>LongParameterList:service.kt$( stagedBookStore: StagedBookStore, storageService: StorageService, bookQueries: BookQueries, authorQueries: AuthorQueries, seriesQueries: SeriesQueries, metadataQueries: MetadataQueries, scope: CoroutineScope, transacter: Transacter, )</ID>
     <ID>LongParameterList:service.kt$( storageService: StorageService, metadataProcessor: MetadataProcessor, stagedBookStore: StagedBookStore, allowedScanRoots: List&lt;String>, scope: CoroutineScope, observability: Observability, )</ID>
     <ID>LongParameterList:service.kt$StagedBookService$( stagedId: String, title: String? = null, description: String? = null, authors: List&lt;String>? = null, selectedAuthorIds: Map&lt;String, String?>? = null, publisher: String? = null, publishYear: Int? = null, genres: List&lt;String>? = null, moods: List&lt;String>? = null, series: List&lt;StagedSeries>? = null, ebookMetadata: StagedEditionMetadata? = null, audiobookMetadata: StagedEditionMetadata? = null, coverUrl: String? = null, )</ID>
-    <ID>MagicNumber:AuthCache.kt$InMemoryAuthCache$5</ID>
-    <ID>MagicNumber:AuthCache.kt$ValkeyAuthCache$5</ID>
     <ID>MagicNumber:Observability.kt$&lt;no name provided>$30</ID>
-    <ID>MagicNumber:TokenService.kt$&lt;no name provided>$32</ID>
+    <ID>MagicNumber:authCache.kt$InMemoryAuthCache$5</ID>
+    <ID>MagicNumber:authCache.kt$ValkeyAuthCache$5</ID>
     <ID>MagicNumber:extensions.kt$10</ID>
     <ID>MagicNumber:extensions.kt$1024</ID>
     <ID>MagicNumber:extensions.kt$1024L</ID>
@@ -66,6 +62,7 @@
     <ID>MagicNumber:service.kt$&lt;no name provided>$100</ID>
     <ID>MagicNumber:service.kt$&lt;no name provided>$3</ID>
     <ID>MagicNumber:service.kt$&lt;no name provided>$50</ID>
+    <ID>MatchingDeclarationName:auth.kt$KoreaderAuthService</ID>
     <ID>MatchingDeclarationName:models.kt$GlobalSearchResult</ID>
     <ID>MatchingDeclarationName:persistence.kt$StagedBookStore</ID>
     <ID>MatchingDeclarationName:policy.kt$AccessPolicy</ID>
@@ -89,6 +86,8 @@
     <ID>MatchingDeclarationName:tokenRoutes.kt$CreateTokenRequest</ID>
     <ID>MatchingDeclarationName:validators.kt$IdValidator</ID>
     <ID>MaxLineLength:service.kt$&lt;no name provided>$"Dropped invalid metadata for '${stagedBook.title}': ${warnings.joinToString { "${it.field}: ${it.message}" }}"</ID>
+    <ID>MaxLineLength:service.kt$&lt;no name provided>$val edition = metadataQueries.selectEditionByFileHash(payload.document).executeAsOneOrNull() ?: raise(BookNotFound)</ID>
+    <ID>NewLineAtEndOfFile:extensions.kt$io.tarantini.shelf.extensions.kt</ID>
     <ID>ReturnCount:client.kt$&lt;no name provided>$override suspend fun searchAuthorsByName(name: String): List&lt;ExternalAuthorResult></ID>
     <ID>ReturnCount:client.kt$&lt;no name provided>$override suspend fun searchBookMetadataByName(name: String): List&lt;ExternalMetadata></ID>
     <ID>TooManyFunctions:builders.kt$OpdsLinkBuilder</ID>

@@ -37,6 +37,9 @@ interface TokenService {
 
     context(_: RaiseContext)
     suspend fun validateToken(token: String): UserId?
+
+    context(_: RaiseContext)
+    suspend fun validateMd5ForUser(userId: UserId, md5Hex: String): Boolean
 }
 
 private const val TOKEN_WORD_COUNT = 4
@@ -86,6 +89,16 @@ fun tokenService(tokensQueries: TokensQueries) =
                 tokensQueries.selectByHash(TokenHash.fromRaw(hash)).executeAsOneOrNull()?.user_id
             }
 
+        @OptIn(ExperimentalStdlibApi::class)
+        context(_: RaiseContext)
+        override suspend fun validateMd5ForUser(userId: UserId, md5Hex: String): Boolean =
+            withContext(Dispatchers.IO) {
+                val md5Bytes = md5Hex.hexToByteArray()
+                tokensQueries
+                    .selectByHashAndUser(TokenHash.fromRaw(md5Bytes), userId)
+                    .executeAsOneOrNull() != null
+            }
+
         private fun generateRawToken(): String {
             val words =
                 (1..TOKEN_WORD_COUNT).joinToString("-") {
@@ -100,7 +113,7 @@ fun tokenService(tokensQueries: TokensQueries) =
         }
 
         private fun hashToken(token: String): ByteArray =
-            MessageDigest.getInstance("SHA-256").digest(token.toByteArray())
+            MessageDigest.getInstance("MD5").digest(token.toByteArray())
 
         private fun loadTokenWords(): List<String> {
             val stream =

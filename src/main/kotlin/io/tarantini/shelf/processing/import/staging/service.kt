@@ -5,6 +5,7 @@ package io.tarantini.shelf.processing.import.staging
 import app.cash.sqldelight.Transacter
 import arrow.core.raise.context.raise
 import arrow.core.raise.recover
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.Identity
 import io.tarantini.shelf.app.PersistenceState
@@ -43,7 +44,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-private val logger = io.github.oshai.kotlinlogging.KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 private val ALLOWED_COVER_HOSTS = listOf("hardcover.app")
 
 private inline fun <T> tryIdentifier(
@@ -305,7 +306,6 @@ fun stagedBookService(
                     stagedBook.coverPath?.let { StoragePath.fromRaw(it) }
                         ?: BookRoot.deriveCoverPath(stagedBook.storagePath)
 
-                // Generate thumbnail if possible
                 generateThumbnailIfPossible(coverPath)
 
                 var warnings = emptyList<WarningDetail>()
@@ -407,6 +407,7 @@ fun stagedBookService(
                         id = Identity.Unsaved,
                         bookId = book,
                         format = BookFormat.EBOOK,
+                        fileHash = meta?.fileHash,
                         path =
                             meta?.storagePath?.let { StoragePath.fromRaw(it) }
                                 ?: StoragePath.fromRaw(stagedBook.storagePath),
@@ -446,6 +447,7 @@ fun stagedBookService(
                         id = Identity.Unsaved,
                         bookId = book,
                         format = BookFormat.AUDIOBOOK,
+                        fileHash = meta?.fileHash,
                         path =
                             meta?.storagePath?.let { StoragePath.fromRaw(it) }
                                 ?: StoragePath.fromRaw(stagedBook.storagePath),
@@ -534,6 +536,7 @@ fun stagedBookService(
                                     when (request.action) {
                                         StagedBatchAction.PROMOTE,
                                         StagedBatchAction.PROMOTE_ALL -> promote(id)
+
                                         StagedBatchAction.DELETE -> {
                                             delete(id)
                                             emptyList()

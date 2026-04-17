@@ -18,8 +18,8 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.AccessDenied
-import io.tarantini.shelf.app.id
 import io.tarantini.shelf.app.respond
+import io.tarantini.shelf.integration.koreader.KoreaderAuthService
 import io.tarantini.shelf.observability.Observability
 import io.tarantini.shelf.user.identity.UserService
 import io.tarantini.shelf.user.identity.domain.JwtMissing
@@ -87,70 +87,59 @@ suspend inline fun RoutingContext.sharedCatalogMutation(
 }
 
 suspend inline fun RoutingContext.koreaderTokenAuth(
-    userService: UserService,
+    koreaderAuthService: KoreaderAuthService,
     observability: Observability,
     crossinline body: suspend RoutingContext.(KoreaderContext) -> Unit,
 ) {
-    either {
-            val username = ensureNotNull(call.request.headers["x-auth-user"]) { AccessDenied }
-            val token = ensureNotNull(call.request.headers["x-auth-key"]) { AccessDenied }.trim()
-            val userId =
-                ensureNotNull(resolveKoreaderUserId(userService, token, username.trim())) {
-                    AccessDenied
-                }
-            val user = userService.getUserById(userId)
-            ensure(user.username.value == username.trim()) { AccessDenied }
-            KoreaderContext(userId)
-        }
-        .fold(
-            {
-                val failureReason =
-                    when {
-                        call.request.headers["x-auth-user"].isNullOrBlank() -> "missing_user_header"
-                        call.request.headers["x-auth-key"].isNullOrBlank() -> "missing_key_header"
-                        else -> "invalid_credentials"
-                    }
-                logger.warn(
-                    "KOReader auth failed method={} uri={} reason={} username={}",
-                    call.request.httpMethod.value,
-                    call.request.uri,
-                    failureReason,
-                    call.request.headers["x-auth-user"] ?: "<missing>",
-                )
-                observability
-                    .counter("shelf.koreader.auth", "result", "failure", "reason", failureReason)
-                    .increment()
-                call.respond(HttpStatusCode.Unauthorized)
-            },
-            { context ->
-                logger.info(
-                    "KOReader auth succeeded method={} uri={} userId={}",
-                    call.request.httpMethod.value,
-                    call.request.uri,
-                    context.userId.value,
-                )
-                observability.counter("shelf.koreader.auth", "result", "success").increment()
-                body(this, context)
-            },
+    val rawUsername = call.request.headers["x-auth-user"]
+    val rawKey = call.request.headers["x-auth-key"]
+
+    if (rawUsername.isNullOrBlank() || rawKey.isNullOrBlank()) {
+        val reason =
+            if (rawUsername.isNullOrBlank()) "missing_user_header" else "missing_key_header"
+        logger.warn(
+            "KOReader auth failed method={} uri={} reason={} username={}",
+            call.request.httpMethod.value,
+            call.request.uri,
+            reason,
+            rawUsername ?: "<missing>",
         )
-}
-
-@OptIn(ExperimentalEncodingApi::class)
-context(_: RaiseContext)
-suspend fun resolveKoreaderUserId(
-    userService: UserService,
-    rawToken: String,
-    username: String,
-): UserId? {
-    val normalized = rawToken.trim()
-    if (normalized.isEmpty()) return null
-    val loginResult = either {
-        userService.login(LoginUserRequest(koreaderEmail(username), normalized))
+        observability
+            .counter("shelf.koreader.auth", "result", "failure", "reason", reason)
+            .increment()
+        call.respond(HttpStatusCode.Unauthorized)
+        return
     }
-    return loginResult.fold({ null }, { (_, user) -> user.id.id })
+
+    val username = stripKoreaderDomain(rawUsername.trim())
+    val authKey = rawKey.trim()
+    val userId = either { koreaderAuthService.authenticate(username, authKey) }.getOrNull()
+
+    if (userId == null) {
+        logger.warn(
+            "KOReader auth failed method={} uri={} reason=invalid_credentials username={}",
+            call.request.httpMethod.value,
+            call.request.uri,
+            username,
+        )
+        observability
+            .counter("shelf.koreader.auth", "result", "failure", "reason", "invalid_credentials")
+            .increment()
+        call.respond(HttpStatusCode.Unauthorized)
+        return
+    }
+
+    logger.info(
+        "KOReader auth succeeded method={} uri={} userId={}",
+        call.request.httpMethod.value,
+        call.request.uri,
+        userId.value,
+    )
+    observability.counter("shelf.koreader.auth", "result", "success").increment()
+    body(this, KoreaderContext(userId))
 }
 
-private fun koreaderEmail(username: String): String = "$username@koreader.local"
+fun stripKoreaderDomain(username: String): String = username.removeSuffix("@koreader.local")
 
 fun Route.sharedCatalogFeedAuth(build: Route.() -> Unit) {
     authenticate("opds-auth", build = build)

@@ -31,6 +31,7 @@ import io.tarantini.shelf.catalog.persistence.Series_books
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.catalog.series.persistence.Series
 import io.tarantini.shelf.integration.koreader.persistence.Koreader_progress
+import io.tarantini.shelf.integration.koreader.persistence.Koreader_users
 import io.tarantini.shelf.organization.library.domain.LibraryId
 import io.tarantini.shelf.organization.library.persistence.Libraries
 import io.tarantini.shelf.processing.storage.StoragePath
@@ -81,6 +82,7 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
             "users",
             "api_tokens",
             "koreader_progress",
+            "koreader_users",
         )
         .forEach { table ->
             driver.execute(null, "SELECT enable_temporal_versioning('$table');", 0)
@@ -137,6 +139,7 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
         book_read_statusAdapter = Book_read_status.Adapter(UserId.adapter, BookId.adapter),
         api_tokensAdapter = Api_tokens.Adapter(TokenId.adapter, UserId.adapter, TokenHash.adapter),
         koreader_progressAdapter = Koreader_progress.Adapter(UserId.adapter, EditionId.adapter),
+        koreader_usersAdapter = Koreader_users.Adapter(UserId.adapter),
     )
 }
 

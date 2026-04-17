@@ -23,6 +23,7 @@ import io.tarantini.shelf.catalog.series.SeriesService
 import io.tarantini.shelf.catalog.series.seriesService
 import io.tarantini.shelf.integration.core.ExternalMetadataProvider
 import io.tarantini.shelf.integration.hardcover.hardcover
+import io.tarantini.shelf.integration.koreader.KoreaderAuthService
 import io.tarantini.shelf.integration.koreader.KoreaderSyncService
 import io.tarantini.shelf.observability.Observability
 import io.tarantini.shelf.observability.observability
@@ -51,6 +52,7 @@ import kotlinx.coroutines.SupervisorJob
 
 private val logger = KotlinLogging.logger {}
 
+@Suppress("LongParameterList")
 class Dependencies(
     val healthCheck: HealthCheckRegistry,
     val userService: UserService,
@@ -66,6 +68,7 @@ class Dependencies(
     val importService: ImportService,
     val stagedBookService: StagedBookService,
     val koreaderSyncService: KoreaderSyncService,
+    val koreaderAuthService: KoreaderAuthService,
     val opdsService: OpdsService,
     val jwtService: JwtService,
     val authCache: AuthCache,
@@ -141,6 +144,12 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 koreaderQueries,
                 metadataQueries,
             )
+        val koreaderAuthService =
+            io.tarantini.shelf.integration.koreader.koreaderAuthService(
+                koreaderQueries,
+                userService,
+                tokenService,
+            )
 
         val valkeyUrl = env.valkey.url
         val (stagedStore, authCache) =
@@ -208,6 +217,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             importService,
             stagedBookService,
             koreaderSyncService,
+            koreaderAuthService,
             opdsService,
             jwtService,
             authCache,

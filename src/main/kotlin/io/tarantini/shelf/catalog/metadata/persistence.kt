@@ -7,6 +7,7 @@ import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.Identity
 import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.book.domain.BookId
+import io.tarantini.shelf.catalog.metadata.domain.BookFormat
 import io.tarantini.shelf.catalog.metadata.domain.Chapter
 import io.tarantini.shelf.catalog.metadata.domain.ChapterId
 import io.tarantini.shelf.catalog.metadata.domain.Edition
@@ -80,9 +81,8 @@ fun MetadataQueries.getChaptersByEditionId(editionId: EditionId): List<SavedChap
     selectChaptersByEditionId(editionId).executeAsList().map { it.toDomain() }
 
 context(_: RaiseContext)
-fun MetadataQueries.getBookIdsByFormat(
-    format: io.tarantini.shelf.catalog.metadata.domain.BookFormat
-): List<BookId> = selectBookIdsByFormat(format).executeAsList()
+fun MetadataQueries.getBookIdsByFormat(format: BookFormat): List<BookId> =
+    selectBookIdsByFormat(format).executeAsList()
 
 context(_: RaiseContext)
 fun MetadataQueries.saveAggregate(aggregate: NewMetadataAggregate): MetadataId =

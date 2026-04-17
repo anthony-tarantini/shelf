@@ -71,6 +71,7 @@ data class BatchProgress(
 @Serializable
 data class StagedEditionMetadata(
     val storagePath: String? = null,
+    val fileHash: String? = null,
     val isbn10: String? = null,
     val isbn13: String? = null,
     val asin: String? = null,

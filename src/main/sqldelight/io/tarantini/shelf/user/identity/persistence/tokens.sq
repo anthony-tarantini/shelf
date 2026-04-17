@@ -18,6 +18,9 @@ SELECT * FROM api_tokens WHERE user_id = :userId;
 selectByHash:
 SELECT * FROM api_tokens WHERE token_hash = :tokenHash;
 
+selectByHashAndUser:
+SELECT * FROM api_tokens WHERE token_hash = :tokenHash AND user_id = :userId;
+
 insert:
 INSERT INTO api_tokens (user_id, token_hash, description)
 VALUES (:userId, :tokenHash, :description)

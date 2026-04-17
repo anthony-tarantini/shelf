@@ -15,7 +15,7 @@ import io.tarantini.shelf.catalog.metadata.MetadataProcessor
 import io.tarantini.shelf.catalog.metadata.domain.BookFormat
 import io.tarantini.shelf.catalog.metadata.domain.MediaType
 import io.tarantini.shelf.catalog.metadata.domain.ProcessedMetadata
-import io.tarantini.shelf.koreaderHash
+import io.tarantini.shelf.integration.koreader.koreaderHash
 import io.tarantini.shelf.observability.Observability
 import io.tarantini.shelf.processing.import.domain.DirectoryNotFound
 import io.tarantini.shelf.processing.import.domain.FailedFileDetail
@@ -35,6 +35,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
 import java.util.UUID
+import kotlin.String
 import kotlin.io.path.deleteIfExists
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.toKotlinUuid
@@ -431,6 +432,7 @@ fun importService(
                         if (edition.format == BookFormat.EBOOK)
                             StagedEditionMetadata(
                                 storagePath = bookStoragePath.value,
+                                fileHash = edition.fileHash,
                                 isbn13 = edition.isbn13?.value,
                                 isbn10 = edition.isbn10?.value,
                                 asin = edition.asin?.value,
@@ -441,6 +443,7 @@ fun importService(
                         if (edition.format == BookFormat.AUDIOBOOK)
                             StagedEditionMetadata(
                                 storagePath = bookStoragePath.value,
+                                fileHash = edition.fileHash,
                                 isbn13 = edition.isbn13?.value,
                                 isbn10 = edition.isbn10?.value,
                                 asin = edition.asin?.value,

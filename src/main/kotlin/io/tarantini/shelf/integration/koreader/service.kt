@@ -1,6 +1,8 @@
 package io.tarantini.shelf.integration.koreader
 
+import arrow.core.raise.context.raise
 import io.tarantini.shelf.RaiseContext
+import io.tarantini.shelf.catalog.book.domain.BookNotFound
 import io.tarantini.shelf.catalog.metadata.persistence.MetadataQueries
 import io.tarantini.shelf.integration.koreader.domain.KoReaderProgress
 import io.tarantini.shelf.integration.koreader.domain.ProgressPayload
@@ -42,14 +44,15 @@ fun koreaderSyncService(koreaderQueries: KoreaderQueries, metadataQueries: Metad
             withContext(Dispatchers.IO) {
                 val edition =
                     metadataQueries.selectEditionByFileHash(payload.document).executeAsOneOrNull()
-                        ?: return@withContext // Ignore if book not found in Shelf
+                        ?: raise(BookNotFound)
 
                 val progressJson = Json.encodeToString(payload)
                 koreaderQueries.upsertProgress(
                     userId = userId,
                     editionId = edition.id,
-                    documentHash = payload.document,
+                    documentHash = payload.document ?: "",
                     progressData = progressJson,
                 )
+                Unit
             }
     }

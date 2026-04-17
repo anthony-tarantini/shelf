@@ -18,14 +18,17 @@ import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.plugins.defaultheaders.DefaultHeaders
+import io.ktor.server.plugins.doublereceive.DoubleReceive
 import io.ktor.server.plugins.partialcontent.PartialContent
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
+import io.ktor.server.request.receiveText
 import io.ktor.server.request.userAgent
 import io.ktor.server.resources.Resources
 import io.tarantini.shelf.user.identity.domain.LoginUserRequest
 import java.security.MessageDigest
 import kotlin.uuid.ExperimentalUuidApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import org.slf4j.event.Level
@@ -48,6 +51,7 @@ fun Application.configure(deps: Dependencies) {
     if (deps.observability.config.metricsEnabled) {
         install(MicrometerMetrics) { registry = deps.observability.meterRegistry }
     }
+    install(DoubleReceive)
     install(CallLogging) {
         level = Level.INFO
         filter { call -> !isNoisyHealthPath(call.request.path()) }
@@ -60,6 +64,7 @@ fun Application.configure(deps: Dependencies) {
         mdc("x_real_ip") { it.request.headers["x-real-ip"] ?: "" }
         mdc("x_envoy_external_address") { it.request.headers["x-envoy-external-address"] ?: "" }
         mdc("user_agent") { it.request.userAgent() ?: "" }
+        format { call -> runBlocking { "Body: ${call.receiveText()}" } }
     }
     install(ContentNegotiation) {
         json(
