@@ -2,6 +2,7 @@
 
 package io.tarantini.shelf.catalog.opds
 
+import app.cash.sqldelight.db.SqlDriver
 import arrow.core.raise.context.either
 import arrow.core.raise.context.raise
 import io.ktor.http.ContentType
@@ -24,6 +25,7 @@ import kotlinx.serialization.serializer
 
 private const val MAX_PAGE_SIZE = 100
 
+context(_: SqlDriver)
 fun Route.opdsRoutes(opdsService: OpdsService) {
     sharedCatalogFeedAuth {
         get<OpdsResource.Catalog> { respondOpds { opdsService.getRootCatalog() } }

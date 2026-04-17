@@ -84,14 +84,28 @@ fun AuthorQueries.getAuthorsForSeries(
 }
 
 context(driver: SqlDriver)
-internal fun fuzzySearch(name: String): Query<AuthorSummary> {
+fun AuthorQueries.fuzzySearch(name: String): Query<AuthorSummary> {
     val sql =
         """
         WITH search AS (SELECT ?::text AS val)
-        SELECT id, name, imagePath, bookCount
+        SELECT 
+            id, 
+            name, 
+            imagePath,
+            bookCount,
+            -- We calculate both for ranking
+            similarity(name, search.val) AS total_score,
+            word_similarity(search.val, name) AS word_score
         FROM authorSummaries, search
-        WHERE similarity(name, search.val) > 0.3
-        ORDER BY similarity(name, search.val) DESC
+        WHERE 
+            -- Show results that pass EITHER threshold
+            similarity(name, search.val) > 0.3
+            OR search.val <% name -- The word_similarity operator
+        ORDER BY 
+            word_score DESC,   -- Prioritize finding the exact phrase/word
+            total_score DESC,  -- Then prioritize the "cleanest" overall match
+            name ASC
+        LIMIT 20;
         """
             .trimIndent()
 

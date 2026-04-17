@@ -2,6 +2,11 @@
 
 package io.tarantini.shelf.catalog.series
 
+import app.cash.sqldelight.Query
+import app.cash.sqldelight.Query.Listener
+import app.cash.sqldelight.db.QueryResult
+import app.cash.sqldelight.db.SqlCursor
+import app.cash.sqldelight.db.SqlDriver
 import arrow.core.raise.context.raise
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.author.domain.AuthorId
@@ -79,6 +84,54 @@ fun SeriesQueries.getCoverPaths(seriesIds: List<SeriesId>): Map<SeriesId, Storag
         .executeAsList()
         .groupBy({ it.first }, { it.second })
         .mapValues { (_, coverPaths) -> coverPaths.first() }
+}
+
+context(driver: SqlDriver)
+fun SeriesQueries.fuzzySearch(name: String): Query<SeriesSummary> {
+    val sql =
+        """
+        WITH search AS (SELECT ?::text AS val)
+        SELECT 
+            id, 
+            title, 
+            -- We calculate both for ranking
+            similarity(title, search.val) AS total_score,
+            word_similarity(search.val, title) AS word_score
+        FROM series, search
+        WHERE 
+            -- Show results that pass EITHER threshold
+            similarity(title, search.val) > 0.3
+            OR search.val <% title -- The word_similarity operator
+        ORDER BY 
+            word_score DESC,   -- Prioritize finding the exact phrase/word
+            total_score DESC,  -- Then prioritize the "cleanest" overall match
+            title ASC
+        LIMIT 20;
+        """
+            .trimIndent()
+
+    return object :
+        Query<SeriesSummary>({ cursor ->
+            SeriesSummary(
+                id = SeriesId.fromRaw(cursor.getString(0)!!),
+                name = cursor.getString(1)!!,
+                coverPath = null,
+                bookCount = 0,
+                ebookCount = 0,
+            )
+        }) {
+        override fun <R> execute(mapper: (SqlCursor) -> QueryResult<R>): QueryResult<R> {
+            return driver.executeQuery(null, sql, mapper, 1) { bindString(0, name) }
+        }
+
+        override fun addListener(listener: Listener) {
+            driver.addListener("fuzzySearch", listener = listener)
+        }
+
+        override fun removeListener(listener: Listener) {
+            driver.removeListener("fuzzySearch", listener = listener)
+        }
+    }
 }
 
 private fun mapSeriesSummary(

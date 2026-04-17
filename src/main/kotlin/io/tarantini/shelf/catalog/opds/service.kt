@@ -2,6 +2,7 @@
 
 package io.tarantini.shelf.catalog.opds
 
+import app.cash.sqldelight.db.SqlDriver
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.author.AuthorService
@@ -39,7 +40,7 @@ interface OpdsService {
     context(_: RaiseContext)
     suspend fun getOpenSearchDescription(): OpenSearchDescription
 
-    context(_: RaiseContext)
+    context(_: RaiseContext, _: SqlDriver)
     suspend fun searchBooksFeed(query: String, page: Int, size: Int): OpdsFeed
 }
 
@@ -319,7 +320,7 @@ fun opdsService(
             )
         }
 
-        context(_: RaiseContext)
+        context(_: RaiseContext, _: SqlDriver)
         override suspend fun searchBooksFeed(query: String, page: Int, size: Int): OpdsFeed {
             val updated = now()
             val searchResult = searchService.search(query)

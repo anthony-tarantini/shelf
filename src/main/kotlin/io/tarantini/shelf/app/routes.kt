@@ -52,7 +52,7 @@ fun Application.routes(deps: Dependencies) = routing {
         deps.observability,
     )
     metadataRoutes(deps.metadataService, deps.jwtService)
-    searchRoutes(deps.searchService, deps.activityService, deps.jwtService)
+    with(deps.sqlDriver) { searchRoutes(deps.searchService, deps.activityService, deps.jwtService) }
     seriesRoutes(
         deps.seriesService,
         deps.bookService,
@@ -61,7 +61,7 @@ fun Application.routes(deps: Dependencies) = routing {
         deps.storageService,
         deps.jwtService,
     )
-    opdsRoutes(deps.opdsService)
+    with(deps.sqlDriver) { opdsRoutes(deps.opdsService) }
     libraryRoutes(deps.jwtService, deps.libraryService, deps.bookService)
     importRoutes(deps.importService, deps.jwtService, deps.userService)
     with(deps.database) {

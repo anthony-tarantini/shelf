@@ -1,5 +1,6 @@
 package io.tarantini.shelf.app
 
+import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.asJdbcDriver
 import arrow.fx.coroutines.ResourceScope
 import com.apollographql.apollo.ApolloClient
@@ -25,6 +26,8 @@ import io.tarantini.shelf.integration.core.ExternalMetadataProvider
 import io.tarantini.shelf.integration.hardcover.hardcover
 import io.tarantini.shelf.integration.koreader.KoreaderAuthService
 import io.tarantini.shelf.integration.koreader.KoreaderSyncService
+import io.tarantini.shelf.integration.koreader.koreaderAuthService
+import io.tarantini.shelf.integration.koreader.koreaderSyncService
 import io.tarantini.shelf.observability.Observability
 import io.tarantini.shelf.observability.observability
 import io.tarantini.shelf.organization.library.LibraryService
@@ -74,6 +77,7 @@ class Dependencies(
     val authCache: AuthCache,
     val storagePath: String,
     val database: Database,
+    val sqlDriver: SqlDriver,
     val env: Env,
     val externalMetadataProvider: ExternalMetadataProvider,
     val observability: Observability,
@@ -139,17 +143,8 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
         val activityService = activityService(activityQueries)
-        val koreaderSyncService =
-            io.tarantini.shelf.integration.koreader.koreaderSyncService(
-                koreaderQueries,
-                metadataQueries,
-            )
-        val koreaderAuthService =
-            io.tarantini.shelf.integration.koreader.koreaderAuthService(
-                koreaderQueries,
-                userService,
-                tokenService,
-            )
+        val koreaderSyncService = koreaderSyncService(koreaderQueries, metadataQueries)
+        val koreaderAuthService = koreaderAuthService(koreaderQueries, userService, tokenService)
 
         val valkeyUrl = env.valkey.url
         val (stagedStore, authCache) =
@@ -223,6 +218,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             authCache,
             storagePath,
             sqlDelight,
+            hikari.asJdbcDriver(),
             env,
             externalMetadataProvider,
             observability,

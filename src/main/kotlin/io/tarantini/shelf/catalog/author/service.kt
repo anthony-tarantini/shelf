@@ -105,7 +105,9 @@ fun authorService(sqlDriver: SqlDriver, authorQueries: AuthorQueries, bookQuerie
 
         context(_: RaiseContext)
         override suspend fun searchAuthorFuzzy(name: String): List<AuthorSummary> =
-            withContext(Dispatchers.IO) { with(sqlDriver) { fuzzySearch(name).executeAsList() } }
+            withContext(Dispatchers.IO) {
+                with(sqlDriver) { authorQueries.fuzzySearch(name).executeAsList() }
+            }
 
         context(_: RaiseContext)
         override suspend fun getAuthorsForBooks(bookIds: List<BookId>) =

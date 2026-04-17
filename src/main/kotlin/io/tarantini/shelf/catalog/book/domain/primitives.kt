@@ -28,6 +28,8 @@ value class BookId private constructor(override val value: Uuid) : UuidValueClas
 
         fun fromRaw(value: Uuid) = BookId(value)
 
+        fun fromRaw(value: String) = BookId(Uuid.parse(value))
+
         fun fromRaw(value: UUID) = BookId(value.toKotlinUuid())
 
         val adapter = object : UuidAdapter<BookId>(::fromRaw) {}
