@@ -5,6 +5,7 @@ package io.tarantini.shelf.catalog.series
 import arrow.core.raise.context.ensure
 import arrow.core.raise.either
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.server.request.receive
@@ -12,6 +13,7 @@ import io.ktor.server.resources.delete
 import io.ktor.server.resources.get
 import io.ktor.server.resources.post
 import io.ktor.server.resources.put
+import io.ktor.server.response.header
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.tarantini.shelf.app.AppError
@@ -42,6 +44,7 @@ fun Route.seriesRoutes(
     jwtService: JwtService,
 ) {
     suspend fun RoutingContext.respondCover(path: StoragePath) {
+        call.response.header(HttpHeaders.CacheControl, "public, max-age=86400")
         respondEither {
             val (length, channel) = storageService.getReadChannel(path)
             object : OutgoingContent.ReadChannelContent() {

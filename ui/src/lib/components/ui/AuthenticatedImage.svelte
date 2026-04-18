@@ -65,4 +65,6 @@
 
 {#if objectUrl}
     <img src={objectUrl} {alt} class={className} />
+{:else}
+    <div class={className}></div>
 {/if}

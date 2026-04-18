@@ -47,6 +47,7 @@ fun Route.bookRoutes(
     observability: Observability,
 ) {
     suspend fun RoutingContext.respondCover(path: StoragePath) {
+        call.response.header(HttpHeaders.CacheControl, "public, max-age=86400")
         respondEither {
             val (length, channel) = storageService.getReadChannel(path)
             object : OutgoingContent.ReadChannelContent() {

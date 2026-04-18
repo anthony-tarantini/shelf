@@ -14,6 +14,7 @@ import io.ktor.server.resources.delete
 import io.ktor.server.resources.get
 import io.ktor.server.resources.post
 import io.ktor.server.resources.put
+import io.ktor.server.response.header
 import io.ktor.server.routing.Route
 import io.ktor.utils.io.jvm.javaio.toInputStream
 import io.tarantini.shelf.app.Request
@@ -126,6 +127,7 @@ fun Route.authorRoutes(
     // Serve author image
     get<AuthorsResource.Id.Image> { resource ->
         sharedCatalogRead(jwtService) {
+            call.response.header(HttpHeaders.CacheControl, "public, max-age=86400")
             respondEither {
                 val author = either { authorService.getAuthor(AuthorId(resource.id)) }.bind()
                 val path = author.imagePath ?: raise(HttpStatusCode.NotFound)
