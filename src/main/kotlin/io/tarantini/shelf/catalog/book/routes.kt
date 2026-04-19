@@ -9,6 +9,7 @@ import io.ktor.http.content.OutgoingContent
 import io.ktor.server.request.receive
 import io.ktor.server.resources.delete
 import io.ktor.server.resources.get
+import io.ktor.server.resources.patch
 import io.ktor.server.resources.put
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
@@ -19,6 +20,7 @@ import io.tarantini.shelf.app.Request
 import io.tarantini.shelf.app.respond
 import io.tarantini.shelf.catalog.author.AuthorService
 import io.tarantini.shelf.catalog.book.domain.BookId
+import io.tarantini.shelf.catalog.book.domain.UpdateBookMetadataRequest
 import io.tarantini.shelf.catalog.metadata.domain.ebookMimeType
 import io.tarantini.shelf.catalog.series.SeriesService
 import io.tarantini.shelf.observability.Observability
@@ -264,6 +266,16 @@ fun Route.bookRoutes(
                     mapOf("message" to "Progress saved")
                 })
             }
+        }
+    }
+
+    patch<BooksResource.Id.Metadata> { resource ->
+        sharedCatalogMutation(jwtService) {
+            val req = call.receive<Request<UpdateBookMetadataRequest>>().data
+            respond({
+                bookService.updateBookMetadata(BookId(resource.id), req)
+                mapOf("message" to "Metadata updated")
+            })
         }
     }
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
     import {type AuthorRoot, type BookSeriesEntry, MediaType} from '$lib/types/models';
+    import {bookAggregateToView} from '$lib/types/metadata';
     import {safeHtml} from "$lib/actions/safeHtml";
     import {t} from '$lib/i18n';
     import {api} from '$lib/api/client';
@@ -9,6 +10,7 @@
     import BookHeader from '$lib/components/book/BookHeader.svelte';
     import BookSidebar from '$lib/components/book/BookSidebar.svelte';
     import BookChapters from '$lib/components/book/BookChapters.svelte';
+    import MetadataManager from '$lib/components/metadata/MetadataManager.svelte';
     import LoadingState from '$lib/components/ui/LoadingState/LoadingState.svelte';
     import StatusBanner from '$lib/components/ui/StatusBanner.svelte';
 
@@ -31,8 +33,10 @@
     const mediaType = $derived(primaryEdition?.format ?? MediaType.EBOOK);
 
     let editMode = $state(false);
+    let metadataMode = $state(false);
     let processing = $state(false);
     let error = $state<string | null>(null);
+    const metadataBookView = $derived(details ? bookAggregateToView(details) : null);
     let initialFormData = $derived<BookMetadataFormState>({
         id: book?.id || '',
         title: book?.title || '',
@@ -56,6 +60,13 @@
 
     function toggleEdit() {
         editMode = !editMode;
+        metadataMode = false;
+        error = null;
+    }
+
+    function toggleMetadata() {
+        metadataMode = !metadataMode;
+        editMode = false;
         error = null;
     }
 
@@ -86,7 +97,7 @@
     }
 </script>
 
-<div class="mx-auto max-w-6xl">
+<div class="mx-auto max-w-6xl w-full overflow-hidden">
     {#if details && book}
         <BookHeader
                 title={book.title}
@@ -95,7 +106,9 @@
                 isAudiobook={hasAudiobook}
                 narrator={audiobookEdition?.narrator}
                 {editMode}
+                {metadataMode}
                 onEditToggle={toggleEdit}
+                onFetchMetadata={toggleMetadata}
         />
 
         {#if error}
@@ -105,18 +118,6 @@
         {/if}
 
         <div class="grid grid-cols-1 gap-8 md:grid-cols-[280px_1fr] md:gap-10 lg:grid-cols-[300px_1fr] lg:gap-12">
-            {#if editMode}
-                <div class="col-span-full">
-                    {#key book.id}
-                        <BookMetadataForm
-                                initialData={initialFormData}
-                                {processing}
-                                onSave={handleSave}
-                                onCancel={toggleEdit}
-                        />
-                    {/key}
-                </div>
-            {:else}
                 <BookSidebar
                     bookId={book.id}
                     coverPath={book.coverPath}
@@ -125,29 +126,50 @@
                     userState={details.userState}
                 />
 
-                <main class="space-y-8 sm:space-y-10">
-                    {#if primaryRecord?.description}
-                        <section>
-                            <h2 class="text-xl font-bold text-primary mb-4 flex items-center">
-                                {$t('books.about')}
-                                <span class="h-px bg-card flex-1 ml-4"></span>
-                            </h2>
-                            <div class="prose prose-invert max-w-none whitespace-pre-wrap text-base leading-relaxed text-muted-foreground sm:text-lg">
-                                <span use:safeHtml={primaryRecord?.description}></span>
-                            </div>
-                        </section>
-                    {/if}
+                <main class="space-y-8 sm:space-y-10 min-h-[60vh] min-w-0">
+                    {#if editMode}
+                        {#key book.id}
+                            <BookMetadataForm
+                                    initialData={initialFormData}
+                                    {processing}
+                                    onSave={handleSave}
+                                    onCancel={toggleEdit}
+                            />
+                        {/key}
+                    {:else if metadataMode && metadataBookView}
+                        {#key book.id}
+                            <MetadataManager
+                                    book={metadataBookView}
+                                    onCancel={() => metadataMode = false}
+                                    onApplySuccess={async () => { metadataMode = false; await invalidateAll(); }}
+                                    onError={(msg) => error = msg}
+                                    onApply={(payload) => api.patch(`/books/${book.id}/metadata`, payload)}
+                                    coverApiPath={`/api/books/${book.id}/cover`}
+                            />
+                        {/key}
+                    {:else}
+                        {#if primaryRecord?.description}
+                            <section>
+                                <h2 class="text-xl font-bold text-primary mb-4 flex items-center">
+                                    {$t('books.about')}
+                                    <span class="h-px bg-card flex-1 ml-4"></span>
+                                </h2>
+                                <div class="prose prose-invert max-w-none whitespace-pre-wrap text-base leading-relaxed text-muted-foreground sm:text-lg">
+                                    <span use:safeHtml={primaryRecord?.description}></span>
+                                </div>
+                            </section>
+                        {/if}
 
-                    <BookFileList
-                            {book}
-                            {editions}
-                    />
+                        <BookFileList
+                                {book}
+                                {editions}
+                        />
 
-                    {#if metadata}
-                        <BookChapters metadata={metadata} mediaType={hasAudiobook ? MediaType.AUDIOBOOK : mediaType} />
+                        {#if metadata}
+                            <BookChapters metadata={metadata} mediaType={hasAudiobook ? MediaType.AUDIOBOOK : mediaType} />
+                        {/if}
                     {/if}
                 </main>
-            {/if}
         </div>
     {:else}
         <LoadingState title={$t('books.loading_detail')} message={$t('books.loading')} />

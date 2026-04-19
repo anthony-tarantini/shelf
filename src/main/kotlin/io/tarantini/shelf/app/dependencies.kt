@@ -139,6 +139,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 authorQueries,
                 seriesQueries,
                 storageService,
+                metadataQueries,
             )
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)

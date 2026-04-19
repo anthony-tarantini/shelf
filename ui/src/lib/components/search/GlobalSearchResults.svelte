@@ -41,7 +41,7 @@
                                 <div class="w-10 h-14 bg-muted rounded shadow-sm overflow-hidden shrink-0">
                                     {#if book.coverPath}
                                         <AuthenticatedImage
-                                            src={`/api/books/${book.id}/cover`}
+                                            src={`/api/books/${book.id}/cover?v=${encodeURIComponent(book.coverPath)}`}
                                             alt=""
                                             class="w-full h-full object-cover"
                                         />

@@ -89,7 +89,7 @@
 					<div class="aspect-2/3 relative bg-background">
 						{#if book.coverPath}
 							<AuthenticatedImage
-								src={`/api/books/${book.id}/cover`}
+								src={`/api/books/${book.id}/cover?v=${encodeURIComponent(book.coverPath)}`}
 								alt={book.title}
 								class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
 							/>

@@ -123,12 +123,13 @@
 				onDelete={() => { clearError(); showDeleteConfirm = true; }}
 			>
 				{#if viewMode === 'metadata'}
-					<MetadataManager 
-						{book} 
+					<MetadataManager
+						{book}
 						bind:isFetching={isFetchingMetadata}
 						onCancel={() => viewMode = 'display'}
 						onApplySuccess={async () => { viewMode = 'display'; onActionSuccess?.(); await invalidateAll(); }}
 						onError={handleError}
+						onApply={(payload) => api.patch(`/books/staged/${book.id}/update`, payload)}
 					/>
 				{/if}
 			</StagedBookDisplay>

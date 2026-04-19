@@ -84,7 +84,7 @@
                                 <div class="h-16 w-11 shrink-0 overflow-hidden rounded-lg border border-border bg-muted shadow-sm">
                                     {#if libBook.coverPath}
                                         <AuthenticatedImage
-                                            src={`/api/books/${libBook.id}/cover`}
+                                            src={`/api/books/${libBook.id}/cover?v=${encodeURIComponent(libBook.coverPath)}`}
                                             alt=""
                                             class="w-full h-full object-cover"
                                         />

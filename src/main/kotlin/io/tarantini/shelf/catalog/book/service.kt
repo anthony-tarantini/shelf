@@ -4,20 +4,33 @@ package io.tarantini.shelf.catalog.book
 
 import arrow.core.raise.context.ensureNotNull
 import io.tarantini.shelf.RaiseContext
+import io.tarantini.shelf.app.Identity
 import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.author.BookAuthorProvider
+import io.tarantini.shelf.catalog.author.createAuthor
 import io.tarantini.shelf.catalog.author.domain.AuthorId
+import io.tarantini.shelf.catalog.author.getAuthorById
+import io.tarantini.shelf.catalog.author.linkBook
 import io.tarantini.shelf.catalog.book.domain.*
 import io.tarantini.shelf.catalog.book.persistence.BookQueries
 import io.tarantini.shelf.catalog.metadata.MetadataProvider
+import io.tarantini.shelf.catalog.metadata.domain.ASIN
 import io.tarantini.shelf.catalog.metadata.domain.BookFormat
 import io.tarantini.shelf.catalog.metadata.domain.EditionNotFound
+import io.tarantini.shelf.catalog.metadata.domain.ISBN10
+import io.tarantini.shelf.catalog.metadata.domain.ISBN13
+import io.tarantini.shelf.catalog.metadata.domain.NewMetadataRoot
 import io.tarantini.shelf.catalog.metadata.domain.SavedEdition
+import io.tarantini.shelf.catalog.metadata.persistence.MetadataQueries
+import io.tarantini.shelf.catalog.metadata.saveMetadata
 import io.tarantini.shelf.catalog.series.BookSeriesProvider
+import io.tarantini.shelf.catalog.series.createSeries
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.organization.library.domain.LibraryId
+import io.tarantini.shelf.processing.storage.FileBytes
 import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.processing.storage.StorageService
+import io.tarantini.shelf.processing.storage.fetchRemoteImage
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -118,7 +131,12 @@ interface BookService :
         size: Int = 20,
         format: BookFormat? = null,
     ): BookPage
+
+    context(_: RaiseContext)
+    suspend fun updateBookMetadata(id: BookId, request: UpdateBookMetadataRequest)
 }
+
+private val ALLOWED_COVER_HOSTS = listOf("hardcover.app")
 
 fun bookService(
     bookQueries: BookQueries,
@@ -128,6 +146,7 @@ fun bookService(
     authorQueries: io.tarantini.shelf.catalog.author.persistence.AuthorQueries,
     seriesQueries: io.tarantini.shelf.catalog.series.persistence.SeriesQueries,
     storageService: StorageService,
+    metadataQueries: MetadataQueries,
 ) =
     object : BookService {
         context(_: RaiseContext)
@@ -468,5 +487,94 @@ fun bookService(
         context(_: RaiseContext)
         override suspend fun linkAuthor(bookId: BookId, authorId: AuthorId) {
             withContext(Dispatchers.IO) { bookQueries.insertBookAuthor(bookId, authorId) }
+        }
+
+        context(_: RaiseContext)
+        override suspend fun updateBookMetadata(id: BookId, request: UpdateBookMetadataRequest) {
+            // Handle cover URL outside transaction (suspend call)
+            var newCoverPath: StoragePath? = null
+            if (!request.coverUrl.isNullOrBlank()) {
+                val (bytes, extension) = fetchRemoteImage(request.coverUrl, ALLOWED_COVER_HOSTS)
+                val coverStoragePath = StoragePath.fromRaw("books/${id.value}/cover.$extension")
+                storageService.save(coverStoragePath, FileBytes(bytes))
+                newCoverPath = coverStoragePath
+            }
+
+            withContext(Dispatchers.IO) {
+                bookQueries.transactionWithResult {
+                    val existing = bookQueries.getBookById(id)
+
+                    // 1. Update book title and/or cover
+                    val newTitle = request.title ?: existing.title
+                    val coverPath = newCoverPath ?: existing.coverPath
+                    if (request.title != null || newCoverPath != null) {
+                        bookQueries.update(newTitle, coverPath, id)
+                    }
+
+                    // 2. Update metadata record (description, publisher, publishYear, genres, moods)
+                    metadataQueries.saveMetadata(
+                        NewMetadataRoot(
+                            id = Identity.Unsaved,
+                            bookId = id,
+                            title = newTitle,
+                            description = request.description,
+                            publisher = request.publisher,
+                            published = request.publishYear,
+                            language = null,
+                            genres = request.genres ?: emptyList(),
+                            moods = request.moods ?: emptyList(),
+                        )
+                    )
+
+                    // 3. Update edition identifiers
+                    if (request.ebookMetadata != null) {
+                        metadataQueries.updateEditionIdentifiers(
+                            isbn10 = request.ebookMetadata.isbn10?.let { ISBN10.fromRaw(it) },
+                            isbn13 = request.ebookMetadata.isbn13?.let { ISBN13.fromRaw(it) },
+                            asin = request.ebookMetadata.asin?.let { ASIN.fromRaw(it) },
+                            narrator = null,
+                            bookId = id,
+                            format = BookFormat.EBOOK,
+                        )
+                    }
+                    if (request.audiobookMetadata != null) {
+                        metadataQueries.updateEditionIdentifiers(
+                            isbn10 = request.audiobookMetadata.isbn10?.let { ISBN10.fromRaw(it) },
+                            isbn13 = request.audiobookMetadata.isbn13?.let { ISBN13.fromRaw(it) },
+                            asin = request.audiobookMetadata.asin?.let { ASIN.fromRaw(it) },
+                            narrator = request.audiobookMetadata.narrator,
+                            bookId = id,
+                            format = BookFormat.AUDIOBOOK,
+                        )
+                    }
+
+                    // 4. Re-link authors
+                    if (request.authors != null) {
+                        bookQueries.deleteBookAuthor(id)
+                        val authorIds = request.authors.map { authorName ->
+                            val selectedId = request.selectedAuthorIds?.get(authorName)
+                            val authorId = if (selectedId != null) {
+                                authorQueries.getAuthorById(AuthorId(selectedId)).id.id
+                            } else {
+                                authorQueries.createAuthor(authorName.trim())
+                            }
+                            bookQueries.insertBookAuthor(id, authorId)
+                            authorId
+                        }
+
+                        // 5. Re-link series
+                        if (request.series != null) {
+                            bookQueries.deleteBookSeries(id)
+                            request.series.forEach { s ->
+                                val seriesId = seriesQueries.createSeries(s.name)
+                                bookQueries.linkSeries(id, seriesId, s.index ?: 0.0)
+                                authorIds.forEach { authorId ->
+                                    seriesQueries.insertSeriesAuthor(seriesId, authorId)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }

@@ -55,7 +55,7 @@
                     <a href={resolve(`/books/${book.book.id}`)} class="block">
                         {#if book.book.coverPath}
                             <AuthenticatedImage
-                                src={`/api/books/${book.book.id}/cover`}
+                                src={`/api/books/${book.book.id}/cover?v=${encodeURIComponent(book.book.coverPath)}`}
                                 alt=""
                                 class="w-10 h-14 object-cover rounded shadow-sm bg-background hover:opacity-80 transition-opacity"
                             />

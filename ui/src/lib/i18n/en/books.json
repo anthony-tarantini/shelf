@@ -11,7 +11,8 @@
     "by": "by",
     "unknown_author": "Unknown Author",
     "narrated_by": "Narrated by",
-    "edit_metadata": "Edit Metadata"
+    "edit_metadata": "Edit Metadata",
+    "fetch_metadata": "Fetch Metadata"
   },
   "sidebar": {
     "publisher": "Publisher",

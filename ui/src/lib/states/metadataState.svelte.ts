@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
-import type {StagedBook, StagedSeries, StagedEditionMetadata} from '$lib/types/models';
+import type {StagedSeries, StagedEditionMetadata} from '$lib/types/models';
+import type {MetadataBookView} from '$lib/types/metadata';
 
 export class MetadataState {
     // 1. We define the state fields
@@ -15,9 +16,9 @@ export class MetadataState {
     coverUrl = $state<string>();
 
     // Use a private field to store the "Source of Truth" getter
-    readonly #getBook: () => StagedBook;
+    readonly #getBook: () => MetadataBookView;
 
-    constructor(bookGetter: () => StagedBook) {
+    constructor(bookGetter: () => MetadataBookView) {
         this.#getBook = bookGetter;
 
         // 2. We use an effect INSIDE the class to keep things in sync.

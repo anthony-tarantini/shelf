@@ -7,7 +7,8 @@
         mergedCoverUrl,
         externalCoverUrl,
         onUseExternal,
-        internalImageComponent
+        internalImageComponent,
+        internalCoverApiPath = `/api/books/staged/${bookId}/cover`
     } = $props<{
         bookId: string;
         originalCoverPath: string | null | undefined;
@@ -15,13 +16,14 @@
         externalCoverUrl: string | null | undefined;
         onUseExternal: () => void;
         internalImageComponent?: typeof import('$lib/components/ui/AuthenticatedImage.svelte').default;
+        internalCoverApiPath?: string;
     }>();
 
     let isInsecure = $derived(externalCoverUrl && !externalCoverUrl.startsWith('https://'));
 
     let internalMergedUrl = $derived.by(() => {
         if (!mergedCoverUrl) return null;
-        return mergedCoverUrl === originalCoverPath ? `/api/books/staged/${bookId}/cover` : null;
+        return mergedCoverUrl === originalCoverPath ? internalCoverApiPath : null;
     });
 
     const InternalImage = $derived(internalImageComponent);

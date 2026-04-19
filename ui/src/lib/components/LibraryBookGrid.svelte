@@ -37,7 +37,7 @@
         <a href={resolve(`/books/${id}`)} class="bg-card/80 border border-border rounded-[1.5rem] p-3 shadow-xl hover:border-primary/50 hover:-translate-y-1 transition-all group flex items-center gap-4">
             <div class="w-20 h-28 shrink-0 rounded-lg overflow-hidden bg-background isolate">
                 {#if coverPath}
-                    <AuthenticatedImage src={`/api/books/${id}/cover`} alt={title} class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <AuthenticatedImage src={`/api/books/${id}/cover?v=${encodeURIComponent(coverPath)}`} alt={title} class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 {:else}
                     <div class="flex h-full w-full items-center justify-center text-[9px] font-bold text-muted-foreground text-center p-1 leading-tight">
                         {title}

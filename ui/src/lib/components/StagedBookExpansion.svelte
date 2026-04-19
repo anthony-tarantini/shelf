@@ -1,5 +1,6 @@
 <script lang="ts">
     import {t} from '$lib/i18n';
+    import {api} from '$lib/api/client';
     import {invalidateAll} from '$app/navigation';
     import type {StagedBook} from '../types/models.ts';
     import StagedBookEditor from './StagedBookEditor.svelte';
@@ -64,6 +65,7 @@
                         onCancel={onClose}
                         onApplySuccess={async () => { onClose(); onActionSuccess?.(); await invalidateAll(); }}
                         onError={onError}
+                        onApply={(payload) => api.patch(`/books/staged/${book.id}/update`, payload)}
                 />
             {/if}
         </div>

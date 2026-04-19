@@ -1,6 +1,7 @@
 <script lang="ts">
     import {api} from '../../api/client.ts';
-    import type {StagedBook, ExternalMetadata} from '../../types/models.ts';
+    import type {ExternalMetadata} from '../../types/models.ts';
+    import type {MetadataBookView} from '../../types/metadata.ts';
     import {MetadataState} from '../../states/metadataState.svelte.js';
     import { t } from '$lib/i18n';
 
@@ -9,11 +10,13 @@
     import MetadataComparisonTable from './MetadataComparisonTable.svelte';
 
     interface Props {
-        book: StagedBook;
+        book: MetadataBookView;
         onCancel: () => void;
         onApplySuccess: () => void;
         onError: (msg: string) => void;
+        onApply: (payload: any) => Promise<{left?: {message: string}}>;
         isFetching?: boolean;
+        coverApiPath?: string;
     }
 
     let {
@@ -21,7 +24,9 @@
         onCancel,
         onApplySuccess,
         onError,
-        isFetching = $bindable(false)
+        onApply,
+        isFetching = $bindable(false),
+        coverApiPath
     }: Props = $props();
 
     // --- Central State ---
@@ -76,7 +81,7 @@
     }
 </script>
 
-<div class="mt-6 p-4 bg-background border border-border rounded-md">
+<div class="mt-6 p-4 bg-background border border-border rounded-md min-h-[400px]">
 
     {#if metadataSearchError}
         <div class="bg-destructive/20 border border-destructive text-destructive-foreground px-4 py-3 rounded-md text-sm mb-4">
@@ -94,6 +99,8 @@
                 onBack={() => selectedExternal = undefined}
                 {onApplySuccess}
                 {onError}
+                {onApply}
+                {coverApiPath}
         />
     {:else if metadataResults}
         <MetadataResultsGrid

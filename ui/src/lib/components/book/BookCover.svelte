@@ -17,7 +17,7 @@
 <div class="{aspectRatio} bg-card rounded-lg shadow-2xl overflow-hidden border border-border relative mb-8">
     {#if coverPath}
         <AuthenticatedImage
-            src={`/api/books/${bookId}/cover`}
+            src={`/api/books/${bookId}/cover?v=${encodeURIComponent(coverPath)}`}
             alt={title}
             class="w-full h-full object-cover"
         />

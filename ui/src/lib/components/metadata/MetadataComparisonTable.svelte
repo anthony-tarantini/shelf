@@ -1,9 +1,9 @@
 <script lang="ts">
-    import {api} from '$lib/api/client';
     import { t } from '$lib/i18n';
     import AuthenticatedImage from '$lib/components/ui/AuthenticatedImage.svelte';
     import { getExternalAuthorNames } from '$lib/utils/externalMetadata';
-    import type {ExternalContributor, ExternalGenre, ExternalMetadata, StagedBook, StagedSeries} from '$lib/types/models';
+    import type {ExternalContributor, ExternalGenre, ExternalMetadata, StagedSeries} from '$lib/types/models';
+    import type {MetadataBookView} from '$lib/types/metadata';
     import type {MetadataState} from '$lib/states/metadataState.svelte.js';
     import {ChipRow, CoverRow, DescriptionRow, IdentifierGroupRow, SeriesListRow, TextRow} from '../comparison';
 
@@ -13,14 +13,18 @@
         external,
         onBack,
         onApplySuccess,
-        onError
+        onError,
+        onApply,
+        coverApiPath
     } = $props<{
-        book: StagedBook;
+        book: MetadataBookView;
         state: MetadataState;
         external: ExternalMetadata;
         onBack: () => void;
         onApplySuccess: () => void;
         onError: (msg: string) => void;
+        onApply: (payload: any) => Promise<{left?: {message: string}}>;
+        coverApiPath?: string;
     }>();
 
     let processing = $state(false);
@@ -47,7 +51,7 @@
         try {
             const updatePayload = passedState.getUpdatePayload();
 
-            const result = await api.patch<void>(`/books/staged/${book.id}/update`, updatePayload);
+            const result = await onApply(updatePayload);
             if (result.left) {
                 onError(result.left.message);
             } else {
@@ -96,6 +100,7 @@
                 mergedCoverUrl={passedState.coverUrl}
                 externalCoverUrl={external.imageUrl}
                 onUseExternal={() => passedState.coverUrl = external.imageUrl}
+                internalCoverApiPath={coverApiPath}
                 internalImageComponent={AuthenticatedImage}
         />
 
