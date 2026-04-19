@@ -2,6 +2,7 @@
     import { t } from '$lib/i18n';
     import type { StagedSeries } from '$lib/types/models';
     import FormField from '$lib/components/ui/FormField.svelte';
+    import SeriesAutocomplete from './SeriesAutocomplete.svelte';
 
     interface Props {
         bookId: string;
@@ -30,15 +31,12 @@
         <p class="text-xs text-muted-foreground italic mb-2">{$t('books.metadata.series.no_series')}</p>
     {/if}
     <div class="space-y-2">
-        {#each seriesList as series, idx (series.name)}
+        {#each seriesList as series, idx (idx)}
             <div class="flex gap-2 items-center">
-                <label for="series-name-{bookId}-{idx}" class="sr-only">{$t('books.metadata.series.series_name')}</label>
-                <input
+                <SeriesAutocomplete
                     id="series-name-{bookId}-{idx}"
-                    type="text"
                     placeholder={$t('books.metadata.series.series_name')}
                     bind:value={series.name}
-                    class="ui-input-sm flex-1"
                 />
                 <label for="series-index-{bookId}-{idx}" class="sr-only">{$t('books.metadata.series.series_index')}</label>
                 <input

@@ -51,10 +51,12 @@
     "save_changes": "Save Changes",
     "cancel": "Cancel",
     "author": {
-      "title": "Authors (comma separated)",
+      "title": "Authors",
+      "placeholder": "Add author...",
       "unlink": "Unlink Author",
       "linked": "Linked",
-      "suggestions": "Suggestions:"
+      "suggestions": "Suggestions:",
+      "suggestions_for": "Suggestions for"
     },
     "series": {
       "title": "Series",

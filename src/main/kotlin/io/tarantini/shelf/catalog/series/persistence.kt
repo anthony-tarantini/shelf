@@ -94,10 +94,12 @@ fun SeriesQueries.fuzzySearch(name: String): Query<SeriesSummary> {
         SELECT 
             id, 
             title, 
+            bookCount,
+            ebookCount,
             -- We calculate both for ranking
             similarity(title, search.val) AS total_score,
             word_similarity(search.val, title) AS word_score
-        FROM series, search
+        FROM seriesSummaries, search
         WHERE 
             -- Show results that pass EITHER threshold
             similarity(title, search.val) > 0.3
@@ -116,8 +118,8 @@ fun SeriesQueries.fuzzySearch(name: String): Query<SeriesSummary> {
                 id = SeriesId.fromRaw(cursor.getString(0)!!),
                 name = cursor.getString(1)!!,
                 coverPath = null,
-                bookCount = 0,
-                ebookCount = 0,
+                bookCount = cursor.getLong(2)!!.toInt(),
+                ebookCount = cursor.getLong(3)!!.toInt(),
             )
         }) {
         override fun <R> execute(mapper: (SqlCursor) -> QueryResult<R>): QueryResult<R> {

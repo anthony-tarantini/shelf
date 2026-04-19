@@ -10,7 +10,6 @@ import io.tarantini.shelf.catalog.author.BookAuthorProvider
 import io.tarantini.shelf.catalog.author.createAuthor
 import io.tarantini.shelf.catalog.author.domain.AuthorId
 import io.tarantini.shelf.catalog.author.getAuthorById
-import io.tarantini.shelf.catalog.author.linkBook
 import io.tarantini.shelf.catalog.book.domain.*
 import io.tarantini.shelf.catalog.book.persistence.BookQueries
 import io.tarantini.shelf.catalog.metadata.MetadataProvider
@@ -511,7 +510,8 @@ fun bookService(
                         bookQueries.update(newTitle, coverPath, id)
                     }
 
-                    // 2. Update metadata record (description, publisher, publishYear, genres, moods)
+                    // 2. Update metadata record (description, publisher, publishYear, genres,
+                    // moods)
                     metadataQueries.saveMetadata(
                         NewMetadataRoot(
                             id = Identity.Unsaved,
@@ -551,16 +551,18 @@ fun bookService(
                     // 4. Re-link authors
                     if (request.authors != null) {
                         bookQueries.deleteBookAuthor(id)
-                        val authorIds = request.authors.map { authorName ->
-                            val selectedId = request.selectedAuthorIds?.get(authorName)
-                            val authorId = if (selectedId != null) {
-                                authorQueries.getAuthorById(AuthorId(selectedId)).id.id
-                            } else {
-                                authorQueries.createAuthor(authorName.trim())
+                        val authorIds =
+                            request.authors.map { authorName ->
+                                val selectedId = request.selectedAuthorIds?.get(authorName)
+                                val authorId =
+                                    if (selectedId != null) {
+                                        authorQueries.getAuthorById(AuthorId(selectedId)).id.id
+                                    } else {
+                                        authorQueries.createAuthor(authorName.trim())
+                                    }
+                                bookQueries.insertBookAuthor(id, authorId)
+                                authorId
                             }
-                            bookQueries.insertBookAuthor(id, authorId)
-                            authorId
-                        }
 
                         // 5. Re-link series
                         if (request.series != null) {

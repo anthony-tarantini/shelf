@@ -36,22 +36,11 @@
 
     // Internal reactive copy
     let formData = $state<BookMetadataFormState>(JSON.parse(JSON.stringify(initialData)));
-    let authorsString = $state((initialData.authors || []).join(', '));
     let genresString = $state((initialData.genres || []).join(', '));
 
     $effect(() => {
         formData = JSON.parse(JSON.stringify(initialData));
-        authorsString = (initialData.authors || []).join(', ');
         genresString = (initialData.genres || []).join(', ');
-    });
-
-    // Sync authorsString to formData.authors
-    $effect(() => {
-        if (formData) {
-            formData.authors = authorsString.split(',')
-                .map((a: string) => a.trim())
-                .filter((a: string) => a.length > 0);
-        }
     });
 
     // Sync genresString to formData.genres
@@ -87,7 +76,7 @@
         </div>
         <AuthorInput
                 bookId={formData.id}
-                bind:authorsString
+                bind:authors={formData.authors}
                 bind:selectedAuthorIds={formData.selectedAuthorIds}
                 authorSuggestions={formData.authorSuggestions}
         />
