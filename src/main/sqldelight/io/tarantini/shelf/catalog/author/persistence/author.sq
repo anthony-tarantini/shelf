@@ -69,6 +69,10 @@ deleteById:
 DELETE FROM authors WHERE id = :id
 RETURNING id;
 
+deleteOrphanedAuthors:
+DELETE FROM authors
+WHERE NOT EXISTS (SELECT 1 FROM book_authors WHERE author = authors.id);
+
 updateImagePath:
 UPDATE authors SET image_path = :imagePath WHERE id = :id RETURNING id;
 

@@ -1,5 +1,6 @@
 <script lang="ts">
     import {t} from '$lib/i18n'
+    import { untrack } from 'svelte';
     import type {StagedSeries, StagedEditionMetadata, AuthorRoot} from '$lib/types/models';
     import AuthorInput from './AuthorInput.svelte';
     import SeriesInput from './SeriesInput.svelte';
@@ -34,15 +35,12 @@
         onCancel
     }: Props = $props();
 
-    // Internal reactive state
-    let formData = $state<BookMetadataFormState>(null!);
-    let genresString = $state('');
-
-    // Sync from props using $effect.pre to avoid warning and ensure data is ready for render
-    $effect.pre(() => {
-        formData = JSON.parse(JSON.stringify(initialData));
-        genresString = (initialData.genres || []).join(', ');
-    });
+    // Internal reactive state initialized once. 
+    // We use untrack to satisfy Svelte 5 that we deliberately want a local copy that doesn't 
+    // automatically sync back if the prop changes (to avoid clobbering user edits).
+    // The component is wrapped in a {#key book.id} by its parents, so it remounts when the book changes.
+    let formData = $state<BookMetadataFormState>(untrack(() => JSON.parse(JSON.stringify(initialData))));
+    let genresString = $state(untrack(() => (initialData.genres || []).join(', ')));
 
     // Sync genresString to formData.genres
     $effect(() => {

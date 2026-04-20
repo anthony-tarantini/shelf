@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS book_authors (
     PRIMARY KEY(book, author)
 );
 
+CREATE INDEX IF NOT EXISTS idx_book_authors_author ON book_authors(author);
+
 CREATE TABLE IF NOT EXISTS library_books (
     library UUID AS LibraryId NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
     book UUID AS BookId NOT NULL REFERENCES books(id) ON DELETE CASCADE,
@@ -21,6 +23,8 @@ CREATE TABLE IF NOT EXISTS series_authors (
     author UUID AS AuthorId NOT NULL REFERENCES authors(id) ON DELETE CASCADE,
     PRIMARY KEY(series, author)
 );
+
+CREATE INDEX IF NOT EXISTS idx_series_authors_author ON series_authors(author);
 
 CREATE TABLE IF NOT EXISTS series_books (
     series UUID AS SeriesId NOT NULL REFERENCES series(id) ON DELETE CASCADE,

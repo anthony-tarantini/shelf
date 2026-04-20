@@ -486,7 +486,9 @@ fun bookService(
                 bookQueries.transactionWithResult {
                     bookQueries.deleteBookAuthor(id)
                     bookQueries.deleteBookSeries(id)
-                    bookQueries.deleteById(id).executeAsOne()
+                    val id = bookQueries.deleteById(id).executeAsOne()
+                    authorQueries.deleteOrphanedAuthors()
+                    id
                 }
             }
 
@@ -586,6 +588,7 @@ fun bookService(
                                 }
                             }
                         }
+                        authorQueries.deleteOrphanedAuthors()
                     }
                 }
             }
