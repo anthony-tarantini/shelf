@@ -1,0 +1,93 @@
+package io.tarantini.shelf.processing.jobs
+
+import arrow.core.raise.either
+import io.github.oshai.kotlinlogging.KotlinLogging
+import io.lettuce.core.api.StatefulRedisConnection
+import io.tarantini.shelf.catalog.book.BookAggregateProvider
+import io.tarantini.shelf.catalog.book.domain.BookId
+import io.tarantini.shelf.catalog.metadata.domain.BookFormat
+import io.tarantini.shelf.processing.epub.EpubMetadataUpdates
+import io.tarantini.shelf.processing.epub.EpubWriter
+import io.tarantini.shelf.processing.storage.StorageService
+import java.nio.file.Files
+import kotlin.uuid.ExperimentalUuidApi
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+
+private val logger = KotlinLogging.logger {}
+
+class SyncMetadataWorker(
+    private val scope: CoroutineScope,
+    private val bookAggregateProvider: BookAggregateProvider,
+    private val epubWriter: EpubWriter,
+    private val storageService: StorageService,
+    private val valkeyConnection: StatefulRedisConnection<String, String>? = null,
+    private val inMemoryChannel: Channel<BookId>? = null,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+) {
+    @OptIn(ExperimentalUuidApi::class)
+    fun start() {
+        scope.launch(dispatcher) {
+            logger.info { "Starting SyncMetadataWorker..." }
+            while (isActive) {
+                val bookId =
+                    runCatching {
+                            if (valkeyConnection != null) {
+                                val commands = valkeyConnection.sync()
+                                val result = commands.brpop(10, "jobs:sync_metadata")
+                                result?.let { BookId.fromRaw(it.value) }
+                            } else if (inMemoryChannel != null) {
+                                inMemoryChannel.receive()
+                            } else {
+                                null
+                            }
+                        }
+                        .onFailure { error ->
+                            if (error is CancellationException) throw error
+                            logger.error(error) { "Metadata sync worker iteration failed." }
+                        }
+                        .getOrNull()
+
+                if (bookId != null) {
+                    processSyncJob(bookId)
+                }
+            }
+        }
+    }
+
+    private suspend fun processSyncJob(bookId: BookId) {
+        logger.debug { "Processing queued metadata sync job." }
+
+        either {
+                val aggregate = bookAggregateProvider.getBookAggregate(bookId)
+                val metadataAggregate = aggregate.metadata ?: return@either
+
+                // Currently we only support EPUB sync
+                val ebookEntry =
+                    metadataAggregate.editions.find { it.edition.format == BookFormat.EBOOK }
+                        ?: return@either
+                val ebook = ebookEntry.edition
+                val metadata = metadataAggregate.metadata
+
+                val filePath = storageService.resolve(ebook.path)
+                if (Files.exists(filePath)) {
+                    val updates =
+                        EpubMetadataUpdates(
+                            title = metadata.title,
+                            authors = aggregate.authors.map { it.name },
+                            description = metadata.description,
+                            publisher = metadata.publisher,
+                            publishYear = metadata.published,
+                        )
+
+                    epubWriter.updateMetadata(filePath, updates)
+                    logger.info { "Metadata sync completed." }
+                } else {
+                    logger.warn { "Metadata sync skipped because source file was not found." }
+                }
+            }
+            .mapLeft { error ->
+                logger.error { "Metadata sync failed: ${error::class.simpleName}" }
+            }
+    }
+}

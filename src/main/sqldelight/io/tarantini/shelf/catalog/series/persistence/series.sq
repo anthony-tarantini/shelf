@@ -1,0 +1,134 @@
+import io.tarantini.shelf.catalog.series.domain.SeriesId;
+import io.tarantini.shelf.catalog.metadata.domain.BookFormat;
+
+-- Table
+CREATE TABLE IF NOT EXISTS series (
+    id UUID AS SeriesId PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_series_trgm
+ON series USING gin (title gin_trgm_ops);
+
+-- Summary
+CREATE OR REPLACE VIEW seriesSummaries AS
+SELECT
+    s.id AS id,
+    s.title AS title,
+    count(DISTINCT sb.book) AS bookCount,
+    count(DISTINCT CASE WHEN e.format = 'EBOOK' THEN sb.book END) AS ebookCount,
+    count(DISTINCT sa.author) AS authorCount
+FROM series s
+LEFT JOIN series_books sb ON sb.series = s.id
+LEFT JOIN editions e ON sb.book = e.book_id
+LEFT JOIN series_authors sa ON sa.series = s.id
+GROUP BY s.id;
+
+-- Queries
+selectAll:
+SELECT * FROM seriesSummaries ORDER BY title ASC;
+
+selectById:
+SELECT * FROM seriesSummaries WHERE id = :id;
+
+selectByTitle:
+SELECT * FROM seriesSummaries WHERE title = :title;
+
+selectSeriesForAuthors:
+SELECT sa.author, s.* FROM seriesSummaries s
+JOIN series_authors sa ON sa.series = s.id
+WHERE sa.author IN :authorIds;
+
+selectSeriesForBooks:
+SELECT sb.book, sb.index, s.* FROM seriesSummaries s
+JOIN series_books sb ON sb.series = s.id
+WHERE sb.book IN :bookIds;
+
+selectSeriesCoverCandidates:
+SELECT sb.series, b.cover_path
+FROM series_books sb
+JOIN books b ON sb.book = b.id
+WHERE sb.series IN :seriesIds
+  AND b.cover_path IS NOT NULL
+ORDER BY sb.series ASC, sb.index ASC NULLS LAST, b.title ASC;
+
+-- Modifications
+insert:
+INSERT INTO series (title)
+VALUES (?)
+RETURNING id;
+
+insertSeriesAuthor:
+INSERT INTO series_authors (series, author)
+VALUES (?, ?)
+ON CONFLICT DO NOTHING;
+
+insertSeriesBook:
+INSERT INTO series_books (series, book, index)
+VALUES (?, ?, ?)
+ON CONFLICT DO NOTHING;
+
+update:
+UPDATE series
+SET title = ?
+WHERE id = ?
+RETURNING id;
+
+deleteById:
+DELETE FROM series WHERE id = ?
+RETURNING id;
+
+deleteOrphanedSeries:
+DELETE FROM series
+WHERE NOT EXISTS (SELECT 1 FROM series_books WHERE series = series.id);
+
+deleteSeriesAuthors:
+DELETE FROM series_authors WHERE series = ?;
+
+deleteSeriesBooks:
+DELETE FROM series_books WHERE series = ?;
+
+searchSeries:
+SELECT * FROM seriesSummaries WHERE title ILIKE '%' || :query || '%' ORDER BY similarity(title, :query) DESC LIMIT 10;
+
+selectSeriesPage:
+SELECT * FROM seriesSummaries
+ORDER BY
+    CASE WHEN :sortBy = 'title' AND :sortDir = 'ASC' THEN title END ASC,
+    CASE WHEN :sortBy = 'title' AND :sortDir = 'DESC' THEN title END DESC,
+    CASE WHEN :sortBy = 'bookCount' AND :sortDir = 'ASC' THEN bookCount END ASC,
+    CASE WHEN :sortBy = 'bookCount' AND :sortDir = 'DESC' THEN bookCount END DESC,
+    title ASC
+LIMIT :limit OFFSET :offset;
+
+countAllSeries:
+SELECT count(*) FROM seriesSummaries;
+
+selectBooksForSeriesPage:
+SELECT b.id, b.title, b.cover_path, b.sys_period FROM books b
+JOIN series_books sb ON b.id = sb.book
+WHERE sb.series = :seriesId
+GROUP BY b.id, sb.index
+ORDER BY sb.index ASC, b.title ASC
+LIMIT :limit OFFSET :offset;
+
+selectBooksForSeriesByFormatPage:
+SELECT b.id, b.title, b.cover_path, b.sys_period FROM books b
+JOIN series_books sb ON b.id = sb.book
+LEFT JOIN editions e ON b.id = e.book_id
+WHERE sb.series = :seriesId AND e.format = :format
+GROUP BY b.id, sb.index
+ORDER BY sb.index ASC, b.title ASC
+LIMIT :limit OFFSET :offset;
+
+countBooksForSeries:
+SELECT count(DISTINCT b.id) FROM books b
+JOIN series_books sb ON b.id = sb.book
+WHERE sb.series = :seriesId;
+
+countBooksForSeriesByFormat:
+SELECT count(DISTINCT b.id) FROM books b
+JOIN series_books sb ON b.id = sb.book
+LEFT JOIN editions e ON b.id = e.book_id
+WHERE sb.series = :seriesId AND e.format = :format;
