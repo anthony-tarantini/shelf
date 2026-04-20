@@ -1,0 +1,15 @@
+{
+  "eyebrow": "Welcome back",
+  "page_title": "Welcome Back",
+  "page_subtitle": "Sign in to access your library",
+  "label_email": "Email Address",
+  "placeholder_email": "name@example.com",
+  "label_password": "Password",
+  "placeholder_password": "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+  "error_required_fields": "Please enter both email and password",
+  "error_failed": "Sign in failed",
+  "button_sign_in": "Sign In",
+  "loading_signing_in": "Signing in...",
+  "footer_prompt": "Don't have an account?",
+  "link_create_account": "Create one"
+}

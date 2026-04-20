@@ -1,0 +1,23 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{ISO8601} %-5level %logger{36} - %msg%n%ex</pattern>
+        </encoder>
+    </appender>
+
+    <root level="WARN">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+    <logger name="io.ktor.test" level="WARN"/>
+    <logger name="org.testcontainers" level="WARN"/>
+    <logger name="com.github.dockerjava" level="WARN"/>
+    <logger name="tc" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+    <logger name="io.micrometer" level="ERROR"/>
+    <logger name="co.simons.cohort" level="ERROR"/>
+    <logger name="c.s.cohort" level="ERROR"/>
+    <logger name="c.s.cohort.HealthCheckRegistry" level="ERROR"/>
+    <logger name="com.sksamuel.cohort" level="ERROR"/>
+    <logger name="com.sksamuel.cohort.HealthCheckRegistry" level="ERROR"/>
+</configuration>

@@ -1,0 +1,39 @@
+{
+  "page_subtitle": "Manage and read your collection.",
+  "empty": "No books found in your library yet.",
+  "search": "Search title, authors...",
+  "import_books": "Import Books",
+  "toolbar": {
+    "eyebrow": "Shared Catalog",
+    "grid": "Grid",
+    "table": "Table"
+  },
+  "dashboard": {
+    "books_label": "Books",
+    "books_description": "Shared titles available right now.",
+    "view_label": "View",
+    "view_description": "Switch between visual browsing and dense scanning.",
+    "view_hint": "Click to switch view",
+    "sort_label": "Sort",
+    "sort_newest": "Newest",
+    "sort_oldest": "Oldest",
+    "sort_alpha_asc": "A-Z",
+    "sort_alpha_desc": "Z-A",
+    "sort_author_asc": "Author A-Z",
+    "sort_author_desc": "Author Z-A",
+    "sort_description_title": "Currently ordered by title.",
+    "sort_description_author": "Currently ordered by author.",
+    "sort_description_added": "Currently ordered by when books were added.",
+    "sort_hint": "Click to cycle sort"
+  },
+  "table": {
+    "title": "Title",
+    "authors": "Authors",
+    "type": "Type",
+    "cover": "Cover",
+    "actions": "Actions",
+    "audio": "Audio",
+    "ebook": "Ebook",
+    "added": "Added"
+  }
+}
