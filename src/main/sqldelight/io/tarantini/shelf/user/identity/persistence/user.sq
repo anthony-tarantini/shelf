@@ -1,0 +1,61 @@
+import io.tarantini.shelf.user.identity.domain.UserId;
+import io.tarantini.shelf.user.identity.domain.UserEmail;
+import io.tarantini.shelf.user.identity.domain.UserName;
+import io.tarantini.shelf.user.identity.domain.UserRole;
+import io.tarantini.shelf.user.identity.domain.Salt;
+import io.tarantini.shelf.user.identity.domain.HashedPassword;
+
+CREATE TABLE IF NOT EXISTS users(
+    id UUID AS UserId PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) AS UserEmail NOT NULL UNIQUE,
+    username VARCHAR(255) AS UserName NOT NULL UNIQUE,
+    role VARCHAR(255) AS UserRole NOT NULL DEFAULT 'USER',
+    salt BYTEA AS Salt NOT NULL,
+    hashed_password BYTEA AS HashedPassword NOT NULL,
+    sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL)
+);
+
+selectByEmail:
+SELECT id, email, username, role, salt, hashed_password
+FROM users
+WHERE email = :email;
+
+selectByUsername:
+SELECT id, email, username, role, salt, hashed_password
+FROM users
+WHERE username = :username;
+
+selectById:
+SELECT id, email, username, role, salt, hashed_password
+FROM users
+WHERE id = :id;
+
+countAll:
+SELECT count(*) FROM users;
+
+selectAllUsers:
+SELECT id, email, username, role, salt, hashed_password
+FROM users
+ORDER BY username ASC;
+
+insertAndGetId:
+INSERT INTO users(email, username, role, salt, hashed_password)
+VALUES (:email, :username, :role, :salt, :hashed_password)
+RETURNING id;
+
+update:
+UPDATE users
+SET email = :email, username = :username, role = :role, hashed_password = :hashed_password
+WHERE id = :userId;
+
+deleteById:
+DELETE FROM users
+WHERE id = :userId;
+
+deleteByEmail:
+DELETE FROM users
+WHERE email = :email;
+
+deleteByUsername:
+DELETE FROM users
+WHERE username = :username;
