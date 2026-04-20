@@ -1,0 +1,73 @@
+name: Release Images
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  publish-release-images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: backend
+            dockerfile: backend.Dockerfile
+            image: ghcr.io/${{ github.repository_owner }}/shelf-backend
+          - name: frontend
+            dockerfile: frontend.Dockerfile
+            image: ghcr.io/${{ github.repository_owner }}/shelf-frontend
+          - name: database
+            dockerfile: database.Dockerfile
+            image: ghcr.io/${{ github.repository_owner }}/shelf-database
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push release ${{ matrix.name }}
+        id: build_push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ matrix.image }}:${{ github.event.release.tag_name }}
+            ${{ matrix.image }}:latest
+
+      - name: Write release image asset
+        run: |
+          cat > "release-image-${{ matrix.name }}.json" <<EOF
+          {
+            "name": "${{ matrix.name }}",
+            "image": "${{ matrix.image }}",
+            "tag": "${{ github.event.release.tag_name }}",
+            "digest": "${{ steps.build_push.outputs.digest }}"
+          }
+          EOF
+
+      - name: Upload release image asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "release-image-${{ matrix.name }}.json" \
+            --clobber

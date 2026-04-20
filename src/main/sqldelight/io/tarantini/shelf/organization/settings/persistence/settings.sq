@@ -1,0 +1,16 @@
+import io.tarantini.shelf.user.identity.domain.UserId;
+
+CREATE TABLE IF NOT EXISTS user_settings (
+    user_id UUID AS UserId PRIMARY KEY,
+    sync_metadata_to_files BOOLEAN NOT NULL DEFAULT FALSE,
+    sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL)
+);
+
+getUserSettings:
+SELECT * FROM user_settings WHERE user_id = :userId;
+
+updateUserSettings:
+INSERT INTO user_settings (user_id, sync_metadata_to_files)
+VALUES (:userId, :syncMetadataToFiles)
+ON CONFLICT (user_id) DO UPDATE SET
+    sync_metadata_to_files = excluded.sync_metadata_to_files;
