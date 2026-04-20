@@ -8,11 +8,13 @@ import com.sksamuel.cohort.HealthCheckRegistry
 import com.sksamuel.cohort.hikari.HikariConnectionsHealthCheck
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.lettuce.core.RedisClient
+import io.lettuce.core.api.StatefulRedisConnection
 import io.tarantini.shelf.Database
 import io.tarantini.shelf.catalog.author.AuthorService
 import io.tarantini.shelf.catalog.author.authorService
 import io.tarantini.shelf.catalog.book.BookService
 import io.tarantini.shelf.catalog.book.bookService
+import io.tarantini.shelf.catalog.book.domain.BookId
 import io.tarantini.shelf.catalog.metadata.MetadataService
 import io.tarantini.shelf.catalog.metadata.metadataProcessor
 import io.tarantini.shelf.catalog.metadata.metadataService
@@ -32,14 +34,18 @@ import io.tarantini.shelf.observability.Observability
 import io.tarantini.shelf.observability.observability
 import io.tarantini.shelf.organization.library.LibraryService
 import io.tarantini.shelf.organization.library.libraryService
+import io.tarantini.shelf.organization.settings.SettingsService
+import io.tarantini.shelf.organization.settings.settingsService
 import io.tarantini.shelf.processing.audiobook.audiobookParser
 import io.tarantini.shelf.processing.epub.epubParser
+import io.tarantini.shelf.processing.epub.epubWriter
 import io.tarantini.shelf.processing.import.ImportService
 import io.tarantini.shelf.processing.import.importService
 import io.tarantini.shelf.processing.import.staging.StagedBookService
 import io.tarantini.shelf.processing.import.staging.inMemoryStagedBookStore
 import io.tarantini.shelf.processing.import.staging.stagedBookService
 import io.tarantini.shelf.processing.import.staging.valkeyStagedBookStore
+import io.tarantini.shelf.processing.jobs.*
 import io.tarantini.shelf.processing.storage.StorageService
 import io.tarantini.shelf.processing.storage.localStorageService
 import io.tarantini.shelf.user.activity.ActivityService
@@ -52,6 +58,7 @@ import io.tarantini.shelf.user.identity.userService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 
 private val logger = KotlinLogging.logger {}
 
@@ -81,6 +88,8 @@ class Dependencies(
     val env: Env,
     val externalMetadataProvider: ExternalMetadataProvider,
     val observability: Observability,
+    val settingsService: SettingsService,
+    val jobQueue: JobQueue,
 )
 
 suspend fun ResourceScope.dependencies(env: Env): Dependencies {
@@ -116,9 +125,11 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val tokenService = io.tarantini.shelf.user.identity.tokenService(tokensQueries)
         val storagePath = env.storage.path
         val storageService = localStorageService(storagePath, observability)
+        val settingsService = settingsService(settingsQueries)
         val seriesService = seriesService(seriesQueries, bookQueries, storageService)
         val authorService = authorService(hikari.asJdbcDriver(), authorQueries, bookQueries)
         val epubParser = epubParser()
+        val epubWriter = epubWriter()
         val audiobookParser = audiobookParser()
         val metadataProcessor = metadataProcessor(epubParser, audiobookParser)
         val hardcoverApolloClient by lazy {
@@ -130,6 +141,37 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val externalMetadataProvider = hardcover(hardcoverApolloClient)
         val metadataService =
             metadataService(externalMetadataProvider, metadataProcessor, metadataQueries)
+
+        val valkeyUrl = env.valkey.url
+        var valkeyConnection: StatefulRedisConnection<String, String>? = null
+        var inMemoryChannel: Channel<BookId>? = null
+
+        val (stagedStore, authCache, jobQueue) =
+            if (valkeyUrl != null) {
+                logger.info { "Valkey detected at $valkeyUrl, initializing distributed stores." }
+                val redisClient = RedisClient.create(valkeyUrl)
+                onRelease { redisClient.shutdown() }
+                val connection = redisClient.connect()
+                onRelease { connection.close() }
+                valkeyConnection = connection
+                
+                Triple(
+                    valkeyStagedBookStore(connection),
+                    ValkeyAuthCache(connection),
+                    ValkeyJobQueue(connection)
+                )
+            } else {
+                logger.info { "Valkey not configured, falling back to in-memory stores." }
+                val channel = Channel<BookId>(Channel.UNLIMITED)
+                inMemoryChannel = channel
+                
+                Triple(
+                    inMemoryStagedBookStore(),
+                    InMemoryAuthCache(),
+                    InMemoryJobQueue(channel)
+                )
+            }
+
         val bookService =
             bookService(
                 bookQueries,
@@ -140,26 +182,14 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 seriesQueries,
                 storageService,
                 metadataQueries,
+                settingsService,
+                jobQueue
             )
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
         val activityService = activityService(activityQueries)
         val koreaderSyncService = koreaderSyncService(koreaderQueries, metadataQueries)
         val koreaderAuthService = koreaderAuthService(koreaderQueries, userService, tokenService)
-
-        val valkeyUrl = env.valkey.url
-        val (stagedStore, authCache) =
-            if (valkeyUrl != null) {
-                logger.info { "Valkey detected at $valkeyUrl, initializing distributed stores." }
-                val redisClient = RedisClient.create(valkeyUrl)
-                onRelease { redisClient.shutdown() }
-                val connection = redisClient.connect()
-                onRelease { connection.close() }
-                valkeyStagedBookStore(connection) to ValkeyAuthCache(connection)
-            } else {
-                logger.info { "Valkey not configured, falling back to in-memory stores." }
-                inMemoryStagedBookStore() to InMemoryAuthCache()
-            }
 
         // Create a managed CoroutineScope for background workers
         val job = SupervisorJob()
@@ -198,6 +228,18 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 baseUrl = "$rootUrl/api/opds/v1.2",
                 rootUrl = rootUrl,
             )
+
+        // Start background worker
+        val worker = SyncMetadataWorker(
+            scope = scope,
+            bookService = bookService,
+            epubWriter = epubWriter,
+            storageService = storageService,
+            valkeyConnection = valkeyConnection,
+            inMemoryChannel = inMemoryChannel
+        )
+        worker.start()
+
         return Dependencies(
             checks,
             userService,
@@ -223,6 +265,8 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             env,
             externalMetadataProvider,
             observability,
+            settingsService,
+            jobQueue,
         )
     }
 }

@@ -4,7 +4,6 @@
     import { t } from '$lib/i18n';
     import { auth } from '$lib/auth.svelte';
     import { api } from '$lib/api/client';
-    import { resolve } from '$app/paths';
     import { env as publicEnv } from '$env/dynamic/public';
     import { toast } from '$lib/state/toast.svelte';
     import FormField from '$lib/components/ui/FormField.svelte';
@@ -80,7 +79,7 @@
     onMount(fetchTokens);
 </script>
 
-<div class="max-w-6xl mx-auto space-y-8">
+<div class="space-y-8">
     <header class="rounded-[1.75rem] border border-border/70 bg-card/70 p-6 shadow-xl shadow-black/5 backdrop-blur-md">
         <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -91,30 +90,30 @@
         </div>
     </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
         <!-- Connection Details -->
-        <section class="bg-card border border-border rounded-lg p-6 space-y-4">
-            <h2 class="text-xl font-semibold border-b border-border pb-2">{$t('settings.koreader.connection.title')}</h2>
+        <section class="bg-card/50 border border-border rounded-2xl p-6 space-y-4">
+            <h3 class="text-lg font-bold text-foreground">{$t('settings.koreader.connection.title')}</h3>
             <div class="space-y-4">
                 <div>
-                    <span class="text-xs font-bold uppercase text-muted-foreground block mb-1">{$t('settings.koreader.connection.sync_server_url')}</span>
-                    <code class="block p-2 bg-muted rounded text-sm overflow-x-auto">{syncServerUrl}</code>
-                    <p class="text-xs text-muted-foreground mt-1">{$t('settings.koreader.connection.sync_server_hint')}</p>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">{$t('settings.koreader.connection.sync_server_url')}</span>
+                    <code class="block p-2 bg-muted rounded-lg text-xs overflow-x-auto">{syncServerUrl}</code>
+                    <p class="text-[10px] text-muted-foreground mt-1">{$t('settings.koreader.connection.sync_server_hint')}</p>
                 </div>
                 <div>
-                    <span class="text-xs font-bold uppercase text-muted-foreground block mb-1">{$t('settings.koreader.connection.webdav_url')}</span>
-                    <code class="block p-2 bg-muted rounded text-sm overflow-x-auto">{webdavUrl}</code>
-                    <p class="text-xs text-muted-foreground mt-1">{$t('settings.koreader.connection.webdav_hint')}</p>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">{$t('settings.koreader.connection.webdav_url')}</span>
+                    <code class="block p-2 bg-muted rounded-lg text-xs overflow-x-auto">{webdavUrl}</code>
+                    <p class="text-[10px] text-muted-foreground mt-1">{$t('settings.koreader.connection.webdav_hint')}</p>
                 </div>
                 <div>
-                    <span class="text-xs font-bold uppercase text-muted-foreground block mb-1">{$t('settings.koreader.connection.username')}</span>
-                    <code class="block p-2 bg-muted rounded text-sm">{auth.currentUser?.username}</code>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">{$t('settings.koreader.connection.username')}</span>
+                    <code class="block p-2 bg-muted rounded-lg text-xs">{auth.currentUser?.username}</code>
                 </div>
             </div>
 
-            <div class="rounded-lg border border-border bg-muted/30 p-4">
-                <h3 class="font-semibold">{$t('settings.koreader.instructions.title')}</h3>
-                <ol class="mt-2 list-decimal list-inside text-sm space-y-2 text-muted-foreground">
+            <div class="rounded-xl border border-border bg-muted/20 p-4">
+                <h4 class="text-sm font-bold text-foreground">{$t('settings.koreader.instructions.title')}</h4>
+                <ol class="mt-2 list-decimal list-inside text-xs space-y-2 text-muted-foreground">
                     <li>{$t('settings.koreader.instructions.step_1')}</li>
                     <li>{$t('settings.koreader.instructions.step_2')}</li>
                     <li>{$t('settings.koreader.instructions.step_3')}</li>
@@ -125,23 +124,23 @@
         </section>
 
         <!-- Token Management -->
-        <section class="bg-card border border-border rounded-lg p-6 space-y-4">
-            <h2 class="text-xl font-semibold border-b border-border pb-2">{$t('settings.koreader.tokens.title')}</h2>
+        <section class="bg-card/50 border border-border rounded-2xl p-6 space-y-4">
+            <h3 class="text-lg font-bold text-foreground">{$t('settings.koreader.tokens.title')}</h3>
 
             {#if createdToken}
-                <div class="space-y-3 rounded-2xl border border-primary/20 bg-primary/10 p-4">
+                <div class="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                     <StatusBanner kind="success" title={$t('settings.koreader.tokens.new_token_title')} message={$t('settings.koreader.tokens.new_token_message')} compact={true} />
-                    <code class="block p-2 bg-background border border-border rounded text-sm break-all select-all font-mono font-bold">{createdToken.token}</code>
-                    <button onclick={() => createdToken = null} class="text-xs text-primary hover:underline">{$t('settings.koreader.tokens.clear_notice')}</button>
+                    <code class="block p-2 bg-background border border-border rounded-lg text-xs break-all select-all font-mono font-bold text-primary">{createdToken.token}</code>
+                    <button onclick={() => createdToken = null} class="text-[10px] text-primary hover:underline">{$t('settings.koreader.tokens.clear_notice')}</button>
                 </div>
             {/if}
 
-            <div class="flex gap-2 items-end">
-                <FormField
-                    label={$t('settings.koreader.tokens.description_label')}
-                    forId="new-token-description"
-                    hint={$t('settings.koreader.tokens.description_hint')}
-                >
+            <FormField
+                label={$t('settings.koreader.tokens.description_label')}
+                forId="new-token-description"
+                hint={$t('settings.koreader.tokens.description_hint')}
+            >
+                <div class="flex flex-col sm:flex-row gap-2">
                     <input
                         id="new-token-description"
                         type="text"
@@ -149,20 +148,20 @@
                         placeholder={$t('settings.koreader.tokens.description_placeholder')}
                         class="ui-input-sm flex-1"
                     />
-                </FormField>
-                <button
-                    onclick={createToken}
-                    disabled={!newTokenDescription}
-                    class="mb-[1px] rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                    {$t('settings.koreader.tokens.generate')}
-                </button>
-            </div>
+                    <button
+                        onclick={createToken}
+                        disabled={!newTokenDescription}
+                        class="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                        {$t('settings.koreader.tokens.generate')}
+                    </button>
+                </div>
+            </FormField>
 
             {#if loading}
                 <LoadingState title={$t('settings.koreader.tokens.loading_title')} message={$t('settings.koreader.tokens.loading_message')} compact={true} />
             {:else if tokens.length === 0}
-                <div class="rounded-2xl border border-dashed border-border bg-card/60 p-4">
+                <div class="mt-6">
                     <EmptyState
                         eyebrow={$t('settings.koreader.tokens.eyebrow')}
                         title={$t('settings.koreader.tokens.empty_title')}
@@ -170,27 +169,28 @@
                     />
                 </div>
             {:else}
-                <ul class="divide-y divide-border border border-border rounded-md overflow-hidden">
-                    {#each tokens as token (token.id)}
-                        <li class="flex items-center justify-between p-3 bg-background hover:bg-accent/50 transition-colors">
-                            <div>
-                                <p class="text-sm font-medium">{token.description}</p>
-                                <p class="text-xs text-muted-foreground">{$t('settings.koreader.tokens.added_on', { date: new Date(token.createdAt).toLocaleDateString() })}</p>
-                            </div>
-                            <button
-                                onclick={() => deleteToken(token.id)}
-                                class="p-2 text-muted-foreground hover:text-destructive transition-colors"
-                                title={$t('settings.koreader.tokens.revoke')}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        </li>
-                    {/each}
-                </ul>
+                <div class="border border-border rounded-xl overflow-hidden bg-background">
+                    <ul class="divide-y divide-border">
+                        {#each tokens as token (token.id)}
+                            <li class="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
+                                <div>
+                                    <p class="text-sm font-bold text-foreground">{token.description}</p>
+                                    <p class="text-[10px] text-muted-foreground mt-0.5">{$t('settings.koreader.tokens.added_on', { date: new Date(token.createdAt).toLocaleDateString() })}</p>
+                                </div>
+                                <button
+                                    onclick={() => deleteToken(token.id)}
+                                    class="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                                    title={$t('settings.koreader.tokens.revoke')}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </li>
+                        {/each}
+                    </ul>
+                </div>
             {/if}
         </section>
     </div>
-
 </div>

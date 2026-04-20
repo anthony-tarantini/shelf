@@ -15,11 +15,19 @@
 	import { getSearchShortcutHint } from '$lib/utils';
 	import { UserRole } from '$lib/types/models';
 	import { pwaInfo } from 'virtual:pwa-info';
+	import { slide } from 'svelte/transition';
 
 	let { children } = $props();
 
 	let isSearchOpen = $state(false);
 	let isMobileNavOpen = $state(false);
+
+	type SidebarSection = 'catalog' | 'tools' | 'settings' | null;
+	let expandedSection = $state<SidebarSection>('catalog');
+
+	function toggleSection(section: SidebarSection) {
+		expandedSection = expandedSection === section ? null : section;
+	}
 
 	function handleLogout() {
 		auth.logout();
@@ -66,15 +74,25 @@
 
 	const toolNavItems = [
 		{ href: '/import', label: 'common.app_shell.import', icon: 'import' },
-		{ href: '/import/staged', label: 'common.app_shell.staging', icon: 'staging' },
-		{ href: '/settings/koreader', label: 'common.app_shell.koreader_sync', icon: 'sync' }
+		{ href: '/import/staged', label: 'common.app_shell.staging', icon: 'staging' }
+	];
+
+	const settingsNavItems = [
+		{ href: '/settings/general', label: 'settings.nav.general', icon: 'settings' },
+		{ href: '/settings/koreader', label: 'settings.nav.koreader', icon: 'sync' }
 	];
 
 	function isActive(href: string) {
 		if (href === '/') return page.url.pathname === href;
 		if (href === '/import') return page.url.pathname === '/import';
-		return page.url.pathname.startsWith(href);
+		return page.url.pathname === href || page.url.pathname.startsWith(href + '/');
 	}
+
+	$effect(() => {
+		if (catalogNavItems.some(item => isActive(item.href))) expandedSection = 'catalog';
+		else if (toolNavItems.some(item => isActive(item.href))) expandedSection = 'tools';
+		else if (settingsNavItems.some(item => isActive(item.href))) expandedSection = 'settings';
+	});
 
 	function iconPath(icon: string) {
 		switch (icon) {
@@ -90,6 +108,8 @@
 				return 'M5 12l5 5L20 7';
 			case 'sync':
 				return 'M21 12a9 9 0 0 1-15.55 6.36L3 16m18-4-2.45-2.36A9 9 0 0 0 3 12m0 0a9 9 0 0 1 15.55-6.36L21 8';
+			case 'settings':
+				return 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z';
 			default:
 				return 'M12 12h.01';
 		}
@@ -143,24 +163,81 @@
 							</kbd>
 						</button>
 					</div>
-					<nav class="flex-1 space-y-1 overflow-y-auto px-4">
-						{#each catalogNavItems as item (item.href)}
-							<a
-								href={item.href}
-								class="block rounded-xl border px-4 py-3 transition-all {isActive(item.href) ? 'border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/15' : 'border-transparent text-muted-foreground hover:bg-accent/70 hover:text-foreground'}"
+					<nav class="flex-1 space-y-4 overflow-y-auto px-4 pb-6">
+						<!-- Catalog Section -->
+						<div class="space-y-1">
+							<button
+								onclick={() => toggleSection('catalog')}
+								class="flex w-full items-center justify-between px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors group"
 							>
-								<span class="text-sm font-semibold">{$t(item.label)}</span>
-							</a>
-						{/each}
-						<div class="my-2 border-t border-border/50"></div>
-						{#each toolNavItems as item (item.href)}
-							<a
-								href={item.href}
-								class="block rounded-xl border px-4 py-3 transition-all {isActive(item.href) ? 'border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/15' : 'border-transparent text-muted-foreground hover:bg-accent/70 hover:text-foreground'}"
+								<span>{$t('common.app_shell.catalog')}</span>
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 transform transition-transform {expandedSection === 'catalog' ? 'rotate-180' : ''} text-muted-foreground/40 group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+								</svg>
+							</button>
+							{#if expandedSection === 'catalog'}
+								<div class="space-y-1" transition:slide={{ duration: 200 }}>
+									{#each catalogNavItems as item (item.href)}
+										<a
+											href={item.href}
+											class="block rounded-xl border px-4 py-3 transition-all {isActive(item.href) ? 'border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/15' : 'border-transparent text-muted-foreground hover:bg-accent/70 hover:text-foreground'}"
+										>
+											<span class="text-sm font-semibold">{$t(item.label)}</span>
+										</a>
+									{/each}
+								</div>
+							{/if}
+						</div>
+						
+						<!-- Tools Section -->
+						<div class="space-y-1">
+							<button
+								onclick={() => toggleSection('tools')}
+								class="flex w-full items-center justify-between px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors group"
 							>
-								<span class="text-sm font-semibold">{$t(item.label)}</span>
-							</a>
-						{/each}
+								<span>{$t('common.app_shell.tools')}</span>
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 transform transition-transform {expandedSection === 'tools' ? 'rotate-180' : ''} text-muted-foreground/40 group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+								</svg>
+							</button>
+							{#if expandedSection === 'tools'}
+								<div class="space-y-1" transition:slide={{ duration: 200 }}>
+									{#each toolNavItems as item (item.href)}
+										<a
+											href={item.href}
+											class="block rounded-xl border px-4 py-3 transition-all {isActive(item.href) ? 'border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/15' : 'border-transparent text-muted-foreground hover:bg-accent/70 hover:text-foreground'}"
+										>
+											<span class="text-sm font-semibold">{$t(item.label)}</span>
+										</a>
+									{/each}
+								</div>
+							{/if}
+						</div>
+
+						<!-- Settings Section -->
+						<div class="space-y-1">
+							<button
+								onclick={() => toggleSection('settings')}
+								class="flex w-full items-center justify-between px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-foreground transition-colors group"
+							>
+								<span>{$t('common.app_shell.settings')}</span>
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 transform transition-transform {expandedSection === 'settings' ? 'rotate-180' : ''} text-muted-foreground/40 group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+								</svg>
+							</button>
+							{#if expandedSection === 'settings'}
+								<div class="space-y-1" transition:slide={{ duration: 200 }}>
+									{#each settingsNavItems as item (item.href)}
+										<a
+											href={item.href}
+											class="block rounded-xl border px-4 py-3 transition-all {isActive(item.href) ? 'border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/15' : 'border-transparent text-muted-foreground hover:bg-accent/70 hover:text-foreground'}"
+										>
+											<span class="text-sm font-semibold">{$t(item.label)}</span>
+										</a>
+									{/each}
+								</div>
+							{/if}
+						</div>
 					</nav>
 					<GlobalProgress />
 					<div class="space-y-4 border-t border-border p-4">

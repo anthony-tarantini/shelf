@@ -26,13 +26,15 @@ fun localStorageService(basePath: String, observability: Observability? = null) 
     object : StorageService {
         private val root = Paths.get(basePath).toAbsolutePath().normalize()
 
-        private fun resolveSecure(path: StoragePath): Path {
+        override fun resolve(path: StoragePath): Path {
             val resolved = root.resolve(path.value).normalize()
             if (!resolved.startsWith(root)) {
                 throw SecurityException("Resolved path escaped storage root: ${path.value}")
             }
             return resolved
         }
+
+        private fun resolveSecure(path: StoragePath): Path = resolve(path)
 
         context(_: RaiseContext)
         override suspend fun save(path: StoragePath, bytes: FileBytes) {
@@ -156,6 +158,8 @@ fun localStorageService(basePath: String, observability: Observability? = null) 
     }
 
 interface StorageService {
+    fun resolve(path: StoragePath): Path
+
     context(_: RaiseContext)
     suspend fun save(path: StoragePath, bytes: FileBytes)
 

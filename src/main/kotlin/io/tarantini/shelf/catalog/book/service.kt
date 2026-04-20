@@ -5,6 +5,7 @@ package io.tarantini.shelf.catalog.book
 import arrow.core.raise.context.ensureNotNull
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.Identity
+import io.tarantini.shelf.app.PersistenceState
 import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.author.BookAuthorProvider
 import io.tarantini.shelf.catalog.author.createAuthor
@@ -26,10 +27,13 @@ import io.tarantini.shelf.catalog.series.BookSeriesProvider
 import io.tarantini.shelf.catalog.series.createSeries
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.organization.library.domain.LibraryId
+import io.tarantini.shelf.organization.settings.SettingsService
+import io.tarantini.shelf.processing.jobs.JobQueue
 import io.tarantini.shelf.processing.storage.FileBytes
 import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.processing.storage.StorageService
 import io.tarantini.shelf.processing.storage.fetchRemoteImage
+import io.tarantini.shelf.user.identity.domain.UserId
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -132,7 +136,7 @@ interface BookService :
     ): BookPage
 
     context(_: RaiseContext)
-    suspend fun updateBookMetadata(id: BookId, request: UpdateBookMetadataRequest)
+    suspend fun updateBookMetadata(userId: UserId, id: BookId, request: UpdateBookMetadataRequest)
 }
 
 private val ALLOWED_COVER_HOSTS = listOf("hardcover.app")
@@ -146,6 +150,8 @@ fun bookService(
     seriesQueries: io.tarantini.shelf.catalog.series.persistence.SeriesQueries,
     storageService: StorageService,
     metadataQueries: MetadataQueries,
+    settingsService: SettingsService,
+    jobQueue: JobQueue,
 ) =
     object : BookService {
         context(_: RaiseContext)
@@ -489,7 +495,7 @@ fun bookService(
         }
 
         context(_: RaiseContext)
-        override suspend fun updateBookMetadata(id: BookId, request: UpdateBookMetadataRequest) {
+        override suspend fun updateBookMetadata(userId: UserId, id: BookId, request: UpdateBookMetadataRequest) {
             // Handle cover URL outside transaction (suspend call)
             var newCoverPath: StoragePath? = null
             if (!request.coverUrl.isNullOrBlank()) {
@@ -500,7 +506,7 @@ fun bookService(
             }
 
             withContext(Dispatchers.IO) {
-                bookQueries.transactionWithResult {
+                bookQueries.transaction {
                     val existing = bookQueries.getBookById(id)
 
                     // 1. Update book title and/or cover
@@ -577,6 +583,12 @@ fun bookService(
                         }
                     }
                 }
+            }
+
+            // Background sync metadata to file if enabled
+            val settings = settingsService.getUserSettings(userId)
+            if (settings.syncMetadataToFiles) {
+                jobQueue.enqueueSyncMetadataJob(id)
             }
         }
     }

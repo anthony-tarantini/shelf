@@ -1,4 +1,21 @@
 {
+  "nav": {
+    "title": "Settings",
+    "general": "General",
+    "koreader": "KOReader Sync"
+  },
+  "general": {
+    "title": "General Settings",
+    "description": "Manage your library and file preferences.",
+    "save_success": "Settings updated successfully",
+    "save_error": "Failed to update settings",
+    "sync_metadata": {
+      "title": "Sync Metadata to Files",
+      "description": "Automatically update original EPUB files with your changes.",
+      "warning": "Currently only EPUB files are supported.",
+      "toggle": "Toggle metadata sync"
+    }
+  },
   "koreader": {
     "eyebrow": "KOReader",
     "title": "KOReader Synchronization",
@@ -23,7 +40,7 @@
       "clear_notice": "Clear notification",
       "description_label": "Token description",
       "description_hint": "Name the device or integration this token belongs to.",
-      "description_placeholder": "Token description (e.g. Kindle, Kobo)",
+      "description_placeholder": "Name",
       "generate": "Generate",
       "revoke": "Revoke Token",
       "added_on": "Added on {{date}}"

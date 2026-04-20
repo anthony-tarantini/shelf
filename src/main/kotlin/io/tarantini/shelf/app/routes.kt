@@ -16,6 +16,7 @@ import io.tarantini.shelf.integration.koreader.koreaderRoutes
 import io.tarantini.shelf.observability.appOwnsServerTraces
 import io.tarantini.shelf.observability.observabilityRoutes
 import io.tarantini.shelf.organization.library.libraryRoutes
+import io.tarantini.shelf.organization.settings.settingsRoutes
 import io.tarantini.shelf.processing.import.importRoutes
 import io.tarantini.shelf.processing.import.stagedRoutes
 import io.tarantini.shelf.user.identity.adminRoutes
@@ -67,5 +68,6 @@ fun Application.routes(deps: Dependencies) = routing {
     with(deps.database) {
         stagedRoutes(deps.jwtService, deps.stagedBookService, deps.storageService)
     }
+    settingsRoutes(deps.settingsService, deps.jwtService)
     koreaderRoutes(deps)
 }

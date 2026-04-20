@@ -270,10 +270,10 @@ fun Route.bookRoutes(
     }
 
     patch<BooksResource.Id.Metadata> { resource ->
-        sharedCatalogMutation(jwtService) {
+        sharedCatalogMutation(jwtService) { auth ->
             val req = call.receive<Request<UpdateBookMetadataRequest>>().data
             respond({
-                bookService.updateBookMetadata(BookId(resource.id), req)
+                bookService.updateBookMetadata(auth.userId, BookId(resource.id), req)
                 mapOf("message" to "Metadata updated")
             })
         }
