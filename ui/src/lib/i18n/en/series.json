@@ -1,0 +1,29 @@
+{
+  "eyebrow": "Sequences",
+  "detail_eyebrow": "Series Detail",
+  "back": "Back to Series",
+  "by": "by",
+  "detail_loading_title": "Series detail",
+  "detail_loading_message": "Loading series details...",
+  "page_title": "Series",
+  "page_subtitle": "Browse book series in your library.",
+  "empty_state": "No series found.",
+  "load_error_title": "Unable to refresh series",
+  "dashboard": {
+    "count_label": "Series",
+    "view_label": "View",
+    "view_hint": "Click to switch view",
+    "sort_label": "Sort",
+    "sort_hint": "Click to cycle sort",
+    "sort_alpha_asc": "A-Z",
+    "sort_alpha_desc": "Z-A",
+    "sort_count_desc": "Most Books",
+    "sort_count_asc": "Fewest Books"
+  },
+  "table": {
+    "cover": "Cover",
+    "name": "Name",
+    "books": "Books",
+    "no_cover": "No Cover"
+  }
+}
