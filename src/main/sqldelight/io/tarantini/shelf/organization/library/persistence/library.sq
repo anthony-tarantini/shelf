@@ -1,0 +1,51 @@
+import io.tarantini.shelf.user.identity.domain.UserId;
+import io.tarantini.shelf.organization.library.domain.LibraryId;
+
+-- Table
+CREATE TABLE IF NOT EXISTS libraries (
+    id UUID AS LibraryId PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID AS UserId NOT NULL REFERENCES users(id),
+    title VARCHAR(255) NOT NULL,
+    sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL)
+);
+
+-- Summary
+CREATE OR REPLACE VIEW librarySummaries AS
+SELECT
+    l.id AS id,
+    l.user_id AS userId,
+    l.title AS title,
+    count(lb.book) AS bookCount
+FROM libraries l
+LEFT JOIN library_books lb ON l.id = lb.library
+GROUP BY l.id;
+
+-- Queries
+selectAllForUser:
+SELECT * FROM librarySummaries WHERE userId = :userId;
+
+selectById:
+SELECT * FROM librarySummaries WHERE id = :libraryId;
+
+insert:
+INSERT INTO libraries (user_id, title)
+VALUES (:userId, :title)
+RETURNING id;
+
+insertLibraryBook:
+INSERT INTO library_books (library, book)
+VALUES (:libraryId, :bookId)
+ON CONFLICT DO NOTHING;
+
+update:
+UPDATE libraries
+SET title = :title
+WHERE id = :libraryId
+RETURNING id;
+
+deleteById:
+DELETE FROM libraries WHERE id = :libraryId
+RETURNING id;
+
+deleteLibraryBook:
+DELETE FROM library_books WHERE library = :libraryId AND book = :bookId;

@@ -1,0 +1,129 @@
+{
+  "admin": "Admin",
+  "dashboard": "Dashboard",
+  "exit": "Exit Admin",
+  "layout": {
+    "eyebrow": "Control Surface",
+    "description": "Administrative tools affect the shared catalog and system-wide configuration. Treat this area as operational space, not day-to-day reading flow.",
+    "scope_title": "Shared catalog administration",
+    "scope_description": "Users, import roots, and provider settings live here. Reader-specific activity stays in the main app."
+  },
+  "users": {
+    "title": "Users & Roles",
+    "management" : {
+      "add_user": "Add User",
+      "title": "User Management",
+      "subtitle": "Manage users, roles, and permissions.",
+      "username": "Username",
+      "email": "Email",
+      "password": "Password",
+      "role": "Role",
+      "actions": "Actions",
+      "you": "You",
+      "administrator": "Administrator",
+      "standard_user": "Standard User",
+      "delete_user": "Delete User",
+      "add_new": "Add New User",
+      "close_modal": "Close Modal",
+      "cancel": "Cancel",
+      "create": "Create User",
+      "placeholders": {
+        "username": "johndoe",
+        "email": "john@example.com"
+      }
+    },
+    "alert": {
+      "self_delete": "You cannot delete yourself.",
+      "fill_all": "Please fill all fields",
+      "create": "Failed to create user"
+    },
+    "confirmation": {
+      "self_demote": "Are you sure you want to remove your own admin privileges? You will be logged out of the admin dashboard.",
+      "delete": "Are you sure you want to delete {{user}}? This action cannot be undone.",
+      "self_demote_title": "Demote your own admin account?",
+      "self_demote_message": "You are about to remove your own admin privileges. The app will refresh and you will lose access to the admin control surface.",
+      "delete_title": "Delete {{user}}?",
+      "delete_message": "This will permanently remove {{user}} from the system. Their access and user-scoped overlay data may no longer be recoverable.",
+      "self_demote_confirm": "Demote myself",
+      "delete_confirm": "Delete user"
+    },
+    "failure": {
+      "load": "Failed to load users",
+      "update": "Failed to update user role",
+      "delete": "Failed to delete user",
+      "create": "Failed to create user"
+    },
+    "status": {
+      "loading_title": "Accounts",
+      "loading_message": "Loading users...",
+      "load_error_title": "Unable to load users"
+    },
+    "stats": {
+      "total_description": "Signed-in accounts with access to the shared catalog.",
+      "admins_description": "Users who can mutate system-wide settings and administrative flows.",
+      "readers_description": "Standard users who can access the shared catalog and maintain their own overlay data."
+    },
+    "toasts": {
+      "role_updated": "Updated {{user}}'s role.",
+      "deleted": "Deleted {{user}}.",
+      "created": "Created {{user}}."
+    }
+  },
+  "settings": {
+    "title": "System Settings",
+    "subtitle": "Configure global application settings and integrations.",
+    "cards": {
+      "configuration": "Configuration",
+      "provider_model": "Provider model",
+      "provider_model_value": "Configured in deployment",
+      "provider_model_description": "Metadata integrations are currently driven by backend environment and deployment config rather than in-app forms.",
+      "change_cadence": "Change cadence",
+      "change_cadence_value": "Low-frequency admin work",
+      "change_cadence_description": "These controls should stay sparse and explicit because they affect catalog-wide ingestion and lookup behavior.",
+      "current_state": "Current state",
+      "current_state_value": "Read-only surface",
+      "current_state_description": "The UI can describe active providers today while leaving mutation to deployment config until a stronger editing flow exists.",
+      "read_only": "Read only"
+    },
+    "providers": {
+      "title": "Metadata Providers",
+      "description": "Metadata API keys (like Hardcover or Google Books) are currently read from environment variables.",
+      "edit": "Edit Providers",
+      "hardcover": {
+        "title": "Hardcover.app",
+        "description": "Configured via HARDCOVER_API_KEY"
+      },
+      "google_books_api_key": "Google Books API Key"
+    }
+  },
+  "library": {
+    "title": "Library Management",
+    "configure": "Configure storage locations and discover new media.",
+    "eyebrow": "Operations",
+    "stats": {
+      "scope_title": "Import scope",
+      "scope_value": "Configured roots only",
+      "scope_description": "Scanning can only target server directories explicitly allowlisted in backend configuration.",
+      "impact_title": "Catalog impact",
+      "impact_value": "Staging first",
+      "impact_description": "Scanned files do not publish directly. They enter staging for review, merge, and approval.",
+      "best_use_title": "Best use",
+      "best_use_value": "Batch ingestion",
+      "best_use_description": "Use direct upload for one-offs and this tool when the server already has a mounted collection ready to scan."
+    },
+    "scan_root_hint": "Configured import roots only (server env: IMPORT_SCAN_ROOTS)",
+    "path_label": "Absolute import path",
+    "path_hint": "The backend will reject paths outside the configured import roots.",
+    "path_placeholder": "/srv/books/incoming",
+    "manual_scan": "Manual Scan",
+    "scan": "Scan Directory",
+    "primary_storage": "Primary Storage",
+    "storage_paths": "Storage Paths",
+    "storage_paths_description": "Library paths are currently managed via environment variables (<code>STORAGE_PATH</code>). Future\n                    updates will allow multiple library volumes and in-app configuration.",
+    "scan_description": "Trigger a manual filesystem scan to discover new book files (EPUB, MP3, etc.) placed directly into\n                    your storage directories. Found items will be placed in the Staging Area.",
+    "prompt": "Enter full absolute path to scan for books (or leave empty to scan the default library directory):",
+    "initializing": "Initializing library scan...",
+    "initialized": "Library scan initialized. Books will appear in the Staging Area once discovered.",
+    "failed": "Failed to initialize library scan: {{error}}"
+  }
+}

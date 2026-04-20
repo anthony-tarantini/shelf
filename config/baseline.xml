@@ -1,0 +1,178 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ConstructorParameterNaming:models.kt$OpenSearchDescription$@XmlElement(true) val Description: String</ID>
+    <ID>ConstructorParameterNaming:models.kt$OpenSearchDescription$@XmlElement(true) val InputEncoding: String = "UTF-8"</ID>
+    <ID>ConstructorParameterNaming:models.kt$OpenSearchDescription$@XmlElement(true) val OutputEncoding: String = "UTF-8"</ID>
+    <ID>ConstructorParameterNaming:models.kt$OpenSearchDescription$@XmlElement(true) val ShortName: String</ID>
+    <ID>ConstructorParameterNaming:models.kt$OpenSearchDescription$@XmlElement(true) val Url: List&lt;OpenSearchUrl> = emptyList()</ID>
+    <ID>CyclomaticComplexMethod:error.kt$private fun MetadataError.toHttpResponse(): Pair&lt;HttpStatusCode, String></ID>
+    <ID>CyclomaticComplexMethod:error.kt$private fun UserError.toHttpResponse(): Pair&lt;HttpStatusCode, String></ID>
+    <ID>CyclomaticComplexMethod:routes.kt$fun Route.stagedRoutes( jwtService: JwtService, stagedBookService: StagedBookService, storageService: StorageService, )</ID>
+    <ID>EmptyFunctionBlock:HardcoverClientTest.kt$HardcoverClientTest.&lt;no name provided>${}</ID>
+    <ID>ExplicitItLambdaParameter:client.kt${ it -> val author = it.author ?: return@mapNotNull null mapContribution(author.id.toString(), author.name, it.contribution) }</ID>
+    <ID>LongMethod:Observability.kt$fun observability(config: ObservabilityConfig): Observability</ID>
+    <ID>LongMethod:client.kt$private fun FetchMetadataByBookIdsQuery.Book.toMetadata(): ExternalMetadata?</ID>
+    <ID>LongMethod:dependencies.kt$suspend fun ResourceScope.dependencies(env: Env): Dependencies</ID>
+    <ID>LongMethod:ktor.kt$fun Application.configure(deps: Dependencies)</ID>
+    <ID>LongMethod:parser.kt$private fun extractMetadata( data: FfprobeOutput, path: Path, fileName: String, bookId: BookId, ): BookMetadata</ID>
+    <ID>LongMethod:parser.kt$private fun extractMetadata( doc: Document, opfPathStr: String, bookId: BookId, path: Path, ): BookMetadata</ID>
+    <ID>LongMethod:persistence.kt$suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database</ID>
+    <ID>LongMethod:routes.kt$fun Route.authorRoutes( authorService: AuthorService, bookService: BookService, activityService: ActivityService, jwtService: JwtService, storageService: StorageService, externalMetadataProvider: ExternalMetadataProvider, )</ID>
+    <ID>LongMethod:routes.kt$fun Route.bookRoutes( bookService: BookService, storageService: StorageService, authorService: AuthorService, seriesService: SeriesService, activityService: ActivityService, jwtService: JwtService, userService: UserService, observability: Observability, )</ID>
+    <ID>LongMethod:routes.kt$fun Route.libraryRoutes( jwtService: JwtService, libraryService: LibraryService, bookService: BookService, )</ID>
+    <ID>LongMethod:routes.kt$fun Route.seriesRoutes( seriesService: SeriesService, bookProvider: SeriesBookProvider, authorProvider: SeriesAuthorProvider, activityService: ActivityService, storageService: StorageService, jwtService: JwtService, )</ID>
+    <ID>LongMethod:routes.kt$fun Route.stagedRoutes( jwtService: JwtService, stagedBookService: StagedBookService, storageService: StorageService, )</ID>
+    <ID>LongMethod:service.kt$&lt;no name provided>$override suspend fun update( stagedId: String, title: String?, description: String?, authors: List&lt;String>?, selectedAuthorIds: Map&lt;String, String?>?, publisher: String?, publishYear: Int?, genres: List&lt;String>?, moods: List&lt;String>?, series: List&lt;StagedSeries>?, ebookMetadata: StagedEditionMetadata?, audiobookMetadata: StagedEditionMetadata?, coverUrl: String?, )</ID>
+    <ID>LongMethod:service.kt$&lt;no name provided>$override suspend fun updateBookMetadata( userId: UserId, id: BookId, request: UpdateBookMetadataRequest, )</ID>
+    <ID>LongMethod:service.kt$&lt;no name provided>$private fun RaiseContext.promoteToBook( stagedBook: StagedBook, book: BookId, ): List&lt;WarningDetail></ID>
+    <ID>LongParameterList:Worker.kt$SyncMetadataWorker$( private val scope: CoroutineScope, private val bookService: BookService, private val epubWriter: EpubWriter, private val storageService: StorageService, private val valkeyConnection: StatefulRedisConnection&lt;String, String>? = null, private val inMemoryChannel: Channel&lt;BookId>? = null, private val dispatcher: CoroutineDispatcher = Dispatchers.IO, )</ID>
+    <ID>LongParameterList:builders.kt$OpdsFeedBuilder$( id: String, title: String, selfHref: String, upHref: String? = null, type: String = OpdsMimeType.ATOM, entries: List&lt;OpdsEntry> = emptyList(), page: Int? = null, size: Int? = null, totalCount: Long? = null, includeSearch: Boolean = false, )</ID>
+    <ID>LongParameterList:persistence.kt$( author: AuthorId, id: SeriesId, title: String, bookCount: Long, ebookCount: Long, authorCount: Long, )</ID>
+    <ID>LongParameterList:persistence.kt$( book: BookId, index: Double?, id: SeriesId, title: String, bookCount: Long, ebookCount: Long, authorCount: Long, )</ID>
+    <ID>LongParameterList:routes.kt$( authorService: AuthorService, bookService: BookService, activityService: ActivityService, jwtService: JwtService, storageService: StorageService, externalMetadataProvider: ExternalMetadataProvider, )</ID>
+    <ID>LongParameterList:routes.kt$( bookService: BookService, storageService: StorageService, authorService: AuthorService, seriesService: SeriesService, activityService: ActivityService, jwtService: JwtService, userService: UserService, observability: Observability, )</ID>
+    <ID>LongParameterList:routes.kt$( seriesService: SeriesService, bookProvider: SeriesBookProvider, authorProvider: SeriesAuthorProvider, activityService: ActivityService, storageService: StorageService, jwtService: JwtService, )</ID>
+    <ID>LongParameterList:service.kt$( bookQueries: BookQueries, authorsProvider: BookAuthorProvider, seriesProvider: BookSeriesProvider, metadataProvider: MetadataProvider, authorQueries: io.tarantini.shelf.catalog.author.persistence.AuthorQueries, seriesQueries: io.tarantini.shelf.catalog.series.persistence.SeriesQueries, storageService: StorageService, metadataQueries: MetadataQueries, settingsService: SettingsService, jobQueue: JobQueue, )</ID>
+    <ID>LongParameterList:service.kt$( bookService: BookService, authorService: AuthorService, seriesService: SeriesService, searchService: SearchService, baseUrl: String, rootUrl: String, )</ID>
+    <ID>LongParameterList:service.kt$( stagedBookStore: StagedBookStore, storageService: StorageService, bookQueries: BookQueries, authorQueries: AuthorQueries, seriesQueries: SeriesQueries, metadataQueries: MetadataQueries, scope: CoroutineScope, transacter: Transacter, )</ID>
+    <ID>LongParameterList:service.kt$( storageService: StorageService, metadataProcessor: MetadataProcessor, stagedBookStore: StagedBookStore, allowedScanRoots: List&lt;String>, scope: CoroutineScope, observability: Observability, )</ID>
+    <ID>LongParameterList:service.kt$StagedBookService$( stagedId: String, title: String? = null, description: String? = null, authors: List&lt;String>? = null, selectedAuthorIds: Map&lt;String, String?>? = null, publisher: String? = null, publishYear: Int? = null, genres: List&lt;String>? = null, moods: List&lt;String>? = null, series: List&lt;StagedSeries>? = null, ebookMetadata: StagedEditionMetadata? = null, audiobookMetadata: StagedEditionMetadata? = null, coverUrl: String? = null, )</ID>
+    <ID>MagicNumber:Observability.kt$&lt;no name provided>$30</ID>
+    <ID>MagicNumber:Worker.kt$SyncMetadataWorker$10</ID>
+    <ID>MagicNumber:extensions.kt$10</ID>
+    <ID>MagicNumber:extensions.kt$1024</ID>
+    <ID>MagicNumber:extensions.kt$1024L</ID>
+    <ID>MagicNumber:ktor.kt$10</ID>
+    <ID>MagicNumber:parser.kt$10</ID>
+    <ID>MagicNumber:parser.kt$30</ID>
+    <ID>MagicNumber:persistence.kt$&lt;no name provided>$3</ID>
+    <ID>MagicNumber:primitives.kt$ASIN.Companion$10</ID>
+    <ID>MagicNumber:primitives.kt$ISBN10.Companion$10</ID>
+    <ID>MagicNumber:primitives.kt$ISBN13.Companion$13</ID>
+    <ID>MagicNumber:primitives.kt$StoragePath.Companion$120</ID>
+    <ID>MagicNumber:primitives.kt$UserName.Companion$3</ID>
+    <ID>MagicNumber:primitives.kt$UserPassword.Companion$8</ID>
+    <ID>MagicNumber:remoteImage.kt$10_000</ID>
+    <ID>MagicNumber:remoteImage.kt$200</ID>
+    <ID>MagicNumber:remoteImage.kt$299</ID>
+    <ID>MagicNumber:remoteImage.kt$5_000</ID>
+    <ID>MagicNumber:routes.kt$20</ID>
+    <ID>MagicNumber:service.kt$&lt;no name provided>$0.8</ID>
+    <ID>MagicNumber:service.kt$&lt;no name provided>$100</ID>
+    <ID>MagicNumber:service.kt$&lt;no name provided>$3</ID>
+    <ID>MagicNumber:service.kt$&lt;no name provided>$50</ID>
+    <ID>MatchingDeclarationName:auth.kt$KoreaderAuthService</ID>
+    <ID>MatchingDeclarationName:models.kt$GlobalSearchResult</ID>
+    <ID>MatchingDeclarationName:persistence.kt$StagedBookStore</ID>
+    <ID>MatchingDeclarationName:policy.kt$AccessPolicy</ID>
+    <ID>MatchingDeclarationName:primitives.kt$AuthorId : UuidValueClass</ID>
+    <ID>MatchingDeclarationName:primitives.kt$BookId : UuidValueClass</ID>
+    <ID>MatchingDeclarationName:primitives.kt$LibraryId : UuidValueClass</ID>
+    <ID>MatchingDeclarationName:primitives.kt$SeriesId : UuidValueClass</ID>
+    <ID>MatchingDeclarationName:processor.kt$MetadataProcessor</ID>
+    <ID>MatchingDeclarationName:resources.kt$AuthorsResource</ID>
+    <ID>MatchingDeclarationName:resources.kt$BooksResource</ID>
+    <ID>MatchingDeclarationName:resources.kt$LibraryResource</ID>
+    <ID>MatchingDeclarationName:resources.kt$OpdsResource</ID>
+    <ID>MatchingDeclarationName:resources.kt$SearchResource</ID>
+    <ID>MatchingDeclarationName:resources.kt$SeriesResource</ID>
+    <ID>MatchingDeclarationName:routes.kt$RootResource</ID>
+    <ID>MatchingDeclarationName:service.kt$ActivityService</ID>
+    <ID>MatchingDeclarationName:service.kt$JwtService</ID>
+    <ID>MatchingDeclarationName:service.kt$KoreaderSyncService</ID>
+    <ID>MatchingDeclarationName:service.kt$OpdsService</ID>
+    <ID>MatchingDeclarationName:service.kt$SearchService</ID>
+    <ID>MatchingDeclarationName:tokenRoutes.kt$CreateTokenRequest</ID>
+    <ID>MatchingDeclarationName:validators.kt$IdValidator</ID>
+    <ID>MaxLineLength:service.kt$&lt;no name provided>$"Dropped invalid metadata for '${stagedBook.title}': ${warnings.joinToString { "${it.field}: ${it.message}" }}"</ID>
+    <ID>ReturnCount:client.kt$&lt;no name provided>$override suspend fun searchAuthorsByName(name: String): List&lt;ExternalAuthorResult></ID>
+    <ID>ReturnCount:client.kt$&lt;no name provided>$override suspend fun searchBookMetadataByName(name: String): List&lt;ExternalMetadata></ID>
+    <ID>TooGenericExceptionCaught:Worker.kt$SyncMetadataWorker$e: Exception</ID>
+    <ID>TooManyFunctions:builders.kt$OpdsLinkBuilder</ID>
+    <ID>TooManyFunctions:error.kt$io.tarantini.shelf.app.error.kt</ID>
+    <ID>TooManyFunctions:persistence.kt$io.tarantini.shelf.catalog.author.persistence.kt</ID>
+    <ID>TooManyFunctions:persistence.kt$io.tarantini.shelf.catalog.book.persistence.kt</ID>
+    <ID>TooManyFunctions:persistence.kt$io.tarantini.shelf.catalog.metadata.persistence.kt</ID>
+    <ID>TooManyFunctions:persistence.kt$io.tarantini.shelf.catalog.series.persistence.kt</ID>
+    <ID>TopLevelPropertyNaming:helpers.kt$private const val defaultIterations = 100000</ID>
+    <ID>TopLevelPropertyNaming:helpers.kt$private const val defaultKeyLength = 512</ID>
+    <ID>UnusedParameter:persistence.kt$authorCount: Long</ID>
+    <ID>UnusedParameter:persistence.kt$bookCount: Long</ID>
+    <ID>UnusedParameter:persistence.kt$ebookCount: Long</ID>
+    <ID>UnusedParameter:persistence.kt$index: Double?</ID>
+    <ID>UnusedParameter:service.kt$authorCount: Long</ID>
+    <ID>UnusedParameter:service.kt$bookCount: Long</ID>
+    <ID>UnusedParameter:service.kt$ebookCount: Long</ID>
+    <ID>UnusedPrivateClass:persistence.kt$JsonAdapter : ColumnAdapter</ID>
+    <ID>UnusedPrivateProperty:MetadataPersistenceTest.kt$MetadataPersistenceTest$val metadataId = metadataQueries.saveAggregate(aggregate)</ID>
+    <ID>UnusedPrivateProperty:domain.kt$IdentitySerializer$private val stateSerializer: KSerializer&lt;S></ID>
+    <ID>UseCheckOrError:Env.kt$throw IllegalStateException("Environment variable $name is required but not set.")</ID>
+    <ID>WildcardImport:BookApiTest.kt$import io.ktor.client.call.*</ID>
+    <ID>WildcardImport:BookApiTest.kt$import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:BookApiTest.kt$import io.ktor.client.statement.*</ID>
+    <ID>WildcardImport:BookApiTest.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:CatalogApiTest.kt$import io.ktor.client.call.*</ID>
+    <ID>WildcardImport:CatalogApiTest.kt$import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:CatalogApiTest.kt$import io.ktor.client.statement.*</ID>
+    <ID>WildcardImport:CatalogApiTest.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:CatalogDomainTest.kt$import io.tarantini.shelf.catalog.author.domain.*</ID>
+    <ID>WildcardImport:CatalogDomainTest.kt$import io.tarantini.shelf.catalog.series.domain.*</ID>
+    <ID>WildcardImport:KoreaderApiTest.kt$import io.ktor.client.call.*</ID>
+    <ID>WildcardImport:KoreaderApiTest.kt$import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:KoreaderApiTest.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:LibraryApiTest.kt$import io.ktor.client.call.*</ID>
+    <ID>WildcardImport:LibraryApiTest.kt$import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:LibraryApiTest.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:LibraryPersistenceTest.kt$import io.tarantini.shelf.organization.library.domain.*</ID>
+    <ID>WildcardImport:LibraryPersistenceTest.kt$import io.tarantini.shelf.user.identity.domain.*</ID>
+    <ID>WildcardImport:MetadataPersistenceTest.kt$import io.tarantini.shelf.catalog.metadata.domain.*</ID>
+    <ID>WildcardImport:OpdsIntegrationTest.kt$import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:OpdsIntegrationTest.kt$import io.ktor.client.statement.*</ID>
+    <ID>WildcardImport:OpdsIntegrationTest.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:SearchApiTest.kt$import io.ktor.client.call.*</ID>
+    <ID>WildcardImport:SearchApiTest.kt$import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:SearchApiTest.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:SettingsPersistenceTest.kt$import io.tarantini.shelf.user.identity.domain.*</ID>
+    <ID>WildcardImport:StagedBatchTest.kt$import io.tarantini.shelf.processing.import.domain.*</ID>
+    <ID>WildcardImport:SyncMetadataWorkerTest.kt$import io.mockk.*</ID>
+    <ID>WildcardImport:SyncMetadataWorkerTest.kt$import io.tarantini.shelf.catalog.metadata.domain.*</ID>
+    <ID>WildcardImport:SyncMetadataWorkerTest.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:SyncMetadataWorkerTest.kt$import kotlinx.coroutines.test.*</ID>
+    <ID>WildcardImport:TokenApiTest.kt$import io.ktor.client.call.*</ID>
+    <ID>WildcardImport:TokenApiTest.kt$import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:TokenApiTest.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:UserApiTest.kt$import io.ktor.client.call.*</ID>
+    <ID>WildcardImport:UserApiTest.kt$import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:UserApiTest.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:UserPersistenceTest.kt$import io.tarantini.shelf.user.identity.domain.*</ID>
+    <ID>WildcardImport:Worker.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:dependencies.kt$import io.tarantini.shelf.processing.jobs.*</ID>
+    <ID>WildcardImport:error.kt$import io.tarantini.shelf.catalog.metadata.domain.*</ID>
+    <ID>WildcardImport:models.kt$import nl.adaptivity.xmlutil.serialization.*</ID>
+    <ID>WildcardImport:parser.kt$import io.tarantini.shelf.catalog.metadata.domain.*</ID>
+    <ID>WildcardImport:persistence.kt$import io.tarantini.shelf.catalog.series.domain.*</ID>
+    <ID>WildcardImport:persistence.kt$import io.tarantini.shelf.organization.library.domain.*</ID>
+    <ID>WildcardImport:resources.kt$import io.ktor.resources.*</ID>
+    <ID>WildcardImport:routes.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:routes.kt$import io.ktor.resources.*</ID>
+    <ID>WildcardImport:routes.kt$import io.ktor.server.request.*</ID>
+    <ID>WildcardImport:routes.kt$import io.ktor.server.resources.*</ID>
+    <ID>WildcardImport:routes.kt$import io.ktor.server.response.*</ID>
+    <ID>WildcardImport:routes.kt$import io.ktor.server.routing.*</ID>
+    <ID>WildcardImport:routes.kt$import io.tarantini.shelf.processing.import.domain.*</ID>
+    <ID>WildcardImport:service.kt$import io.tarantini.shelf.catalog.author.domain.*</ID>
+    <ID>WildcardImport:service.kt$import io.tarantini.shelf.catalog.book.domain.*</ID>
+    <ID>WildcardImport:service.kt$import io.tarantini.shelf.catalog.metadata.domain.*</ID>
+    <ID>WildcardImport:service.kt$import io.tarantini.shelf.catalog.series.domain.*</ID>
+    <ID>WildcardImport:service.kt$import io.tarantini.shelf.organization.library.domain.*</ID>
+    <ID>WildcardImport:service.kt$import io.tarantini.shelf.processing.import.domain.*</ID>
+    <ID>WildcardImport:service.kt$import io.tarantini.shelf.user.identity.domain.*</ID>
+    <ID>WildcardImport:tokenRoutes.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:tokenRoutes.kt$import io.ktor.server.application.*</ID>
+    <ID>WildcardImport:tokenRoutes.kt$import io.ktor.server.request.*</ID>
+    <ID>WildcardImport:tokenRoutes.kt$import io.ktor.server.response.*</ID>
+    <ID>WildcardImport:tokenRoutes.kt$import io.ktor.server.routing.*</ID>
+  </CurrentIssues>
+</SmellBaseline>
