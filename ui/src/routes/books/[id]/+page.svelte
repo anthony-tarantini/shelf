@@ -54,7 +54,7 @@
         audiobookMetadata: {
             narrator: metadata?.editions?.find(e => e.edition.format === MediaType.AUDIOBOOK)?.edition?.narrator || primaryEdition?.narrator
         },
-        selectedAuthorIds: {},
+        selectedAuthorIds: authors?.reduce((acc, a) => ({ ...acc, [a.name]: a.id }), {}) || {},
         authorSuggestions: {}
     });
 
@@ -75,15 +75,23 @@
         processing = true;
         error = null;
 
-        const result = await api.put<unknown>('/books', {
-            id: book.id,
+        const cleanAuthorIds: Record<string, string | null> = {};
+        for (const author of formData.authors) {
+            cleanAuthorIds[author] = formData.selectedAuthorIds?.[author] ?? null;
+        }
+
+        const result = await api.patch<void>(`/books/${book.id}/metadata`, {
             title: formData.title,
             authors: formData.authors,
+            selectedAuthorIds: cleanAuthorIds,
             description: formData.description,
             publisher: formData.publisher,
-            isbn: formData.ebookMetadata?.isbn13 || formData.ebookMetadata?.isbn10 || formData.ebookMetadata?.asin || '',
             publishYear: formData.publishYear,
-            genres: formData.genres
+            genres: formData.genres,
+            moods: primaryRecord?.moods || [],
+            series: formData.series,
+            ebookMetadata: Object.keys(formData.ebookMetadata).length > 0 ? formData.ebookMetadata : null,
+            audiobookMetadata: Object.keys(formData.audiobookMetadata).length > 0 ? formData.audiobookMetadata : null,
         });
 
         if (result.left) {

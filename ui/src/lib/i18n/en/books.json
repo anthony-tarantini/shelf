@@ -45,6 +45,7 @@
   },
   "metadata": {
     "title": "Title",
+    "description": "Description",
     "publisher": "Publisher",
     "publish_year": "Publish Year",
     "genres": "Genres (comma separated)",

@@ -15,11 +15,11 @@
     }: Props = $props();
 
     function addSeries() {
-        seriesList.push({ name: '', index: undefined });
+        seriesList = [...seriesList, { name: '', index: undefined }];
     }
 
     function removeSeries(index: number) {
-        seriesList.splice(index, 1);
+        seriesList = seriesList.filter((_, i) => i !== index);
     }
 </script>
 

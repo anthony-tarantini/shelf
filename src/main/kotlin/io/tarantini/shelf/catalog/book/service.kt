@@ -473,7 +473,9 @@ fun bookService(
             withContext(Dispatchers.IO) {
                 bookQueries.transactionWithResult {
                     val existing = bookQueries.getBookById(id)
-                    bookQueries.update(title ?: existing.title, path ?: existing.coverPath, id)
+                    bookQueries
+                        .update(title ?: existing.title, path ?: existing.coverPath, id)
+                        .executeAsOne()
                     bookQueries.getBookById(id)
                 }
             }
@@ -516,7 +518,7 @@ fun bookService(
                     val newTitle = request.title ?: existing.title
                     val coverPath = newCoverPath ?: existing.coverPath
                     if (request.title != null || newCoverPath != null) {
-                        bookQueries.update(newTitle, coverPath, id)
+                        bookQueries.update(newTitle, coverPath, id).executeAsOne()
                     }
 
                     // 2. Update metadata record (description, publisher, publishYear, genres,
