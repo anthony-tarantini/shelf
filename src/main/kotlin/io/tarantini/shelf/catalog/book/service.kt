@@ -488,6 +488,7 @@ fun bookService(
                     bookQueries.deleteBookSeries(id)
                     val id = bookQueries.deleteById(id).executeAsOne()
                     authorQueries.deleteOrphanedAuthors()
+                    seriesQueries.deleteOrphanedSeries()
                     id
                 }
             }
@@ -589,6 +590,7 @@ fun bookService(
                             }
                         }
                         authorQueries.deleteOrphanedAuthors()
+                        seriesQueries.deleteOrphanedSeries()
                     }
                 }
             }

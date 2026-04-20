@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS series_books (
     PRIMARY KEY(series, book)
 );
 
+CREATE INDEX IF NOT EXISTS idx_series_books_series ON series_books(series);
+
 CREATE TABLE IF NOT EXISTS book_genres (
     book UUID AS BookId NOT NULL REFERENCES books(id) ON DELETE CASCADE,
     genre TEXT NOT NULL REFERENCES genres(id) ON DELETE CASCADE,

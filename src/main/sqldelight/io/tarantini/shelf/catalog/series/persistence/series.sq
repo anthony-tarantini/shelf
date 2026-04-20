@@ -80,6 +80,10 @@ deleteById:
 DELETE FROM series WHERE id = ?
 RETURNING id;
 
+deleteOrphanedSeries:
+DELETE FROM series
+WHERE NOT EXISTS (SELECT 1 FROM series_books WHERE series = series.id);
+
 deleteSeriesAuthors:
 DELETE FROM series_authors WHERE series = ?;
 
