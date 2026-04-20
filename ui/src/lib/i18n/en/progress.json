@@ -1,0 +1,11 @@
+{
+  "importing": "Importing {{count}}/{{total}} files",
+  "import_complete": "Import complete",
+  "promoting": "Promoting {{count}}/{{total}} books",
+  "promote_complete": "Promotion complete",
+  "deleting": "Deleting {{count}}/{{total}} books",
+  "delete_complete": "Deletion complete",
+  "batch_title": "Batch Progress",
+  "batch_promoting": "Promoting staged books to catalog",
+  "batch_deleting": "Deleting staged books"
+}

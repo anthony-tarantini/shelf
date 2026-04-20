@@ -1,0 +1,77 @@
+{
+  "fetch": "Fetch Metadata",
+  "loading": "Searching metadata...",
+  "loading_title": "Metadata",
+  "external_description": "External Description",
+  "current_description": "Current Description",
+  "external_cover": "External Cover",
+  "current_cover": "Current Cover",
+  "external_authors": "External Authors",
+  "current_authors": "Current Authors",
+  "external_genres": "External Genres",
+  "current_genres": "Current Genres",
+  "external_series": "External Series",
+  "current_series": "Current Series",
+  "external_narrator": "External Narrator",
+  "current_narrator": "Current Narrator",
+  "no_cover": "No Cover",
+  "use": "Use",
+  "no_selected": "No {label} selected",
+  "identifiers": {
+    "label": "Identifiers",
+    "subtitle": "{{identifier}} ({{media}} | {{type}})",
+    "ISBN10": "ISBN-10",
+    "ISBN13": "ISBN-13",
+    "ASIN": "ASIN"
+  },
+  "cover": {
+    "label": "Cover",
+    "insecure": "Insecure Image URL",
+    "external": "External Cover",
+    "current_alt": "Cover",
+    "external_alt": "External Cover",
+    "use": "Use"
+  },
+  "comparison": {
+    "none_selected": "No {{label}} selected",
+    "series_label": "Series",
+    "no_series_selected": "No series selected",
+    "edit_series_index": "Edit series index",
+    "remove_series": "Remove series",
+    "unknown_series_index": "?",
+    "identifier_isbn13": "ISBN-13",
+    "identifier_isbn10": "ISBN-10",
+    "identifier_asin": "ASIN"
+  },
+  "description_row": {
+    "none": "None",
+    "more": "More",
+    "close_modal": "Close modal",
+    "use_description": "Use Description"
+  },
+  "manager": {
+    "search_error": "Search Error:",
+    "no_search": "No search initiated.",
+    "select_match": "Select Metadata Match",
+    "back_to_results": "Back to Results",
+    "compare_title": "Compare:",
+    "compare_external": "vs External Result",
+    "field": "Field",
+    "merged_result": "Merged Result (Left)",
+    "external_options": "External Options (Click to move left)",
+    "external_hint": "Only additional external values are shown; matches already on the left are hidden.",
+    "apply_failed": "Unknown error occurred during apply",
+    "applying": "Applying...",
+    "apply_selected": "Apply Selected Metadata",
+    "select_result": "Select {{title}} by {{author}}"
+  },
+  "fields": {
+    "title": "Title",
+    "authors": "Authors",
+    "publisher": "Publisher",
+    "ebook_identifiers": "Ebook Identifiers",
+    "audiobook_identifiers": "Audiobook Identifiers",
+    "publish_year": "Publish Year",
+    "genres": "Genres"
+  }
+}
