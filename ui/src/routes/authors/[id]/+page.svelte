@@ -2,6 +2,7 @@
 	import { t } from '$lib/i18n';
 	import { resolve } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
+	import type { BookSummary } from '$lib/types/models';
 	import AuthenticatedImage from '$lib/components/ui/AuthenticatedImage.svelte';
 	import AuthorImageDialog from '$lib/components/AuthorImageDialog.svelte';
 	import LoadingState from '$lib/components/ui/LoadingState/LoadingState.svelte';
@@ -12,6 +13,34 @@
 	const details = $derived(data.details);
 	const author = $derived(details?.author);
 	const books = $derived(details?.books ?? []);
+
+	const booksByGroup = $derived.by(() => {
+		const groups: Record<string, typeof books> = {};
+		const others: typeof books = [];
+
+		for (const book of books) {
+			if (book.seriesName) {
+				if (!groups[book.seriesName]) groups[book.seriesName] = [];
+				groups[book.seriesName].push(book);
+			} else {
+				others.push(book);
+			}
+		}
+
+		// Sort each series by index
+		for (const name in groups) {
+			groups[name].sort((a, b) => (a.seriesIndex ?? 0) - (b.seriesIndex ?? 0));
+		}
+
+		// Sort individual books by title
+		others.sort((a, b) => a.title.localeCompare(b.title));
+
+		const series = Object.keys(groups)
+			.sort()
+			.map((name) => ({ name, books: groups[name] }));
+
+		return { series, others };
+	});
 
 	let imageDialogOpen = $state(false);
 
@@ -32,6 +61,42 @@
 
 <div class="max-w-6xl mx-auto">
 	{#if details && author}
+		{#snippet bookCard(book: BookSummary)}
+			<a
+				href={resolve(`/books/${book.id}`)}
+				class="group flex flex-col bg-card/80 border border-border rounded-[1.5rem] overflow-hidden hover:border-primary/50 hover:-translate-y-1 transition-all shadow-xl"
+			>
+				<div class="aspect-2/3 relative bg-background">
+					{#if book.coverPath}
+						<AuthenticatedImage
+							src={`/api/books/${book.id}/cover?v=${encodeURIComponent(book.coverPath)}`}
+							alt={book.title}
+							class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+						/>
+					{:else}
+						<div class="w-full h-full flex items-center justify-center text-gray-700 font-bold p-4 text-center text-sm">
+							{book.title}
+						</div>
+					{/if}
+				</div>
+				<div class="p-4 flex-1">
+					{#if book.userState}
+						<div class="mb-2">
+							<ReadStatusBadge status={book.userState.readStatus} />
+						</div>
+					{/if}
+					<h3 class="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+						{book.title}
+					</h3>
+					{#if book.seriesIndex !== null && book.seriesIndex !== undefined}
+						<p class="text-[10px] text-muted-foreground mt-1 font-medium uppercase tracking-wider">
+							Book {book.seriesIndex}
+						</p>
+					{/if}
+				</div>
+			</a>
+		{/snippet}
+
 		<header class="mb-10 rounded-[1.75rem] border border-border/70 bg-card/70 p-6 shadow-xl shadow-black/5 backdrop-blur-md">
 			<a
 				href={resolve("/authors")}
@@ -80,37 +145,36 @@
 			</div>
 		</header>
 
-		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-			{#each books as book (book.id)}
-				<a
-					href={resolve(`/books/${book.id}`)}
-					class="group flex flex-col bg-card/80 border border-border rounded-[1.5rem] overflow-hidden hover:border-primary/50 hover:-translate-y-1 transition-all shadow-xl"
-				>
-					<div class="aspect-2/3 relative bg-background">
-						{#if book.coverPath}
-							<AuthenticatedImage
-								src={`/api/books/${book.id}/cover?v=${encodeURIComponent(book.coverPath)}`}
-								alt={book.title}
-								class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-							/>
-						{:else}
-							<div class="w-full h-full flex items-center justify-center text-gray-700 font-bold p-4 text-center text-sm">
-								{book.title}
-							</div>
-						{/if}
+		<div class="space-y-12">
+			{#each booksByGroup.series as group}
+				<section>
+					<div class="flex items-center gap-4 mb-6">
+						<h2 class="text-xl font-bold text-foreground">{group.name}</h2>
+						<div class="h-px flex-1 bg-border/50"></div>
 					</div>
-					<div class="p-4 flex-1">
-						{#if book.userState}
-							<div class="mb-2">
-								<ReadStatusBadge status={book.userState.readStatus} />
-							</div>
-						{/if}
-						<h3 class="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-							{book.title}
-						</h3>
+					<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+						{#each group.books as book (book.id)}
+							{@render bookCard(book)}
+						{/each}
 					</div>
-				</a>
+				</section>
 			{/each}
+
+			{#if booksByGroup.others.length > 0}
+				<section>
+					{#if booksByGroup.series.length > 0}
+						<div class="flex items-center gap-4 mb-6">
+							<h2 class="text-xl font-bold text-foreground">{$t('authors.other_books')}</h2>
+							<div class="h-px flex-1 bg-border/50"></div>
+						</div>
+					{/if}
+					<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+						{#each booksByGroup.others as book (book.id)}
+							{@render bookCard(book)}
+						{/each}
+					</div>
+				</section>
+			{/if}
 		</div>
 
 		<AuthorImageDialog

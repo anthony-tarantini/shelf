@@ -110,13 +110,24 @@ fun Route.authorRoutes(
             with(auth) {
                 respond({
                     val authorId = AuthorId(resource.id)
-                    val books =
-                        bookService
-                            .getBooksForAuthors(listOf(authorId))
-                            .getOrDefault(authorId, emptyList())
+                    val paged =
+                        bookService.getBooksByAuthorPage(
+                            authorId = authorId,
+                            page = 0,
+                            size = Int.MAX_VALUE,
+                        )
+
                     activityService.enrichBookSummaries(
-                        books.map {
-                            BookSummary(id = it.id.id, title = it.title, coverPath = it.coverPath)
+                        paged.items.map { agg ->
+                            val series = agg.series.firstOrNull()
+                            BookSummary(
+                                id = agg.book.id.id,
+                                title = agg.book.title,
+                                coverPath = agg.book.coverPath,
+                                authorNames = agg.authors.map { it.name },
+                                seriesName = series?.name,
+                                seriesIndex = series?.index,
+                            )
                         }
                     )
                 })

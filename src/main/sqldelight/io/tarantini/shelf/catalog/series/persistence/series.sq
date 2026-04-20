@@ -109,8 +109,16 @@ SELECT count(*) FROM seriesSummaries;
 selectBooksForSeriesPage:
 SELECT b.id, b.title, b.cover_path, b.sys_period FROM books b
 JOIN series_books sb ON b.id = sb.book
+WHERE sb.series = :seriesId
+GROUP BY b.id, sb.index
+ORDER BY sb.index ASC, b.title ASC
+LIMIT :limit OFFSET :offset;
+
+selectBooksForSeriesByFormatPage:
+SELECT b.id, b.title, b.cover_path, b.sys_period FROM books b
+JOIN series_books sb ON b.id = sb.book
 LEFT JOIN editions e ON b.id = e.book_id
-WHERE sb.series = :seriesId AND (:format IS NULL OR e.format = :format)
+WHERE sb.series = :seriesId AND e.format = :format
 GROUP BY b.id, sb.index
 ORDER BY sb.index ASC, b.title ASC
 LIMIT :limit OFFSET :offset;
@@ -118,5 +126,10 @@ LIMIT :limit OFFSET :offset;
 countBooksForSeries:
 SELECT count(DISTINCT b.id) FROM books b
 JOIN series_books sb ON b.id = sb.book
+WHERE sb.series = :seriesId;
+
+countBooksForSeriesByFormat:
+SELECT count(DISTINCT b.id) FROM books b
+JOIN series_books sb ON b.id = sb.book
 LEFT JOIN editions e ON b.id = e.book_id
-WHERE sb.series = :seriesId AND (:format IS NULL OR e.format = :format);
+WHERE sb.series = :seriesId AND e.format = :format;

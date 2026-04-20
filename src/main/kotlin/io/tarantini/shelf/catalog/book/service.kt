@@ -187,16 +187,13 @@ fun bookService(
                     }
                 val bookIds = books.map { it.id.id }
                 val authorsMap = authorsProvider.getAuthorsForBooks(bookIds)
-                val seriesMap = seriesProvider.getSeriesForBooks(bookIds)
+                val seriesMap = seriesProvider.getBookSeriesEntries(bookIds)
                 val metadataMap = metadataProvider.getMetadataForBooks(bookIds)
                 books.map { book ->
                     BookAggregate(
                         book = book,
                         authors = authorsMap.getOrDefault(book.id.id, emptyList()),
-                        series =
-                            seriesMap.getOrDefault(book.id.id, emptyList()).map {
-                                BookSeriesEntry(it.id.id, it.name, it.coverPath)
-                            },
+                        series = seriesMap.getOrDefault(book.id.id, emptyList()),
                         metadata = metadataMap[book.id.id],
                     )
                 }
@@ -246,7 +243,7 @@ fun bookService(
 
                 val pagedIds = pagedRoots.map { it.id.id }
                 val pagedAuthorsMap = authorsProvider.getAuthorsForBooks(pagedIds)
-                val pagedSeriesMap = seriesProvider.getSeriesForBooks(pagedIds)
+                val pagedSeriesMap = seriesProvider.getBookSeriesEntries(pagedIds)
                 val pagedMetadataMap = metadataProvider.getMetadataForBooks(pagedIds)
 
                 val items =
@@ -254,10 +251,7 @@ fun bookService(
                         BookAggregate(
                             book = book,
                             authors = pagedAuthorsMap.getOrDefault(book.id.id, emptyList()),
-                            series =
-                                pagedSeriesMap.getOrDefault(book.id.id, emptyList()).map {
-                                    BookSeriesEntry(it.id.id, it.name, it.coverPath)
-                                },
+                            series = pagedSeriesMap.getOrDefault(book.id.id, emptyList()),
                             metadata = pagedMetadataMap[book.id.id],
                         )
                     }
@@ -277,15 +271,28 @@ fun bookService(
                 val offset = (page * size).toLong()
 
                 val pagedRoots =
-                    authorQueries
-                        .selectBooksForAuthorPage(authorId, format, limit, offset)
-                        .executeAsList()
-                        .map { BookRoot.fromRaw(it.id, it.title, it.cover_path) }
-                val totalCount = authorQueries.countBooksForAuthor(authorId, format).executeAsOne()
+                    if (format != null) {
+                        authorQueries
+                            .selectBooksForAuthorByFormatPage(authorId, format, limit, offset)
+                            .executeAsList()
+                            .map { BookRoot.fromRaw(it.id, it.title, it.cover_path) }
+                    } else {
+                        authorQueries
+                            .selectBooksForAuthorPage(authorId, limit, offset)
+                            .executeAsList()
+                            .map { BookRoot.fromRaw(it.id, it.title, it.cover_path) }
+                    }
+
+                val totalCount =
+                    if (format != null) {
+                        authorQueries.countBooksForAuthorByFormat(authorId, format).executeAsOne()
+                    } else {
+                        authorQueries.countBooksForAuthor(authorId).executeAsOne()
+                    }
 
                 val pagedIds = pagedRoots.map { it.id.id }
                 val pagedAuthorsMap = authorsProvider.getAuthorsForBooks(pagedIds)
-                val pagedSeriesMap = seriesProvider.getSeriesForBooks(pagedIds)
+                val pagedSeriesMap = seriesProvider.getBookSeriesEntries(pagedIds)
                 val pagedMetadataMap = metadataProvider.getMetadataForBooks(pagedIds)
 
                 val items =
@@ -293,10 +300,7 @@ fun bookService(
                         BookAggregate(
                             book = book,
                             authors = pagedAuthorsMap.getOrDefault(book.id.id, emptyList()),
-                            series =
-                                pagedSeriesMap.getOrDefault(book.id.id, emptyList()).map {
-                                    BookSeriesEntry(it.id.id, it.name, it.coverPath)
-                                },
+                            series = pagedSeriesMap.getOrDefault(book.id.id, emptyList()),
                             metadata = pagedMetadataMap[book.id.id],
                         )
                     }
@@ -315,15 +319,28 @@ fun bookService(
                 val offset = (page * size).toLong()
 
                 val pagedRoots =
-                    seriesQueries
-                        .selectBooksForSeriesPage(seriesId, format, limit, offset)
-                        .executeAsList()
-                        .map { BookRoot.fromRaw(it.id, it.title, it.cover_path) }
-                val totalCount = seriesQueries.countBooksForSeries(seriesId, format).executeAsOne()
+                    if (format != null) {
+                        seriesQueries
+                            .selectBooksForSeriesByFormatPage(seriesId, format, limit, offset)
+                            .executeAsList()
+                            .map { BookRoot.fromRaw(it.id, it.title, it.cover_path) }
+                    } else {
+                        seriesQueries
+                            .selectBooksForSeriesPage(seriesId, limit, offset)
+                            .executeAsList()
+                            .map { BookRoot.fromRaw(it.id, it.title, it.cover_path) }
+                    }
+
+                val totalCount =
+                    if (format != null) {
+                        seriesQueries.countBooksForSeriesByFormat(seriesId, format).executeAsOne()
+                    } else {
+                        seriesQueries.countBooksForSeries(seriesId).executeAsOne()
+                    }
 
                 val pagedIds = pagedRoots.map { it.id.id }
                 val pagedAuthorsMap = authorsProvider.getAuthorsForBooks(pagedIds)
-                val pagedSeriesMap = seriesProvider.getSeriesForBooks(pagedIds)
+                val pagedSeriesMap = seriesProvider.getBookSeriesEntries(pagedIds)
                 val pagedMetadataMap = metadataProvider.getMetadataForBooks(pagedIds)
 
                 val items =
@@ -331,10 +348,7 @@ fun bookService(
                         BookAggregate(
                             book = book,
                             authors = pagedAuthorsMap.getOrDefault(book.id.id, emptyList()),
-                            series =
-                                pagedSeriesMap.getOrDefault(book.id.id, emptyList()).map {
-                                    BookSeriesEntry(it.id.id, it.name, it.coverPath)
-                                },
+                            series = pagedSeriesMap.getOrDefault(book.id.id, emptyList()),
                             metadata = pagedMetadataMap[book.id.id],
                         )
                     }
@@ -350,7 +364,7 @@ fun bookService(
                     }
                 val bookIds = books.map { it.id.id }
                 val authorsMap = authorsProvider.getAuthorsForBooks(bookIds)
-                val seriesMap = seriesProvider.getSeriesForBooks(bookIds)
+                val seriesMap = seriesProvider.getBookSeriesEntries(bookIds)
                 books.map { book ->
                     val seriesList = seriesMap[book.id.id] ?: emptyList()
                     val series = seriesList.firstOrNull()
@@ -360,7 +374,7 @@ fun bookService(
                         coverPath = book.coverPath,
                         authorNames = authorsMap[book.id.id]?.map { it.name } ?: emptyList(),
                         seriesName = series?.name,
-                        seriesIndex = null,
+                        seriesIndex = series?.index,
                     )
                 }
             }
@@ -421,17 +435,14 @@ fun bookService(
                     }
                 val rawIds = books.map { it.id.id }
                 val authorsMap = authorsProvider.getAuthorsForBooks(rawIds)
-                val seriesMap = seriesProvider.getSeriesForBooks(rawIds)
+                val seriesMap = seriesProvider.getBookSeriesEntries(rawIds)
                 val metadataMap = metadataProvider.getMetadataForBooks(rawIds)
 
                 books.map { book ->
                     BookAggregate(
                         book = book,
                         authors = authorsMap.getOrDefault(book.id.id, emptyList()),
-                        series =
-                            seriesMap.getOrDefault(book.id.id, emptyList()).map {
-                                BookSeriesEntry(it.id.id, it.name, it.coverPath)
-                            },
+                        series = seriesMap.getOrDefault(book.id.id, emptyList()),
                         metadata = metadataMap[book.id.id],
                     )
                 }

@@ -8,6 +8,7 @@
   "empty_state": "No authors found.",
   "load_error_title": "Unable to refresh authors",
   "loading": "Loading authors details...",
+  "other_books": "Standalone Books",
   "dashboard": {
     "count_label": "Authors",
     "view_label": "View",

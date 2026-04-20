@@ -93,16 +93,23 @@ searchAuthors:
 SELECT * FROM authorSummaries WHERE name ILIKE '%' || :query || '%' ORDER BY similarity(name, :query) DESC LIMIT 10;
 
 selectBooksForAuthorPage:
-SELECT b.id, b.title, b.cover_path FROM books b
-JOIN book_authors ba ON b.id = ba.book
-LEFT JOIN editions e ON b.id = e.book_id
-WHERE ba.author = :authorId AND (:format IS NULL OR e.format = :format)
-GROUP BY b.id
-ORDER BY b.title ASC
+SELECT id, title, cover_path FROM books
+WHERE id IN (SELECT book FROM book_authors WHERE author = :authorId)
+ORDER BY title ASC
+LIMIT :limit OFFSET :offset;
+
+selectBooksForAuthorByFormatPage:
+SELECT id, title, cover_path FROM books
+WHERE id IN (SELECT book FROM book_authors WHERE author = :authorId)
+AND id IN (SELECT book_id FROM editions WHERE format = :format)
+ORDER BY title ASC
 LIMIT :limit OFFSET :offset;
 
 countBooksForAuthor:
-SELECT count(DISTINCT b.id) FROM books b
-JOIN book_authors ba ON b.id = ba.book
-LEFT JOIN editions e ON b.id = e.book_id
-WHERE ba.author = :authorId AND (:format IS NULL OR e.format = :format);
+SELECT count(*) FROM books
+WHERE id IN (SELECT book FROM book_authors WHERE author = :authorId);
+
+countBooksForAuthorByFormat:
+SELECT count(*) FROM books
+WHERE id IN (SELECT book FROM book_authors WHERE author = :authorId)
+AND id IN (SELECT book_id FROM editions WHERE format = :format);
