@@ -1,0 +1,76 @@
+query FetchMetadataByBookIds($bookIds: [Int!]!) {
+  books(where: {id: {_in: $bookIds}}) {
+    id
+    title
+    release_year
+    ratings_count
+    rating
+    description
+    book_series {
+      position
+      series {
+        name
+        id
+        description
+      }
+    }
+    genres: taggings(
+      limit: 10
+      order_by: {}
+      where: {tag: {tag_category: {category: {_eq: "Genre"}}}}
+      distinct_on: tag_id
+    ) {
+      tag {
+        id
+        tag
+      }
+    }
+    contributions {
+      author {
+        id
+        image {
+          url
+        }
+        name
+      }
+      contribution
+    }
+    image {
+      url
+    }
+    default_ebook_edition {
+      isbn_10
+      isbn_13
+      pages
+      publisher {
+        id
+        name
+      }
+      contributions {
+        author {
+          id
+          name
+        }
+        contribution
+      }
+      asin
+    }
+    default_audio_edition {
+      isbn_10
+      isbn_13
+      audio_seconds
+      publisher {
+        id
+        name
+      }
+      contributions {
+        author {
+          id
+          name
+        }
+        contribution
+      }
+      asin
+    }
+  }
+}
