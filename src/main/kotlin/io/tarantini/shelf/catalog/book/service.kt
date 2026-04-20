@@ -5,7 +5,6 @@ package io.tarantini.shelf.catalog.book
 import arrow.core.raise.context.ensureNotNull
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.Identity
-import io.tarantini.shelf.app.PersistenceState
 import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.author.BookAuthorProvider
 import io.tarantini.shelf.catalog.author.createAuthor
@@ -495,7 +494,11 @@ fun bookService(
         }
 
         context(_: RaiseContext)
-        override suspend fun updateBookMetadata(userId: UserId, id: BookId, request: UpdateBookMetadataRequest) {
+        override suspend fun updateBookMetadata(
+            userId: UserId,
+            id: BookId,
+            request: UpdateBookMetadataRequest,
+        ) {
             // Handle cover URL outside transaction (suspend call)
             var newCoverPath: StoragePath? = null
             if (!request.coverUrl.isNullOrBlank()) {

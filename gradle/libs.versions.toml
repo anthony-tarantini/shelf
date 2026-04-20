@@ -18,6 +18,7 @@ lettuce = "7.5.1.RELEASE"
 logback = "1.5.32"
 logstash-logback = "8.1"
 micrometer = "1.15.0"
+mockk = "1.13.12"
 opentelemetry = "1.54.1"
 opentelemetry-instrumentation = "2.18.1-alpha"
 postgresql = "42.7.10"
@@ -53,6 +54,7 @@ kotlinx-coroutines-slf4j = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-
 logstash-logback = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback" }
 micrometer-registry-otlp = { module = "io.micrometer:micrometer-registry-otlp", version.ref = "micrometer" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "opentelemetry" }
 opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp", version.ref = "opentelemetry" }
 opentelemetry-sdk-extension-autoconfigure = { module = "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure", version.ref = "opentelemetry" }

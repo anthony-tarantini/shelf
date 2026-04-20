@@ -119,6 +119,7 @@ dependencies {
 
     testImplementation(libs.bundles.kotest)
     testImplementation(libs.bundles.ktor.client)
+    testImplementation(libs.mockk)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.ktor.server.tests)
 }

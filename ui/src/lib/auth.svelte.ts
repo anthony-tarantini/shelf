@@ -5,7 +5,7 @@ interface SetupStatusResponse {
   complete: boolean;
 }
 
-class AuthState {
+export class AuthState {
   private user = $state<UserRoot | null>(null);
   private initialized = $state(false);
   private setupComplete = $state<boolean | null>(null);

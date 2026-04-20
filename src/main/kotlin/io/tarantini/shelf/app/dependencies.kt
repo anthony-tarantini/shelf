@@ -154,22 +154,18 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 val connection = redisClient.connect()
                 onRelease { connection.close() }
                 valkeyConnection = connection
-                
+
                 Triple(
                     valkeyStagedBookStore(connection),
                     ValkeyAuthCache(connection),
-                    ValkeyJobQueue(connection)
+                    ValkeyJobQueue(connection),
                 )
             } else {
                 logger.info { "Valkey not configured, falling back to in-memory stores." }
                 val channel = Channel<BookId>(Channel.UNLIMITED)
                 inMemoryChannel = channel
-                
-                Triple(
-                    inMemoryStagedBookStore(),
-                    InMemoryAuthCache(),
-                    InMemoryJobQueue(channel)
-                )
+
+                Triple(inMemoryStagedBookStore(), InMemoryAuthCache(), InMemoryJobQueue(channel))
             }
 
         val bookService =
@@ -183,7 +179,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 storageService,
                 metadataQueries,
                 settingsService,
-                jobQueue
+                jobQueue,
             )
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
@@ -230,14 +226,15 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             )
 
         // Start background worker
-        val worker = SyncMetadataWorker(
-            scope = scope,
-            bookService = bookService,
-            epubWriter = epubWriter,
-            storageService = storageService,
-            valkeyConnection = valkeyConnection,
-            inMemoryChannel = inMemoryChannel
-        )
+        val worker =
+            SyncMetadataWorker(
+                scope = scope,
+                bookService = bookService,
+                epubWriter = epubWriter,
+                storageService = storageService,
+                valkeyConnection = valkeyConnection,
+                inMemoryChannel = inMemoryChannel,
+            )
         worker.start()
 
         return Dependencies(

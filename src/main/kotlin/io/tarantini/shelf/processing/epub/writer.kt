@@ -9,7 +9,6 @@ import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
@@ -45,7 +44,7 @@ fun epubWriter(): EpubWriter =
                     FileSystems.newFileSystem(uri, env).use { fs ->
                         val containerPath = fs.getPath("/META-INF/container.xml")
                         ensure(Files.exists(containerPath)) { MissingContainerXML }
-                        
+
                         val containerXml = Files.readAllBytes(containerPath)
                         val opfPathStr = getOpfPath(containerXml)
                         val opfPath = fs.getPath(opfPathStr)
@@ -60,7 +59,10 @@ fun epubWriter(): EpubWriter =
                         Files.newOutputStream(opfPath).use { os ->
                             val transformer = TransformerFactory.newInstance().newTransformer()
                             transformer.setOutputProperty(OutputKeys.INDENT, "yes")
-                            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
+                            transformer.setOutputProperty(
+                                "{http://xml.apache.org/xslt}indent-amount",
+                                "2",
+                            )
                             transformer.transform(DOMSource(doc), StreamResult(os))
                         }
                     }
@@ -83,7 +85,7 @@ private fun applyUpdates(doc: Document, updates: EpubMetadataUpdates) {
     val dcNamespace = epubNamespaceContext.getNamespaceURI("dc")
 
     updates.title?.let { updateOrCreateNode(doc, metadata, dcNamespace, "dc:title", it) }
-    
+
     updates.authors?.let { authorList ->
         // For authors, we typically want to replace existing dc:creator tags
         removeNodes(metadata, "dc:creator")
@@ -94,9 +96,13 @@ private fun applyUpdates(doc: Document, updates: EpubMetadataUpdates) {
         }
     }
 
-    updates.description?.let { updateOrCreateNode(doc, metadata, dcNamespace, "dc:description", it) }
+    updates.description?.let {
+        updateOrCreateNode(doc, metadata, dcNamespace, "dc:description", it)
+    }
     updates.publisher?.let { updateOrCreateNode(doc, metadata, dcNamespace, "dc:publisher", it) }
-    updates.publishYear?.let { updateOrCreateNode(doc, metadata, dcNamespace, "dc:date", it.toString()) }
+    updates.publishYear?.let {
+        updateOrCreateNode(doc, metadata, dcNamespace, "dc:date", it.toString())
+    }
 }
 
 private fun updateOrCreateNode(
@@ -104,7 +110,7 @@ private fun updateOrCreateNode(
     parent: Element,
     namespace: String?,
     tagName: String,
-    value: String
+    value: String,
 ) {
     val nodes = doc.getElementsByTagName(tagName)
     if (nodes.length > 0) {

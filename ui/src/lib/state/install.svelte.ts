@@ -3,7 +3,7 @@ const INSTALL_DISMISS_MS = 1000 * 60 * 60 * 24 * 7;
 
 export type InstallPlatform = 'ios-safari' | 'chromium' | 'unsupported';
 
-class InstallState {
+export class InstallState {
 	private platformState = $state<InstallPlatform>('unsupported');
 	private canPromptState = $state(false);
 	private installedState = $state(false);

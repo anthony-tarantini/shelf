@@ -14,7 +14,7 @@ function shouldShowBatchProgress(
 	return now - new Date(progress.finishedAt).getTime() < visibilityMs;
 }
 
-class ProgressState {
+export class ProgressState {
 	private _importScan = $state<ImportScanProgress | null>(null);
 	private _batch = $state<BatchProgress | null>(null);
 	private _pollTimer: ReturnType<typeof setInterval> | null = null;

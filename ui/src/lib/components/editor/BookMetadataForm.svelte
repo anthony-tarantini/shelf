@@ -35,8 +35,8 @@
     }: Props = $props();
 
     // Internal reactive copy
-    let formData = $state<BookMetadataFormState>(JSON.parse(JSON.stringify(initialData)));
-    let genresString = $state((initialData.genres || []).join(', '));
+    let formData = $derived<BookMetadataFormState>(JSON.parse(JSON.stringify(initialData)));
+    let genresString = $derived((initialData.genres || []).join(', '));
 
     $effect(() => {
         formData = JSON.parse(JSON.stringify(initialData));

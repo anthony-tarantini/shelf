@@ -13,24 +13,14 @@ import kotlinx.serialization.Serializable
 
 @Resource("/settings")
 class SettingsResource {
-    @Resource("user")
-    class User(val parent: SettingsResource = SettingsResource())
+    @Resource("user") class User(val parent: SettingsResource = SettingsResource())
 }
 
-@Serializable
-data class UpdateSettingsRequest(
-    val syncMetadataToFiles: Boolean
-)
+@Serializable data class UpdateSettingsRequest(val syncMetadataToFiles: Boolean)
 
-@Serializable
-data class SettingsResponse(
-    val syncMetadataToFiles: Boolean
-)
+@Serializable data class SettingsResponse(val syncMetadataToFiles: Boolean)
 
-fun Route.settingsRoutes(
-    settingsService: SettingsService,
-    jwtService: JwtService,
-) {
+fun Route.settingsRoutes(settingsService: SettingsService, jwtService: JwtService) {
     get<SettingsResource.User> {
         this.jwtAuth(jwtService) { context ->
             respond({
@@ -44,7 +34,8 @@ fun Route.settingsRoutes(
         this.jwtAuth(jwtService) { context ->
             val request = call.receive<Request<UpdateSettingsRequest>>().data
             respond({
-                val updated = settingsService.updateUserSettings(context.userId, request.syncMetadataToFiles)
+                val updated =
+                    settingsService.updateUserSettings(context.userId, request.syncMetadataToFiles)
                 SettingsResponse(syncMetadataToFiles = updated.syncMetadataToFiles)
             })
         }
