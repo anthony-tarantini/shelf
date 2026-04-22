@@ -10,6 +10,7 @@ import io.tarantini.shelf.catalog.author.authorRoutes
 import io.tarantini.shelf.catalog.book.bookRoutes
 import io.tarantini.shelf.catalog.metadata.metadataRoutes
 import io.tarantini.shelf.catalog.opds.opdsRoutes
+import io.tarantini.shelf.catalog.podcast.podcastRoutes
 import io.tarantini.shelf.catalog.search.searchRoutes
 import io.tarantini.shelf.catalog.series.seriesRoutes
 import io.tarantini.shelf.integration.koreader.koreaderRoutes
@@ -59,6 +60,7 @@ fun Application.routes(deps: Dependencies) = routing {
     )
     metadataRoutes(deps.metadataService, deps.jwtService)
     with(deps.sqlDriver) { searchRoutes(deps.searchService, deps.activityService, deps.jwtService) }
+    podcastRoutes(deps.podcastService, deps.jwtService)
     seriesRoutes(
         deps.seriesService,
         deps.bookService,

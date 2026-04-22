@@ -26,6 +26,8 @@ object InvalidFeedToken : PodcastValidationError
 
 object InvalidEpisodeIndex : PodcastValidationError
 
+object InvalidFetchInterval : PodcastValidationError
+
 sealed interface PodcastIntegrationError : PodcastError
 
 object FeedFetchFailed : PodcastIntegrationError

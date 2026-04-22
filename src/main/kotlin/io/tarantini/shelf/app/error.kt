@@ -52,6 +52,21 @@ import io.tarantini.shelf.catalog.metadata.domain.MetadataNotFound
 import io.tarantini.shelf.catalog.metadata.domain.ShortASIN
 import io.tarantini.shelf.catalog.metadata.domain.ShortISBN
 import io.tarantini.shelf.catalog.metadata.domain.ShortISBN13
+import io.tarantini.shelf.catalog.podcast.domain.EmptyFeedUrl
+import io.tarantini.shelf.catalog.podcast.domain.EmptyPodcastId
+import io.tarantini.shelf.catalog.podcast.domain.FeedAuthRequired
+import io.tarantini.shelf.catalog.podcast.domain.FeedFetchFailed
+import io.tarantini.shelf.catalog.podcast.domain.FeedParseFailed
+import io.tarantini.shelf.catalog.podcast.domain.FeedRateLimited
+import io.tarantini.shelf.catalog.podcast.domain.InvalidEpisodeIndex
+import io.tarantini.shelf.catalog.podcast.domain.InvalidFeedToken
+import io.tarantini.shelf.catalog.podcast.domain.InvalidFeedUrl
+import io.tarantini.shelf.catalog.podcast.domain.InvalidFetchInterval
+import io.tarantini.shelf.catalog.podcast.domain.InvalidPodcastId
+import io.tarantini.shelf.catalog.podcast.domain.PodcastAlreadyExists
+import io.tarantini.shelf.catalog.podcast.domain.PodcastError
+import io.tarantini.shelf.catalog.podcast.domain.PodcastFeedAlreadySubscribed
+import io.tarantini.shelf.catalog.podcast.domain.PodcastNotFound
 import io.tarantini.shelf.catalog.series.domain.EmptySeriesId
 import io.tarantini.shelf.catalog.series.domain.EmptySeriesSlug
 import io.tarantini.shelf.catalog.series.domain.EmptySeriesTitle
@@ -86,6 +101,16 @@ import io.tarantini.shelf.processing.import.domain.ScanFailed
 import io.tarantini.shelf.processing.import.domain.StagedBookNotFound
 import io.tarantini.shelf.processing.import.domain.StagedCoverNotFound
 import io.tarantini.shelf.processing.import.domain.UnsupportedFormat
+import io.tarantini.shelf.processing.sanitization.domain.EmptySanitizationJobId
+import io.tarantini.shelf.processing.sanitization.domain.FfmpegExecutionFailed
+import io.tarantini.shelf.processing.sanitization.domain.InvalidAdSegment
+import io.tarantini.shelf.processing.sanitization.domain.InvalidAudioTimestamp
+import io.tarantini.shelf.processing.sanitization.domain.InvalidSanitizationJobId
+import io.tarantini.shelf.processing.sanitization.domain.InvalidSanitizationTransition
+import io.tarantini.shelf.processing.sanitization.domain.OriginalFileNotFound
+import io.tarantini.shelf.processing.sanitization.domain.SanitizationError
+import io.tarantini.shelf.processing.sanitization.domain.SanitizationJobNotFound
+import io.tarantini.shelf.processing.sanitization.domain.TranscriptionFailed
 import io.tarantini.shelf.processing.storage.DiskFull
 import io.tarantini.shelf.processing.storage.FileNotFound
 import io.tarantini.shelf.processing.storage.ImageTooLarge
@@ -161,9 +186,48 @@ fun AppError.toHttpResponse(): Pair<HttpStatusCode, String> =
         is AudiobookError -> toHttpResponse()
         is ImportError -> toHttpResponse()
         is MetadataError -> toHttpResponse()
+        is PodcastError -> toHttpResponse()
+        is SanitizationError -> toHttpResponse()
         is DataError -> HttpStatusCode.InternalServerError to "Database error"
         is AccessDenied -> HttpStatusCode.Forbidden to "Access denied"
         else -> HttpStatusCode.InternalServerError to "Internal server error"
+    }
+
+private fun PodcastError.toHttpResponse(): Pair<HttpStatusCode, String> =
+    when (this) {
+        PodcastNotFound -> HttpStatusCode.NotFound to "Podcast not found"
+        PodcastAlreadyExists -> HttpStatusCode.Conflict to "Podcast already exists"
+        PodcastFeedAlreadySubscribed ->
+            HttpStatusCode.Conflict to "Feed URL is already subscribed by another podcast"
+        EmptyPodcastId -> HttpStatusCode.BadRequest to "Podcast id is required"
+        InvalidPodcastId -> HttpStatusCode.BadRequest to "Invalid podcast id"
+        EmptyFeedUrl -> HttpStatusCode.BadRequest to "Feed URL is required"
+        InvalidFeedUrl -> HttpStatusCode.BadRequest to "Invalid feed URL"
+        InvalidFeedToken -> HttpStatusCode.BadRequest to "Invalid feed token"
+        InvalidEpisodeIndex -> HttpStatusCode.BadRequest to "Invalid episode index"
+        InvalidFetchInterval ->
+            HttpStatusCode.BadRequest to "Fetch interval must be between 1 and 10080 minutes"
+        FeedFetchFailed -> HttpStatusCode.BadGateway to "Failed to fetch podcast feed"
+        FeedParseFailed -> HttpStatusCode.UnprocessableEntity to "Failed to parse podcast feed"
+        FeedAuthRequired -> HttpStatusCode.Unauthorized to "Feed authentication required"
+        is FeedRateLimited ->
+            HttpStatusCode.TooManyRequests to
+                (retryAfterSeconds?.let { "Feed rate limited. Retry after $it seconds" }
+                    ?: "Feed rate limited")
+    }
+
+private fun SanitizationError.toHttpResponse(): Pair<HttpStatusCode, String> =
+    when (this) {
+        SanitizationJobNotFound -> HttpStatusCode.NotFound to "Sanitization job not found"
+        EmptySanitizationJobId -> HttpStatusCode.BadRequest to "Sanitization job id is required"
+        InvalidSanitizationJobId -> HttpStatusCode.BadRequest to "Invalid sanitization job id"
+        InvalidAudioTimestamp -> HttpStatusCode.BadRequest to "Invalid audio timestamp"
+        InvalidAdSegment -> HttpStatusCode.BadRequest to "Invalid ad segment"
+        InvalidSanitizationTransition ->
+            HttpStatusCode.BadRequest to "Invalid sanitization status transition"
+        FfmpegExecutionFailed -> HttpStatusCode.BadGateway to "FFmpeg execution failed"
+        TranscriptionFailed -> HttpStatusCode.BadGateway to "Transcription failed"
+        OriginalFileNotFound -> HttpStatusCode.NotFound to "Original audio file not found"
     }
 
 private fun ImportError.toHttpResponse(): Pair<HttpStatusCode, String> =
