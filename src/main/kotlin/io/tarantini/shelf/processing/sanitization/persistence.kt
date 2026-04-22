@@ -29,6 +29,10 @@ fun SanitizationQueries.getJobsByBookId(bookId: BookId): List<SavedSanitizationJ
     selectByBookId(bookId).executeAsList().map { it.toDomain() }
 
 context(_: RaiseContext)
+fun SanitizationQueries.getJobById(id: SanitizationJobId): SavedSanitizationJob =
+    selectById(id).executeAsOneOrNull()?.toDomain() ?: raise(SanitizationJobNotFound)
+
+context(_: RaiseContext)
 fun SanitizationQueries.getJobByEditionId(editionId: EditionId): SavedSanitizationJob =
     selectByEditionId(editionId).executeAsList().firstOrNull()?.toDomain()
         ?: raise(SanitizationJobNotFound)
