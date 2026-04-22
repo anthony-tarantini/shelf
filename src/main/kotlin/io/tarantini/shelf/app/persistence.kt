@@ -28,13 +28,22 @@ import io.tarantini.shelf.catalog.persistence.Book_moods
 import io.tarantini.shelf.catalog.persistence.Library_books
 import io.tarantini.shelf.catalog.persistence.Series_authors
 import io.tarantini.shelf.catalog.persistence.Series_books
+import io.tarantini.shelf.catalog.podcast.domain.FeedToken
+import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
+import io.tarantini.shelf.catalog.podcast.domain.PodcastId
+import io.tarantini.shelf.catalog.podcast.persistence.Episode_guids
+import io.tarantini.shelf.catalog.podcast.persistence.Episode_ordering
+import io.tarantini.shelf.catalog.podcast.persistence.Podcasts
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.catalog.series.persistence.Series
 import io.tarantini.shelf.integration.koreader.persistence.Koreader_progress
 import io.tarantini.shelf.integration.koreader.persistence.Koreader_users
+import io.tarantini.shelf.integration.persistence.Integration_credentials
 import io.tarantini.shelf.organization.library.domain.LibraryId
 import io.tarantini.shelf.organization.library.persistence.Libraries
 import io.tarantini.shelf.organization.settings.persistence.User_settings
+import io.tarantini.shelf.processing.sanitization.domain.SanitizationJobId
+import io.tarantini.shelf.processing.sanitization.persistence.Sanitization_jobs
 import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.user.activity.persistence.Book_read_status
 import io.tarantini.shelf.user.activity.persistence.Reading_progress
@@ -80,6 +89,7 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
             "series",
             "series_authors",
             "series_books",
+            "podcasts",
             "users",
             "api_tokens",
             "koreader_progress",
@@ -129,6 +139,16 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
         seriesAdapter = Series.Adapter(SeriesId.adapter),
         series_authorsAdapter = Series_authors.Adapter(SeriesId.adapter, AuthorId.adapter),
         series_booksAdapter = Series_books.Adapter(SeriesId.adapter, BookId.adapter),
+        podcastsAdapter =
+            Podcasts.Adapter(
+                idAdapter = PodcastId.adapter,
+                series_idAdapter = SeriesId.adapter,
+                feed_urlAdapter = FeedUrl.adapter,
+                feed_tokenAdapter = FeedToken.adapter,
+                feed_token_previousAdapter = FeedToken.adapter,
+            ),
+        episode_guidsAdapter = Episode_guids.Adapter(PodcastId.adapter, BookId.adapter),
+        episode_orderingAdapter = Episode_ordering.Adapter(PodcastId.adapter, BookId.adapter),
         usersAdapter =
             Users.Adapter(
                 idAdapter = UserId.adapter,
@@ -145,12 +165,16 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
         api_tokensAdapter = Api_tokens.Adapter(TokenId.adapter, UserId.adapter, TokenHash.adapter),
         koreader_progressAdapter = Koreader_progress.Adapter(UserId.adapter, EditionId.adapter),
         koreader_usersAdapter = Koreader_users.Adapter(UserId.adapter),
+        sanitization_jobsAdapter =
+            Sanitization_jobs.Adapter(
+                idAdapter = SanitizationJobId.adapter,
+                book_idAdapter = BookId.adapter,
+                edition_idAdapter = EditionId.adapter,
+                original_pathAdapter = StoragePath.adapter,
+                sanitized_pathAdapter = StoragePath.adapter,
+                transcript_pathAdapter = StoragePath.adapter,
+            ),
+        integration_credentialsAdapter = Integration_credentials.Adapter(PodcastId.adapter),
         user_settingsAdapter = User_settings.Adapter(UserId.adapter),
     )
-}
-
-private class JsonAdapter : app.cash.sqldelight.ColumnAdapter<String, String> {
-    override fun decode(databaseValue: String): String = databaseValue
-
-    override fun encode(value: String): String = value
 }

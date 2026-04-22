@@ -1,0 +1,153 @@
+import io.tarantini.shelf.catalog.book.domain.BookId;
+import io.tarantini.shelf.catalog.podcast.domain.PodcastId;
+import io.tarantini.shelf.catalog.podcast.domain.FeedToken;
+import io.tarantini.shelf.catalog.podcast.domain.FeedUrl;
+import io.tarantini.shelf.catalog.series.domain.SeriesId;
+
+CREATE TABLE IF NOT EXISTS podcasts (
+    id UUID AS PodcastId PRIMARY KEY DEFAULT gen_random_uuid(),
+    series_id UUID AS SeriesId NOT NULL UNIQUE REFERENCES series(id) ON DELETE CASCADE,
+    feed_url TEXT AS FeedUrl NOT NULL,
+    feed_token TEXT AS FeedToken NOT NULL UNIQUE,
+    feed_token_expires_at TIMESTAMP WITH TIME ZONE,
+    feed_token_previous TEXT AS FeedToken,
+    feed_token_previous_expires_at TIMESTAMP WITH TIME ZONE,
+    auto_sanitize BOOLEAN NOT NULL DEFAULT TRUE,
+    auto_fetch BOOLEAN NOT NULL DEFAULT TRUE,
+    last_fetched_at TIMESTAMP WITH TIME ZONE,
+    fetch_interval_minutes INTEGER NOT NULL DEFAULT 60,
+    version INTEGER NOT NULL DEFAULT 0,
+    sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_podcasts_series ON podcasts(series_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_podcasts_feed_token ON podcasts(feed_token);
+
+CREATE TABLE IF NOT EXISTS episode_guids (
+    podcast_id UUID AS PodcastId NOT NULL REFERENCES podcasts(id) ON DELETE CASCADE,
+    guid TEXT NOT NULL,
+    book_id UUID AS BookId NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    PRIMARY KEY (podcast_id, guid)
+);
+
+CREATE TABLE IF NOT EXISTS episode_ordering (
+    podcast_id UUID AS PodcastId NOT NULL REFERENCES podcasts(id) ON DELETE CASCADE,
+    book_id UUID AS BookId NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    season INTEGER NOT NULL DEFAULT 0,
+    episode INTEGER NOT NULL,
+    published_at TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (podcast_id, book_id),
+    UNIQUE (podcast_id, season, episode)
+);
+
+CREATE INDEX IF NOT EXISTS idx_episode_ordering_podcast
+ON episode_ordering(podcast_id, season ASC, episode ASC);
+
+CREATE OR REPLACE VIEW podcastSummaries AS
+SELECT
+    p.id,
+    p.series_id,
+    s.title AS series_title,
+    p.feed_url,
+    p.auto_sanitize,
+    p.auto_fetch,
+    p.last_fetched_at,
+    p.version,
+    count(DISTINCT sb.book) AS episode_count,
+    (
+        SELECT b.cover_path
+        FROM books b
+        JOIN series_books sb2 ON b.id = sb2.book
+        WHERE sb2.series = s.id AND b.cover_path IS NOT NULL
+        ORDER BY sb2.index ASC NULLS LAST
+        LIMIT 1
+    ) AS cover_path
+FROM podcasts p
+JOIN series s ON p.series_id = s.id
+LEFT JOIN series_books sb ON sb.series = s.id
+GROUP BY p.id, s.id;
+
+selectAll:
+SELECT * FROM podcastSummaries ORDER BY series_title ASC;
+
+selectById:
+SELECT * FROM podcasts WHERE id = :id;
+
+selectBySeriesId:
+SELECT * FROM podcasts WHERE series_id = :seriesId;
+
+selectSummaryById:
+SELECT * FROM podcastSummaries WHERE id = :id;
+
+selectByFeedTokenIncludingPrevious:
+SELECT * FROM podcasts
+WHERE (feed_token = :token
+       AND (feed_token_expires_at IS NULL OR feed_token_expires_at > CURRENT_TIMESTAMP))
+   OR (feed_token_previous = :token
+       AND feed_token_previous_expires_at IS NOT NULL
+       AND feed_token_previous_expires_at > CURRENT_TIMESTAMP);
+
+selectDuePodcasts:
+SELECT * FROM podcasts
+WHERE auto_fetch = TRUE
+  AND (
+      last_fetched_at IS NULL
+      OR last_fetched_at + (fetch_interval_minutes * INTERVAL '1 minute') < CURRENT_TIMESTAMP
+  );
+
+selectMaxEpisodeForSeason:
+SELECT COALESCE(MAX(episode), 0) FROM episode_ordering
+WHERE podcast_id = :podcastId AND season = :season;
+
+selectGuidByPodcastAndGuid:
+SELECT guid FROM episode_guids
+WHERE podcast_id = :podcastId AND guid = :guid;
+
+insert:
+INSERT INTO podcasts (series_id, feed_url, feed_token, auto_sanitize, auto_fetch, fetch_interval_minutes)
+VALUES (:seriesId, :feedUrl, :feedToken, :autoSanitize, :autoFetch, :fetchIntervalMinutes)
+RETURNING id;
+
+updateFeedConfig:
+UPDATE podcasts
+SET auto_sanitize = :autoSanitize,
+    auto_fetch = :autoFetch,
+    fetch_interval_minutes = :fetchIntervalMinutes
+WHERE id = :id;
+
+updateLastFetched:
+UPDATE podcasts
+SET last_fetched_at = :fetchedAt
+WHERE id = :id;
+
+rotateToken:
+UPDATE podcasts
+SET feed_token_previous = feed_token,
+    feed_token_previous_expires_at = :graceExpiresAt,
+    feed_token = :newToken
+WHERE id = :id;
+
+revokeToken:
+UPDATE podcasts
+SET feed_token = :newToken,
+    feed_token_previous = NULL,
+    feed_token_previous_expires_at = NULL
+WHERE id = :id;
+
+bumpVersion:
+UPDATE podcasts
+SET version = version + 1
+WHERE id = :id;
+
+claimEpisodeGuid:
+INSERT INTO episode_guids (podcast_id, guid, book_id)
+VALUES (:podcastId, :guid, :bookId)
+ON CONFLICT (podcast_id, guid) DO NOTHING
+RETURNING guid;
+
+insertEpisodeOrdering:
+INSERT INTO episode_ordering (podcast_id, book_id, season, episode, published_at)
+VALUES (:podcastId, :bookId, :season, :episode, :publishedAt);
+
+deleteById:
+DELETE FROM podcasts WHERE id = :id;

@@ -1,0 +1,63 @@
+import io.tarantini.shelf.processing.sanitization.domain.SanitizationJobId;
+import io.tarantini.shelf.catalog.metadata.domain.EditionId;
+import io.tarantini.shelf.catalog.book.domain.BookId;
+import io.tarantini.shelf.processing.storage.StoragePath;
+
+CREATE TABLE IF NOT EXISTS sanitization_jobs (
+    id UUID AS SanitizationJobId PRIMARY KEY DEFAULT gen_random_uuid(),
+    book_id UUID AS BookId NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    edition_id UUID AS EditionId NOT NULL REFERENCES editions(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    original_path TEXT AS StoragePath NOT NULL,
+    sanitized_path TEXT AS StoragePath,
+    transcript_path TEXT AS StoragePath,
+    detected_segments JSONB,
+    total_removed_seconds DOUBLE PRECISION,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    error_message TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sanitization_active_edition
+ON sanitization_jobs(edition_id) WHERE status IN ('PENDING', 'PROCESSING', 'REVIEW');
+
+CREATE INDEX IF NOT EXISTS idx_sanitization_status ON sanitization_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_sanitization_book ON sanitization_jobs(book_id);
+
+selectByBookId:
+SELECT * FROM sanitization_jobs WHERE book_id = :bookId;
+
+selectByEditionId:
+SELECT * FROM sanitization_jobs WHERE edition_id = :editionId;
+
+selectByStatus:
+SELECT * FROM sanitization_jobs WHERE status = :status ORDER BY created_at ASC;
+
+selectPending:
+SELECT * FROM sanitization_jobs WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT :limit;
+
+insert:
+INSERT INTO sanitization_jobs (book_id, edition_id, original_path)
+VALUES (:bookId, :editionId, :originalPath)
+RETURNING id;
+
+updateStatus:
+UPDATE sanitization_jobs
+SET status = :status,
+    updated_at = CURRENT_TIMESTAMP,
+    error_message = :errorMessage
+WHERE id = :id;
+
+updateResult:
+UPDATE sanitization_jobs
+SET status = 'REVIEW',
+    sanitized_path = :sanitizedPath,
+    transcript_path = :transcriptPath,
+    detected_segments = :detectedSegments,
+    total_removed_seconds = :totalRemovedSeconds,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = :id;
+
+deleteByBookId:
+DELETE FROM sanitization_jobs WHERE book_id = :bookId;
+
