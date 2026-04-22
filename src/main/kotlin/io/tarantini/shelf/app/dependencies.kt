@@ -22,6 +22,7 @@ import io.tarantini.shelf.catalog.metadata.metadataService
 import io.tarantini.shelf.catalog.opds.OpdsService
 import io.tarantini.shelf.catalog.opds.opdsService
 import io.tarantini.shelf.catalog.podcast.PodcastService
+import io.tarantini.shelf.catalog.podcast.podcastFeedFetchService
 import io.tarantini.shelf.catalog.podcast.podcastService
 import io.tarantini.shelf.catalog.search.SearchService
 import io.tarantini.shelf.catalog.search.searchService
@@ -33,6 +34,9 @@ import io.tarantini.shelf.integration.koreader.KoreaderAuthService
 import io.tarantini.shelf.integration.koreader.KoreaderSyncService
 import io.tarantini.shelf.integration.koreader.koreaderAuthService
 import io.tarantini.shelf.integration.koreader.koreaderSyncService
+import io.tarantini.shelf.integration.podcast.feed.episodeAudioFetchAdapter
+import io.tarantini.shelf.integration.podcast.feed.feedFetchAdapter
+import io.tarantini.shelf.integration.podcast.feed.feedParser
 import io.tarantini.shelf.observability.Observability
 import io.tarantini.shelf.observability.observability
 import io.tarantini.shelf.organization.library.LibraryService
@@ -150,6 +154,8 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val valkeyUrl = env.valkey.url
         var workerValkeyConnection: StatefulRedisConnection<String, String>? = null
         var inMemoryChannel: Channel<BookId>? = null
+        var inMemoryPodcastChannel: Channel<io.tarantini.shelf.catalog.podcast.domain.PodcastId>? =
+            null
 
         val (stagedStore, authCache, jobQueue) =
             if (valkeyUrl != null) {
@@ -169,10 +175,17 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 )
             } else {
                 logger.info { "Valkey not configured, falling back to in-memory stores." }
-                val channel = Channel<BookId>(Channel.UNLIMITED)
-                inMemoryChannel = channel
+                val metadataChannel = Channel<BookId>(Channel.UNLIMITED)
+                val podcastChannel =
+                    Channel<io.tarantini.shelf.catalog.podcast.domain.PodcastId>(Channel.UNLIMITED)
+                inMemoryChannel = metadataChannel
+                inMemoryPodcastChannel = podcastChannel
 
-                Triple(inMemoryStagedBookStore(), InMemoryAuthCache(), InMemoryJobQueue(channel))
+                Triple(
+                    inMemoryStagedBookStore(),
+                    InMemoryAuthCache(),
+                    InMemoryJobQueue(metadataChannel, podcastChannel),
+                )
             }
 
         val bookService =
@@ -191,6 +204,20 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
         val podcastService = podcastService(podcastQueries)
+        val podcastFeedFetchService =
+            podcastFeedFetchService(
+                readRepository =
+                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(podcastQueries),
+                mutationRepository =
+                    io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries),
+                podcastQueries = podcastQueries,
+                bookQueries = bookQueries,
+                metadataQueries = metadataQueries,
+                storageService = storageService,
+                feedFetchAdapter = feedFetchAdapter(),
+                feedParser = feedParser(),
+                audioFetchAdapter = episodeAudioFetchAdapter(),
+            )
         val activityService = activityService(activityQueries)
         val koreaderSyncService = koreaderSyncService(koreaderQueries, metadataRepository)
         val koreaderAuthService = koreaderAuthService(koreaderQueries, userService, tokenService)
@@ -245,6 +272,23 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 inMemoryChannel = inMemoryChannel,
             )
         worker.start()
+
+        val podcastWorker =
+            PodcastFeedWorker(
+                scope = scope,
+                feedFetchService = podcastFeedFetchService,
+                valkeyConnection = workerValkeyConnection,
+                inMemoryChannel = inMemoryPodcastChannel,
+            )
+        podcastWorker.start()
+
+        val podcastScheduler =
+            PodcastFeedScheduler(
+                scope = scope,
+                feedFetchService = podcastFeedFetchService,
+                jobQueue = jobQueue,
+            )
+        podcastScheduler.start()
 
         return Dependencies(
             checks,

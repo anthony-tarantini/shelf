@@ -53,18 +53,18 @@ SELECT
     p.auto_fetch,
     p.last_fetched_at,
     p.version,
-    count(DISTINCT sb.book) AS episode_count,
+    count(DISTINCT eo.book_id) AS episode_count,
     (
         SELECT b.cover_path
         FROM books b
-        JOIN series_books sb2 ON b.id = sb2.book
-        WHERE sb2.series = s.id AND b.cover_path IS NOT NULL
-        ORDER BY sb2.index ASC NULLS LAST
+        JOIN episode_ordering eo2 ON eo2.book_id = b.id
+        WHERE eo2.podcast_id = p.id AND b.cover_path IS NOT NULL
+        ORDER BY eo2.season ASC, eo2.episode ASC
         LIMIT 1
     ) AS cover_path
 FROM podcasts p
 JOIN series s ON p.series_id = s.id
-LEFT JOIN series_books sb ON sb.series = s.id
+LEFT JOIN episode_ordering eo ON eo.podcast_id = p.id
 GROUP BY p.id, s.id;
 
 selectAll:
