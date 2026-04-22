@@ -21,6 +21,7 @@ data class Env(
     val storage: Storage,
     val valkey: Valkey,
     val observability: Observability,
+    val integration: Integration = Integration.fromEnv(),
 ) {
     companion object {
         operator fun invoke() =
@@ -32,7 +33,20 @@ data class Env(
                 storage = Storage.fromEnv(),
                 valkey = Valkey.fromEnv(),
                 observability = Observability.fromEnv(),
+                integration = Integration.fromEnv(),
             )
+    }
+
+    data class Integration(val encryptionSecret: String) {
+        companion object {
+            fun fromEnv() =
+                Integration(
+                    encryptionSecret =
+                        getenv("ENCRYPTION_SECRET")
+                            ?: getenv("JWT_SECRET")
+                            ?: "insecure-local-default-change-me"
+                )
+        }
     }
 
     data class Valkey(val url: String?) {

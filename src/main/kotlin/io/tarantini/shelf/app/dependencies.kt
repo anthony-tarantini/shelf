@@ -37,6 +37,8 @@ import io.tarantini.shelf.integration.koreader.koreaderSyncService
 import io.tarantini.shelf.integration.podcast.feed.episodeAudioFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.feedFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.feedParser
+import io.tarantini.shelf.integration.podcast.podcastCredentialService
+import io.tarantini.shelf.integration.security.EncryptionService
 import io.tarantini.shelf.observability.Observability
 import io.tarantini.shelf.observability.observability
 import io.tarantini.shelf.organization.library.LibraryService
@@ -204,6 +206,8 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
         val podcastService = podcastService(podcastQueries)
+        val encryptionService = EncryptionService(env.integration.encryptionSecret)
+        val credentialService = podcastCredentialService(credentialsQueries, encryptionService)
         val podcastFeedFetchService =
             podcastFeedFetchService(
                 readRepository =
@@ -214,6 +218,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 bookQueries = bookQueries,
                 metadataQueries = metadataQueries,
                 storageService = storageService,
+                credentialService = credentialService,
                 feedFetchAdapter = feedFetchAdapter(),
                 feedParser = feedParser(),
                 audioFetchAdapter = episodeAudioFetchAdapter(),

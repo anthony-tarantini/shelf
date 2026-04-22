@@ -12,6 +12,7 @@ This project follows a strict **Domain-Driven Design (DDD)** approach. Before ma
 -   Ensure you have JDK 21+ and Docker installed.
 -   Clone the repository.
 -   Start the local database using `docker-compose up -d`.
+-   Set an `ENCRYPTION_SECRET` for integration credential encryption. In local development you can copy it from `example.env`, but production must use a unique secret distinct from `JWT_SECRET`.
 -   When running the full compose stack, use the dedicated `COMPOSE_*` env vars from `example.env` for container-to-container addresses. Do not point compose services at `localhost` for Postgres, Valkey, backend, or LGTM.
 -   Use `dev.docker-compose.yaml` for bind-mounted hot reload and keep `docker-compose.yaml` for the image-based stack.
 -   Do not run both compose modes simultaneously unless you also remap their ports.

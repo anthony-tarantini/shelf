@@ -69,6 +69,7 @@ Use Arrow Either/AppError + Raise DSL (`either { }`, `.bind()`); no exceptions i
 - `fromRaw` is only for trusted DB rehydration or already-sanitized internal values.
 - Storage paths must remain relative to the configured storage root; never expose raw disk layout as a public contract.
 - Private media should be served through explicit endpoints with policy checks. Do not mount storage directories directly for convenience.
+- Integration credentials must be encrypted at rest (AES-GCM with per-row IV); never log plaintext credentials, ciphertext blobs, or IV values.
 - Encode access rules with named policy helpers:
   `sharedCatalogRead`, `sharedCatalogMutation`, `requireOwnership`, `requireAdmin`.
 

@@ -61,7 +61,7 @@ For detailed installation and usage instructions, please refer to the [Deploymen
    docker-compose up -d
    ```
 
-> **⚠️ CRITICAL SECURITY WARNING:** The `example.env` file contains default credentials and secrets. You MUST change `JWT_SECRET` and `POSTGRES_PASSWORD` before deploying to a public-facing server.
+> **⚠️ CRITICAL SECURITY WARNING:** The `example.env` file contains default credentials and secrets. You MUST change `JWT_SECRET`, `ENCRYPTION_SECRET`, and `POSTGRES_PASSWORD` before deploying to a public-facing server.
 
 2. **Run the application:**
    ```bash

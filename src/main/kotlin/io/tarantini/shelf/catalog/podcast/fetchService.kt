@@ -12,6 +12,7 @@ import io.tarantini.shelf.catalog.metadata.persistence.MetadataQueries
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastRoot
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
+import io.tarantini.shelf.integration.podcast.PodcastCredentialService
 import io.tarantini.shelf.integration.podcast.feed.EpisodeAudioFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.FeedFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.FeedParser
@@ -43,6 +44,7 @@ fun podcastFeedFetchService(
     bookQueries: BookQueries,
     metadataQueries: MetadataQueries,
     storageService: StorageService,
+    credentialService: PodcastCredentialService,
     feedFetchAdapter: FeedFetchAdapter,
     feedParser: FeedParser,
     audioFetchAdapter: EpisodeAudioFetchAdapter,
@@ -54,6 +56,7 @@ fun podcastFeedFetchService(
         bookQueries = bookQueries,
         metadataQueries = metadataQueries,
         storageService = storageService,
+        credentialService = credentialService,
         feedFetchAdapter = feedFetchAdapter,
         feedParser = feedParser,
         audioFetchAdapter = audioFetchAdapter,
@@ -66,6 +69,7 @@ private class DefaultPodcastFeedFetchService(
     private val bookQueries: BookQueries,
     private val metadataQueries: MetadataQueries,
     private val storageService: StorageService,
+    private val credentialService: PodcastCredentialService,
     private val feedFetchAdapter: FeedFetchAdapter,
     private val feedParser: FeedParser,
     private val audioFetchAdapter: EpisodeAudioFetchAdapter,
@@ -76,7 +80,8 @@ private class DefaultPodcastFeedFetchService(
     context(_: RaiseContext)
     override suspend fun fetchPodcast(podcastId: PodcastId) {
         val podcast = mutationRepository.getPodcastById(podcastId)
-        val xml = feedFetchAdapter.fetch(podcast.feedUrl)
+        val credentials = credentialService.getFeedCredentials(podcast.id.id)
+        val xml = feedFetchAdapter.fetch(podcast.feedUrl, credentials)
         val parsed = feedParser.parse(xml)
 
         var ingested = 0
