@@ -335,6 +335,8 @@ export interface PodcastAggregate {
   seriesTitle: string;
   episodes: EpisodeEntry[];
   credential: CredentialStatus;
+  audibleConnected: boolean;
+  audibleUsername?: string;
 }
 
 export interface SavedPodcastRoot {

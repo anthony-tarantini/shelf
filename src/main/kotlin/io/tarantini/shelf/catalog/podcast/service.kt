@@ -41,6 +41,9 @@ interface PodcastModifier {
     suspend fun revokeToken(id: PodcastId): SavedPodcastRoot
 
     context(_: RaiseContext)
+    suspend fun clearFeedCredentials(id: PodcastId)
+
+    context(_: RaiseContext)
     suspend fun deletePodcast(id: PodcastId)
 }
 
@@ -123,6 +126,13 @@ private class PodcastAggregateService(
             mutationRepository.revokeToken(id, newToken)
             mutationRepository.getPodcastById(id)
         }
+
+    context(_: RaiseContext)
+    override suspend fun clearFeedCredentials(id: PodcastId) {
+        withContext(Dispatchers.IO) {
+            credentialService.clearFeedCredentials(id)
+        }
+    }
 
     context(_: RaiseContext)
     override suspend fun deletePodcast(id: PodcastId) {

@@ -22,6 +22,9 @@ data class PodcastsResource(val parent: RootResource = RootResource) {
 
     @Resource("{id}")
     data class Id(val parent: PodcastsResource = PodcastsResource(), val id: String) {
+        @Resource("audible")
+        data class Audible(val parent: Id)
+
         @Resource("rotate-token")
         data class RotateToken(val parent: Id)
 

@@ -86,6 +86,15 @@ fun Route.podcastRoutes(
         }
     }
 
+    delete<PodcastsResource.Id.Audible> { resource ->
+        sharedCatalogMutation(jwtService) {
+            respond({
+                val podcastId = PodcastId(resource.parent.id)
+                podcastService.clearFeedCredentials(podcastId)
+            }, HttpStatusCode.NoContent)
+        }
+    }
+
     post<PodcastsResource.Audible.Connect> {
         sharedCatalogMutation(jwtService) { respond({ audibleAuthService.generateLoginUrl() }) }
     }

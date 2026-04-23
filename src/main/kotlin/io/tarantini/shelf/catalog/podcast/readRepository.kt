@@ -13,6 +13,7 @@ import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastRoot
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.integration.persistence.CredentialsQueries
+import io.tarantini.shelf.integration.podcast.CredentialType
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -66,6 +67,10 @@ private class SqlDelightPodcastReadRepository(
             val summary = queries.getPodcastSummaryById(id)
             val episodes = queries.getEpisodesByPodcastId(id)
             val hasCredentials = credentialsQueries.hasCredentials(id)
+            val hasAudible = queries.transactionWithResult {
+                val types = credentialsQueries.selectByPodcastId(id).executeAsOneOrNull()?.credential_type
+                types == CredentialType.AUDIBLE_COOKIE.name
+            }
 
             PodcastAggregate(
                 podcast = root,
@@ -75,6 +80,8 @@ private class SqlDelightPodcastReadRepository(
                 credential =
                     if (hasCredentials) CredentialStatus.HAS_CREDENTIAL
                     else CredentialStatus.NO_CREDENTIAL,
+                audibleConnected = hasAudible,
+                audibleUsername = if (hasAudible) "Connected Account" else null // TODO: Store actual username
             )
         }
 

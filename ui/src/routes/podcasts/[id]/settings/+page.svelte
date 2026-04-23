@@ -4,14 +4,23 @@
 	import PodcastRssSettings from '$lib/components/podcast/PodcastRssSettings.svelte';
 	import PodcastConfigSettings from '$lib/components/podcast/PodcastConfigSettings.svelte';
 	import PodcastDangerZone from '$lib/components/podcast/PodcastDangerZone.svelte';
+	import AudibleConnectCard from '$lib/components/audible/AudibleConnectCard.svelte';
 	import type { PageData } from './$types';
 	import type { SavedPodcastAggregate, SavedPodcastRoot } from '$lib/types/models';
+	import { api } from '$lib/api/client';
 
 	let { data }: { data: PageData } = $props();
 	let aggregate = $state<SavedPodcastAggregate>(data.aggregate!);
 
 	function handlePodcastUpdate(updated: SavedPodcastRoot) {
 		aggregate = { ...aggregate, podcast: updated };
+	}
+
+	async function handleDisconnectAudible() {
+		const result = await api.delete(`/podcasts/${aggregate.podcast.id}/audible`);
+		if (result.right !== undefined) {
+			aggregate = { ...aggregate, audibleConnected: false, audibleUsername: undefined };
+		}
 	}
 </script>
 
@@ -34,6 +43,13 @@
 	</div>
 
 	<div class="space-y-8">
+		<!-- Audible Integration -->
+		<AudibleConnectCard 
+			isConnected={aggregate.audibleConnected} 
+			username={aggregate.audibleUsername}
+			onDisconnect={handleDisconnectAudible}
+		/>
+
 		<!-- RSS Feed Section -->
 		<PodcastRssSettings podcast={aggregate.podcast} onUpdate={handlePodcastUpdate} />
 

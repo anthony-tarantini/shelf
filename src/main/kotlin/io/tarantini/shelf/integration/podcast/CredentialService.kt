@@ -46,6 +46,9 @@ interface PodcastCredentialService {
 
     context(_: RaiseContext)
     suspend fun hasFeedCredentials(podcastId: PodcastId): Boolean
+
+    context(_: RaiseContext)
+    suspend fun hasCredential(podcastId: PodcastId, type: CredentialType): Boolean
 }
 
 fun podcastCredentialService(
@@ -98,6 +101,12 @@ private class DefaultPodcastCredentialService(
     context(_: RaiseContext)
     override suspend fun hasFeedCredentials(podcastId: PodcastId): Boolean =
         withContext(Dispatchers.IO) { queries.existsByPodcastId(podcastId).executeAsOne() }
+
+    context(_: RaiseContext)
+    override suspend fun hasCredential(podcastId: PodcastId, type: CredentialType): Boolean =
+        withContext(Dispatchers.IO) {
+            queries.selectByPodcastId(podcastId).executeAsOneOrNull()?.credential_type == type.name
+        }
 }
 
 private fun FeedFetchCredentials.toStored(): StoredFeedCredential =
