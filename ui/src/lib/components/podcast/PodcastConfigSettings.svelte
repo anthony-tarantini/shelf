@@ -17,9 +17,15 @@
 	let successMessage = $state<string | null>(null);
 
 	// Local form state
-	let autoFetch = $state(podcast.autoFetch);
-	let autoSanitize = $state(podcast.autoSanitize);
-	let fetchIntervalMinutes = $state(podcast.fetchIntervalMinutes);
+	let autoFetch = $state(false);
+	let autoSanitize = $state(false);
+	let fetchIntervalMinutes = $state(60);
+
+	$effect(() => {
+		autoFetch = podcast.autoFetch;
+		autoSanitize = podcast.autoSanitize;
+		fetchIntervalMinutes = podcast.fetchIntervalMinutes;
+	});
 
 	async function handleSave() {
 		isSaving = true;

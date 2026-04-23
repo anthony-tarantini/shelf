@@ -2,6 +2,7 @@
 
 package io.tarantini.shelf.integration.podcast
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import io.tarantini.shelf.integration.persistence.CredentialsQueries
@@ -53,6 +54,8 @@ fun podcastCredentialService(
     encryptionService: EncryptionService,
 ): PodcastCredentialService = DefaultPodcastCredentialService(queries, encryptionService)
 
+private val logger = KotlinLogging.logger {}
+
 private class DefaultPodcastCredentialService(
     private val queries: CredentialsQueries,
     private val encryptionService: EncryptionService,
@@ -64,12 +67,19 @@ private class DefaultPodcastCredentialService(
         withContext(Dispatchers.IO) {
             val row =
                 queries.selectByPodcastId(podcastId).executeAsOneOrNull() ?: return@withContext null
-            val decrypted =
-                encryptionService.decrypt(
-                    EncryptedPayload(ciphertext = row.encrypted_value, iv = row.iv)
-                )
-            val stored = json.decodeFromString<StoredFeedCredential>(decrypted.decodeToString())
-            stored.toFetchCredentials()
+            runCatching {
+                    val decrypted =
+                        encryptionService.decrypt(
+                            EncryptedPayload(ciphertext = row.encrypted_value, iv = row.iv)
+                        )
+                    val stored =
+                        json.decodeFromString<StoredFeedCredential>(decrypted.decodeToString())
+                    stored.toFetchCredentials()
+                }
+                .getOrElse { error ->
+                    logger.warn(error) { "Failed to decode stored feed credentials." }
+                    null
+                }
         }
 
     context(_: RaiseContext)

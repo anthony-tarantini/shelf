@@ -85,6 +85,7 @@ private class DefaultPodcastLibationService(
 ) : PodcastLibationService {
     private val dropDirectoryPath = Path.of(dropDirectory).toAbsolutePath().normalize()
     private val stateMutex = Mutex()
+    private val scanMutex = Mutex()
     private var status = LibationScanStatus(enabled = enabled, running = false)
 
     override suspend fun getStatus(): LibationScanStatus =
@@ -111,6 +112,10 @@ private class DefaultPodcastLibationService(
     }
 
     private suspend fun performScanAndImport(): Pair<LibationScanStatus, Throwable?> {
+        return scanMutex.withLock { performScanAndImportLocked() }
+    }
+
+    private suspend fun performScanAndImportLocked(): Pair<LibationScanStatus, Throwable?> {
         if (!enabled) return getStatus() to null
 
         val startedAt = Clock.System.now()

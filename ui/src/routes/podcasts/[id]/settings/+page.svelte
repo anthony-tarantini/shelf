@@ -8,10 +8,11 @@
 	import type { SavedPodcastAggregate, SavedPodcastRoot } from '$lib/types/models';
 
 	let { data }: { data: PageData } = $props();
-	let aggregate = $state<SavedPodcastAggregate>(data.aggregate!);
+	let localAggregate = $state<SavedPodcastAggregate | null>(null);
+	let aggregate = $derived(localAggregate ?? data.aggregate!);
 
 	function handlePodcastUpdate(updated: SavedPodcastRoot) {
-		aggregate = { ...aggregate, podcast: updated };
+		localAggregate = { ...aggregate, podcast: updated };
 	}
 </script>
 

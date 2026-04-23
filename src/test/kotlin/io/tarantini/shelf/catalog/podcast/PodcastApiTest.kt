@@ -18,13 +18,16 @@ import io.tarantini.shelf.IntegrationSpec
 import io.tarantini.shelf.app.Request
 import io.tarantini.shelf.app.Response
 import io.tarantini.shelf.app.id
+import io.tarantini.shelf.catalog.podcast.domain.PodcastDashboard
 import io.tarantini.shelf.catalog.podcast.domain.PodcastRequest
-import io.tarantini.shelf.catalog.podcast.domain.PodcastSummary
 import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastRoot
 import io.tarantini.shelf.catalog.series.domain.SavedSeriesRoot
 import io.tarantini.shelf.catalog.series.domain.SeriesRequest
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class PodcastApiTest :
     IntegrationSpec({
@@ -75,8 +78,8 @@ class PodcastApiTest :
                         header(HttpHeaders.Authorization, "Bearer $token")
                     }
                 listResponse.status shouldBe HttpStatusCode.OK
-                val podcasts = listResponse.body<Response<List<PodcastSummary>>>().data
-                podcasts.any { it.id.value.toString() == podcastId } shouldBe true
+                val dashboard = listResponse.body<Response<PodcastDashboard>>().data
+                dashboard.podcasts.any { it.id.value.toString() == podcastId } shouldBe true
 
                 val updateResponse =
                     client.put("/api/podcasts/$podcastId") {
@@ -103,7 +106,8 @@ class PodcastApiTest :
                         header(HttpHeaders.Authorization, "Bearer $token")
                     }
                 getResponse.status shouldBe HttpStatusCode.OK
-                getResponse.body<Response<SavedPodcastRoot>>().data.id.id.value.toString() shouldBe
+                val aggregate = getResponse.body<Response<JsonObject>>().data
+                aggregate.getValue("podcast").jsonObject.getValue("id").jsonPrimitive.content shouldBe
                     podcastId
 
                 val deleteResponse =
