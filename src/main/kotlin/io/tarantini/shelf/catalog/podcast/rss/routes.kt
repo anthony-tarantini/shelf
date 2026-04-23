@@ -22,6 +22,8 @@ import java.io.RandomAccessFile
 import java.nio.file.Files
 import kotlin.uuid.ExperimentalUuidApi
 
+private const val MAX_RANGE_BYTES = 10L * 1024 * 1024 // 10 MB
+
 fun Route.podcastRssRoutes(rssService: PodcastRssService, storageService: StorageService) {
     get("/rss/podcasts/{token}") {
         either {
@@ -136,12 +138,13 @@ private fun parseByteRange(header: String?, totalSize: Long): ByteRangeParse {
                 if (endPart.isEmpty()) totalSize - 1L
                 else endPart.toLongOrNull() ?: return ByteRangeParse.Invalid
             if (end < start) return ByteRangeParse.Invalid
-            ByteRangeParse.Valid(start = start, endInclusive = minOf(end, totalSize - 1L))
+            val clampedEnd = minOf(end, totalSize - 1L, start + MAX_RANGE_BYTES - 1L)
+            ByteRangeParse.Valid(start = start, endInclusive = clampedEnd)
         }
         else -> {
             val suffixLength = endPart.toLongOrNull() ?: return ByteRangeParse.Invalid
             if (suffixLength <= 0L) return ByteRangeParse.Invalid
-            val clamped = minOf(suffixLength, totalSize)
+            val clamped = minOf(suffixLength, totalSize, MAX_RANGE_BYTES)
             ByteRangeParse.Valid(start = totalSize - clamped, endInclusive = totalSize - 1L)
         }
     }
