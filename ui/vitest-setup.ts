@@ -41,6 +41,12 @@ vi.mock('$app/environment', () => ({
     version: 'test'
 }));
 
+vi.mock('$app/state', () => ({
+	page: {
+		url: new URL('http://localhost')
+	}
+}));
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
 	writable: true,
