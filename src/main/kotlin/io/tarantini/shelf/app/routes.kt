@@ -66,6 +66,7 @@ fun Application.routes(deps: Dependencies) = routing {
         deps.jwtService,
         deps.audibleAuthService,
         deps.audibleAdapter,
+        deps.audibleContentFetchService,
     )
     podcastRssRoutes(deps.podcastRssService, deps.storageService)
     seriesRoutes(

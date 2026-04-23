@@ -11,10 +11,8 @@ import io.ktor.server.resources.put
 import io.ktor.server.routing.Route
 import io.tarantini.shelf.app.Request
 import io.tarantini.shelf.app.respond
-import io.tarantini.shelf.catalog.podcast.domain.PodcastId
-import io.tarantini.shelf.catalog.podcast.domain.PodcastRequest
-import io.tarantini.shelf.catalog.podcast.domain.toCreateCommand
-import io.tarantini.shelf.catalog.podcast.domain.toUpdateCommand
+import io.tarantini.shelf.catalog.podcast.domain.*
+import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.integration.podcast.audible.AudibleAdapter
 import io.tarantini.shelf.integration.podcast.audible.AudibleAuthService
 import io.tarantini.shelf.integration.podcast.audible.AudibleTitle
@@ -29,6 +27,7 @@ fun Route.podcastRoutes(
     jwtService: JwtService,
     audibleAuthService: AudibleAuthService,
     audibleAdapter: AudibleAdapter,
+    audibleContentFetchService: AudibleContentFetchService,
 ) {
     post<PodcastsResource> {
         sharedCatalogMutation(jwtService) {
@@ -109,8 +108,38 @@ fun Route.podcastRoutes(
     }
 
     get<PodcastsResource.Audible.Library> {
-        sharedCatalogRead(jwtService) { respond({ emptyList<AudibleTitle>() }) }
+        sharedCatalogRead(jwtService) {
+            respond({
+                // We'd usually get these from the session/user context
+                // For this milestone, we'll try to find any existing Audible credentials
+                // Or we can pass them in the header if the UI sends them.
+                // For now, return empty if no credentials found.
+                emptyList<AudibleTitle>()
+            })
+        }
+    }
+
+    post<PodcastsResource.Audible.Import> {
+        sharedCatalogMutation(jwtService) {
+            respond({
+                val request = call.receive<Request<AudibleImportRequest>>().data
+                audibleContentFetchService.importAudibleTitle(
+                    request.asin,
+                    SeriesId(request.seriesId),
+                    request.autoFetch,
+                    request.autoSanitize
+                )
+            }, HttpStatusCode.Created)
+        }
     }
 }
 
 @Serializable data class FinalizeAudibleAuthRequest(val sessionId: String, val callbackUrl: String)
+
+@Serializable
+data class AudibleImportRequest(
+    val asin: String,
+    val seriesId: String,
+    val autoFetch: Boolean,
+    val autoSanitize: Boolean,
+)

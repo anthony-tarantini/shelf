@@ -102,6 +102,8 @@ data class PodcastAggregate<S : PersistenceState>(
     val seriesTitle: String,
     val episodes: List<EpisodeEntry> = emptyList(),
     val credential: CredentialStatus,
+    val audibleConnected: Boolean = false,
+    val audibleUsername: String? = null,
 )
 
 typealias SavedPodcastAggregate = PodcastAggregate<PersistenceState.Persisted>

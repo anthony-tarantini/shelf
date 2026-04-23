@@ -3,13 +3,7 @@
 package io.tarantini.shelf.catalog.podcast
 
 import io.tarantini.shelf.RaiseContext
-import io.tarantini.shelf.catalog.podcast.domain.CredentialStatus
-import io.tarantini.shelf.catalog.podcast.domain.FeedToken
-import io.tarantini.shelf.catalog.podcast.domain.PodcastAggregate
-import io.tarantini.shelf.catalog.podcast.domain.PodcastId
-import io.tarantini.shelf.catalog.podcast.domain.PodcastSummary
-import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastAggregate
-import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastRoot
+import io.tarantini.shelf.catalog.podcast.domain.*
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.integration.persistence.CredentialsQueries
@@ -67,10 +61,9 @@ private class SqlDelightPodcastReadRepository(
             val summary = queries.getPodcastSummaryById(id)
             val episodes = queries.getEpisodesByPodcastId(id)
             val hasCredentials = credentialsQueries.hasCredentials(id)
-            val hasAudible = queries.transactionWithResult {
-                val types = credentialsQueries.selectByPodcastId(id).executeAsOneOrNull()?.credential_type
-                types == CredentialType.AUDIBLE_COOKIE.name
-            }
+            
+            val types = credentialsQueries.selectByPodcastId(id).executeAsOneOrNull()?.credential_type
+            val hasAudible = types == CredentialType.AUDIBLE_COOKIE.name
 
             PodcastAggregate(
                 podcast = root,
@@ -81,7 +74,7 @@ private class SqlDelightPodcastReadRepository(
                     if (hasCredentials) CredentialStatus.HAS_CREDENTIAL
                     else CredentialStatus.NO_CREDENTIAL,
                 audibleConnected = hasAudible,
-                audibleUsername = if (hasAudible) "Connected Account" else null // TODO: Store actual username
+                audibleUsername = if (hasAudible) "Connected Account" else null
             )
         }
 

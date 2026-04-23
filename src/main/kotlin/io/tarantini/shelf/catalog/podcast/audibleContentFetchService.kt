@@ -6,8 +6,9 @@ import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.book.persistence.BookQueries
 import io.tarantini.shelf.catalog.metadata.persistence.MetadataQueries
-import io.tarantini.shelf.catalog.podcast.domain.PodcastId
+import io.tarantini.shelf.catalog.podcast.domain.*
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
+import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.integration.podcast.PodcastCredentialService
 import io.tarantini.shelf.integration.podcast.audible.*
 import io.tarantini.shelf.integration.podcast.audio.FfmpegAdapter
@@ -15,6 +16,8 @@ import io.tarantini.shelf.integration.podcast.feed.ParsedEpisode
 import io.tarantini.shelf.processing.storage.StorageService
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val logger = KotlinLogging.logger {}
 
@@ -24,6 +27,17 @@ interface AudibleContentFetchService {
      */
     context(_: RaiseContext)
     suspend fun fetchAudibleContent(podcastId: PodcastId)
+
+    /**
+     * One-time import of an Audible title into Shelf.
+     */
+    context(_: RaiseContext)
+    suspend fun importAudibleTitle(
+        asin: String,
+        seriesId: SeriesId,
+        autoFetch: Boolean,
+        autoSanitize: Boolean,
+    ): SavedPodcastRoot
 }
 
 fun audibleContentFetchService(
@@ -64,7 +78,6 @@ private class DefaultAudibleContentFetchService(
     context(_: RaiseContext)
     override suspend fun fetchAudibleContent(podcastId: PodcastId) {
         val podcast = mutationRepository.getPodcastById(podcastId)
-        // For Audible, the feedUrl will be an Audible ASIN (e.g. audible://ASIN)
         val asin = podcast.feedUrl.value.removePrefix("audible://")
         
         val cookieCred = credentialService.getFeedCredentials(podcastId) as? io.tarantini.shelf.integration.podcast.feed.FeedFetchCredentials.AudibleCookie
@@ -91,6 +104,27 @@ private class DefaultAudibleContentFetchService(
     }
 
     context(_: RaiseContext)
+    override suspend fun importAudibleTitle(
+        asin: String,
+        seriesId: SeriesId,
+        autoFetch: Boolean,
+        autoSanitize: Boolean,
+    ): SavedPodcastRoot {
+        return withContext(Dispatchers.IO) {
+            mutationRepository.createPodcast(
+                PodcastRoot.new(
+                    seriesId = seriesId,
+                    feedUrl = FeedUrl.fromRaw("audible://$asin"),
+                    feedToken = FeedToken.generate(),
+                    autoFetch = autoFetch,
+                    autoSanitize = autoSanitize,
+                    fetchIntervalMinutes = 1440
+                )
+            )
+        }
+    }
+
+    context(_: RaiseContext)
     private suspend fun ingestAudibleEpisode(
         podcastId: PodcastId, 
         episode: ParsedEpisode, 
@@ -98,8 +132,7 @@ private class DefaultAudibleContentFetchService(
     ): Boolean {
         if (readRepository.guidExists(podcastId, episode.guid)) return false
         
-        // TODO: Download encrypted file, decrypt via ffmpegAdapter, then save to storageService
-        // This is a complex multi-step process that we'll implement in the next turn
+        // TODO: Implement actual secure download and ffmpeg decryption
         return false
     }
 }

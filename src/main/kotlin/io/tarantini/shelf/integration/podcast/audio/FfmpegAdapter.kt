@@ -1,13 +1,13 @@
 package io.tarantini.shelf.integration.podcast.audio
 
+import arrow.core.raise.context.raise
 import io.tarantini.shelf.RaiseContext
-import io.tarantini.shelf.catalog.podcast.domain.FfmpegExecutionFailed
+import io.tarantini.shelf.processing.sanitization.domain.FfmpegExecutionFailed
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.absolutePathString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import arrow.core.raise.context.raise
-import java.util.concurrent.TimeUnit
 
 interface FfmpegAdapter {
     /**
@@ -33,7 +33,7 @@ private class DefaultFfmpegAdapter : FfmpegAdapter {
             "-activation_bytes", activationBytes,
             "-i", input.absolutePathString(),
             "-codec:a", "copy",
-            "-vn", // No video (covers often cause issues in concat later)
+            "-vn",
             output.absolutePathString()
         )
         runCommand(command)
@@ -60,15 +60,13 @@ private class DefaultFfmpegAdapter : FfmpegAdapter {
                 .redirectError(ProcessBuilder.Redirect.PIPE)
                 .start()
             
-            val finished = process.waitFor(10, TimeUnit.MINUTES) // Audible files can be huge
+            val finished = process.waitFor(10, TimeUnit.MINUTES)
             if (!finished) {
                 process.destroyForcibly()
                 raise(FfmpegExecutionFailed)
             }
             
             if (process.exitValue() != 0) {
-                val error = process.errorStream.bufferedReader().readText()
-                // logger.error { "FFmpeg failed: $error" }
                 raise(FfmpegExecutionFailed)
             }
         }

@@ -212,9 +212,9 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             )
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
-        val podcastService = podcastService(podcastQueries, credentialsQueries)
         val encryptionService = EncryptionService(env.integration.encryptionSecret)
         val credentialService = podcastCredentialService(credentialsQueries, encryptionService)
+        val podcastService = podcastService(podcastQueries, credentialsQueries, credentialService)
         val podcastFeedFetchService =
             podcastFeedFetchService(
                 readRepository =

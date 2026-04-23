@@ -3,14 +3,8 @@
 package io.tarantini.shelf.catalog.podcast
 
 import io.tarantini.shelf.RaiseContext
-import io.tarantini.shelf.catalog.podcast.domain.CreatePodcastCommand
-import io.tarantini.shelf.catalog.podcast.domain.FeedToken
-import io.tarantini.shelf.catalog.podcast.domain.PodcastId
-import io.tarantini.shelf.catalog.podcast.domain.PodcastRoot
-import io.tarantini.shelf.catalog.podcast.domain.PodcastSummary
-import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastAggregate
-import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastRoot
-import io.tarantini.shelf.catalog.podcast.domain.UpdatePodcastCommand
+import io.tarantini.shelf.catalog.podcast.domain.*
+import io.tarantini.shelf.integration.podcast.PodcastCredentialService
 import io.tarantini.shelf.integration.persistence.CredentialsQueries
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
@@ -52,20 +46,24 @@ interface PodcastService : PodcastProvider, PodcastModifier
 fun podcastService(
     readRepository: PodcastReadRepository,
     mutationRepository: PodcastMutationRepository,
-): PodcastService = PodcastAggregateService(readRepository, mutationRepository)
+    credentialService: PodcastCredentialService,
+): PodcastService = PodcastAggregateService(readRepository, mutationRepository, credentialService)
 
 fun podcastService(
     queries: io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries,
     credentialsQueries: CredentialsQueries,
+    credentialService: PodcastCredentialService,
 ): PodcastService =
     podcastService(
         readRepository = podcastReadRepository(queries, credentialsQueries),
         mutationRepository = podcastMutationRepository(queries),
+        credentialService = credentialService,
     )
 
 private class PodcastAggregateService(
     private val readRepository: PodcastReadRepository,
     private val mutationRepository: PodcastMutationRepository,
+    private val credentialService: PodcastCredentialService,
 ) : PodcastService {
     context(_: RaiseContext)
     override suspend fun getPodcasts(): List<PodcastSummary> =
@@ -111,7 +109,6 @@ private class PodcastAggregateService(
         withContext(Dispatchers.IO) {
             mutationRepository.getPodcastById(id)
             val newToken = FeedToken.generate()
-            // 7 days grace period
             val graceExpiresAt =
                 kotlin.time.Clock.System.now().plus(kotlin.time.Duration.parse("7d"))
             mutationRepository.rotateToken(id, newToken, graceExpiresAt)
