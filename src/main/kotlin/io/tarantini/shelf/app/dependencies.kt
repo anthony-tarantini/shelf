@@ -233,29 +233,26 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 env.integration.minuspodUrl,
                 env.integration.minuspodAdminPassword,
             )
+        val podcastReadRepository =
+            io.tarantini.shelf.catalog.podcast.podcastReadRepository(
+                podcastQueries,
+                credentialsQueries,
+            )
+        val podcastMutationRepository =
+            io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries)
 
         val podcastService =
             podcastService(
-                readRepository =
-                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(
-                        podcastQueries,
-                        credentialsQueries,
-                    ),
-                mutationRepository =
-                    io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries),
+                readRepository = podcastReadRepository,
+                mutationRepository = podcastMutationRepository,
                 credentialService = credentialService,
                 libationService = podcastLibationService,
             )
 
         val podcastFeedFetchService =
             podcastFeedFetchService(
-                readRepository =
-                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(
-                        podcastQueries,
-                        credentialsQueries,
-                    ),
-                mutationRepository =
-                    io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries),
+                readRepository = podcastReadRepository,
+                mutationRepository = podcastMutationRepository,
                 podcastQueries = podcastQueries,
                 bookQueries = bookQueries,
                 metadataQueries = metadataQueries,
@@ -267,11 +264,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             )
         val podcastRssService =
             podcastRssService(
-                readRepository =
-                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(
-                        podcastQueries,
-                        credentialsQueries,
-                    ),
+                readRepository = podcastReadRepository,
                 podcastQueries = podcastQueries,
                 storageService = storageService,
                 publicRootUrl = env.http.publicRootUrl,
@@ -346,6 +339,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 scope = scope,
                 feedFetchService = podcastFeedFetchService,
                 jobQueue = jobQueue,
+                intervalSeconds = env.integration.podcastScheduleIntervalSeconds,
             )
         podcastScheduler.start()
 

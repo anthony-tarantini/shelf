@@ -27,4 +27,14 @@ class EncryptionServiceTest :
             first.ciphertext.contentEquals(second.ciphertext) shouldBe false
             first.ciphertext.toList() shouldNotBe plaintext.toList()
         }
+
+        "encrypted payload equality should compare byte content" {
+            val first =
+                EncryptedPayload(ciphertext = byteArrayOf(1, 2, 3), iv = byteArrayOf(9, 8, 7))
+            val second =
+                EncryptedPayload(ciphertext = byteArrayOf(1, 2, 3), iv = byteArrayOf(9, 8, 7))
+
+            first shouldBe second
+            first.hashCode() shouldBe second.hashCode()
+        }
     })

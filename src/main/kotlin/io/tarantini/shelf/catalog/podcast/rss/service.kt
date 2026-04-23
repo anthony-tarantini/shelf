@@ -2,6 +2,7 @@
 
 package io.tarantini.shelf.catalog.podcast.rss
 
+import arrow.core.raise.context.ensure
 import arrow.core.raise.context.ensureNotNull
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.id
@@ -14,6 +15,7 @@ import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.processing.storage.StorageService
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -57,6 +59,7 @@ private class DefaultPodcastRssService(
     override suspend fun generateFeed(token: FeedToken): PodcastRssFeed =
         withContext(Dispatchers.IO) {
             val podcast = ensureNotNull(readRepository.findByFeedToken(token)) { PodcastNotFound }
+            ensure(podcast.isTokenValid(token, Clock.System.now())) { PodcastNotFound }
             val summary = podcastQueries.selectSummaryById(podcast.id.id).executeAsOne()
             val episodes =
                 podcastQueries.selectRssEpisodesByPodcastId(podcast.id.id).executeAsList()
@@ -113,6 +116,7 @@ private class DefaultPodcastRssService(
     override suspend fun resolveAudio(token: FeedToken, bookId: BookId): PodcastRssAudio =
         withContext(Dispatchers.IO) {
             val podcast = ensureNotNull(readRepository.findByFeedToken(token)) { PodcastNotFound }
+            ensure(podcast.isTokenValid(token, Clock.System.now())) { PodcastNotFound }
             val row =
                 ensureNotNull(
                     podcastQueries

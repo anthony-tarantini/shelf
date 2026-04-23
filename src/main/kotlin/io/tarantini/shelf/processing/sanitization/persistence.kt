@@ -4,6 +4,7 @@ package io.tarantini.shelf.processing.sanitization
 
 import arrow.core.raise.context.raise
 import io.tarantini.shelf.RaiseContext
+import io.tarantini.shelf.app.toKotlinInstant
 import io.tarantini.shelf.catalog.book.domain.BookId
 import io.tarantini.shelf.catalog.metadata.domain.EditionId
 import io.tarantini.shelf.processing.sanitization.domain.DetectedSegment
@@ -16,8 +17,6 @@ import io.tarantini.shelf.processing.sanitization.domain.SanitizationStatus
 import io.tarantini.shelf.processing.sanitization.domain.SavedSanitizationJob
 import io.tarantini.shelf.processing.sanitization.persistence.SanitizationQueries
 import io.tarantini.shelf.processing.sanitization.persistence.Sanitization_jobs
-import java.time.OffsetDateTime
-import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -95,6 +94,3 @@ private fun decodeSegments(raw: String?): List<DetectedSegment> {
     return runCatching { detectedSegmentsJson.decodeFromString<List<DetectedSegment>>(raw) }
         .getOrDefault(emptyList())
 }
-
-private fun OffsetDateTime?.toKotlinInstant(): Instant? =
-    this?.let { Instant.fromEpochMilliseconds(it.toInstant().toEpochMilli()) }

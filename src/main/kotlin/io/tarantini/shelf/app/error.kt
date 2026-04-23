@@ -77,6 +77,7 @@ import io.tarantini.shelf.catalog.series.domain.SeriesCoverNotFound
 import io.tarantini.shelf.catalog.series.domain.SeriesError
 import io.tarantini.shelf.catalog.series.domain.SeriesFuzzySearchDisabled
 import io.tarantini.shelf.catalog.series.domain.SeriesNotFound
+import io.tarantini.shelf.integration.podcast.sanitization.MinusPodError
 import io.tarantini.shelf.organization.library.domain.EmptyLibraryId
 import io.tarantini.shelf.organization.library.domain.EmptyLibrarySlug
 import io.tarantini.shelf.organization.library.domain.EmptyLibraryTitle
@@ -191,6 +192,7 @@ fun AppError.toHttpResponse(): Pair<HttpStatusCode, String> =
         is SanitizationError -> toHttpResponse()
         is DataError -> HttpStatusCode.InternalServerError to "Database error"
         is AccessDenied -> HttpStatusCode.Forbidden to "Access denied"
+        is MinusPodError -> HttpStatusCode.BadGateway to msg
         else -> HttpStatusCode.InternalServerError to "Internal server error"
     }
 

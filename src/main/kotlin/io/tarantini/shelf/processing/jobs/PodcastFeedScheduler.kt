@@ -18,8 +18,14 @@ class PodcastFeedScheduler(
     private val scope: CoroutineScope,
     private val feedFetchService: PodcastFeedFetchService,
     private val jobQueue: JobQueue,
+    private val intervalSeconds: Long,
 ) {
     fun start() {
+        if (intervalSeconds <= 0L) {
+            logger.info { "PodcastFeedScheduler disabled because interval is <= 0 seconds." }
+            return
+        }
+
         scope.launch(Dispatchers.IO) {
             logger.info { "Starting PodcastFeedScheduler..." }
             while (isActive) {
@@ -41,7 +47,7 @@ class PodcastFeedScheduler(
                         logger.error(error) { "Podcast feed scheduler iteration failed." }
                     }
 
-                delay(60.seconds)
+                delay(intervalSeconds.seconds)
             }
         }
     }

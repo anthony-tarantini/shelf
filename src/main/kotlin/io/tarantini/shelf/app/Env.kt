@@ -42,6 +42,7 @@ data class Env(
         val libationImportEnabled: Boolean,
         val libationDropDir: String,
         val libationScanIntervalSeconds: Long,
+        val podcastScheduleIntervalSeconds: Long,
         val minuspodUrl: String,
         val minuspodAdminPassword: String,
     ) {
@@ -57,6 +58,8 @@ data class Env(
                     libationDropDir = getenv("LIBATION_DROP_DIR") ?: "./data/libation-export",
                     libationScanIntervalSeconds =
                         getenv("LIBATION_SCAN_INTERVAL_SECONDS")?.toLongOrNull() ?: 300,
+                    podcastScheduleIntervalSeconds =
+                        getenv("PODCAST_SCHEDULE_INTERVAL_SECONDS")?.toLongOrNull() ?: 60,
                     minuspodUrl = getenv("MINUSPOD_URL") ?: "http://minuspod:8080",
                     minuspodAdminPassword = getenv("MINUSPOD_ADMIN_PASSWORD") ?: "admin",
                 )

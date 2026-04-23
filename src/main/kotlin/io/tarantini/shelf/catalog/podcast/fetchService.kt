@@ -19,6 +19,7 @@ import io.tarantini.shelf.integration.podcast.feed.FeedParser
 import io.tarantini.shelf.integration.podcast.feed.ParsedEpisode
 import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.processing.storage.StorageService
+import java.nio.file.Files
 import java.security.MessageDigest
 import java.time.ZoneOffset
 import kotlin.time.Clock
@@ -108,82 +109,89 @@ private class DefaultPodcastFeedFetchService(
         }
 
         val downloaded = audioFetchAdapter.fetch(episode.audioUrl)
-        val path = episodeAudioStoragePath(podcast, episode, downloaded.extension)
-        storageService.save(path, io.tarantini.shelf.processing.storage.FileBytes(downloaded.bytes))
+        try {
+            val path = episodeAudioStoragePath(podcast, episode, downloaded.extension)
+            storageService.save(path, downloaded.path)
 
-        val inserted =
-            withContext(Dispatchers.IO) {
-                podcastQueries.transactionWithResult {
-                    val bookId =
-                        bookQueries.insert(title = episode.title, coverPath = null).executeAsOne()
-                    val claimed =
-                        podcastQueries
-                            .claimEpisodeGuid(
-                                podcastId = podcast.id.id,
-                                guid = episode.guid,
-                                bookId = bookId,
-                            )
-                            .executeAsOneOrNull()
+            val inserted =
+                withContext(Dispatchers.IO) {
+                    podcastQueries.transactionWithResult {
+                        val bookId =
+                            bookQueries
+                                .insert(title = episode.title, coverPath = null)
+                                .executeAsOne()
+                        val claimed =
+                            podcastQueries
+                                .claimEpisodeGuid(
+                                    podcastId = podcast.id.id,
+                                    guid = episode.guid,
+                                    bookId = bookId,
+                                )
+                                .executeAsOneOrNull()
 
-                    if (claimed == null) {
-                        bookQueries.deleteById(bookId).executeAsOneOrNull()
-                        return@transactionWithResult false
-                    }
-
-                    val season = episode.season ?: 0
-                    val maxEpisodeForSeason =
-                        podcastQueries
-                            .selectMaxEpisodeForSeason(podcast.id.id, season)
-                            .executeAsOne()
-                    val resolvedEpisodeNumber =
-                        when (val provided = episode.episode) {
-                            null -> maxEpisodeForSeason + 1
-                            else ->
-                                if (provided <= maxEpisodeForSeason) maxEpisodeForSeason + 1
-                                else provided
+                        if (claimed == null) {
+                            bookQueries.deleteById(bookId).executeAsOneOrNull()
+                            return@transactionWithResult false
                         }
 
-                    podcastQueries.insertEpisodeOrdering(
-                        podcastId = podcast.id.id,
-                        bookId = bookId,
-                        season = season,
-                        episode = resolvedEpisodeNumber,
-                        publishedAt = episode.publishedAt.toOffsetDateTimeUtc(),
-                    )
+                        val season = episode.season ?: 0
+                        val maxEpisodeForSeason =
+                            podcastQueries
+                                .selectMaxEpisodeForSeason(podcast.id.id, season)
+                                .executeAsOne()
+                        val resolvedEpisodeNumber =
+                            when (val provided = episode.episode) {
+                                null -> maxEpisodeForSeason + 1
+                                else ->
+                                    if (provided <= maxEpisodeForSeason) maxEpisodeForSeason + 1
+                                    else provided
+                            }
 
-                    metadataQueries.insertMetadata(
-                        bookId = bookId,
-                        title = episode.title,
-                        description = episode.description,
-                        publisher = null,
-                        published = episode.publishedAt.toUtcYear(),
-                        language = null,
-                    )
+                        podcastQueries.insertEpisodeOrdering(
+                            podcastId = podcast.id.id,
+                            bookId = bookId,
+                            season = season,
+                            episode = resolvedEpisodeNumber,
+                            publishedAt = episode.publishedAt.toOffsetDateTimeUtc(),
+                        )
 
-                    metadataQueries.insertEdition(
-                        bookId = bookId,
-                        format = BookFormat.AUDIOBOOK,
-                        path = path,
-                        fileHash = null,
-                        narrator = null,
-                        translator = null,
-                        isbn10 = null,
-                        isbn13 = null,
-                        asin = null,
-                        pages = null,
-                        totalTime = episode.duration?.inWholeMilliseconds?.toDouble()?.div(1000.0),
-                        size = downloaded.bytes.size.toLong(),
-                    )
+                        metadataQueries.insertMetadata(
+                            bookId = bookId,
+                            title = episode.title,
+                            description = episode.description,
+                            publisher = null,
+                            published = episode.publishedAt.toUtcYear(),
+                            language = null,
+                        )
 
-                    true
+                        metadataQueries.insertEdition(
+                            bookId = bookId,
+                            format = BookFormat.AUDIOBOOK,
+                            path = path,
+                            fileHash = null,
+                            narrator = null,
+                            translator = null,
+                            isbn10 = null,
+                            isbn13 = null,
+                            asin = null,
+                            pages = null,
+                            totalTime =
+                                episode.duration?.inWholeMilliseconds?.toDouble()?.div(1000.0),
+                            size = downloaded.size,
+                        )
+
+                        true
+                    }
                 }
+
+            if (!inserted) {
+                storageService.delete(path)
             }
 
-        if (!inserted) {
-            storageService.delete(path)
+            return inserted
+        } finally {
+            runCatching { Files.deleteIfExists(downloaded.path) }
         }
-
-        return inserted
     }
 
     private fun episodeAudioStoragePath(

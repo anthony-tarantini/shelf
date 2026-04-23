@@ -4,7 +4,9 @@ package io.tarantini.shelf.catalog.podcast
 
 import arrow.core.raise.recover
 import io.kotest.assertions.fail
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
@@ -106,6 +108,22 @@ class PodcastRssApiTest :
                     client.get("/rss/podcasts/${token.value}/episodes/$bookId/audio")
                 audioResponse.status shouldBe HttpStatusCode.OK
                 audioResponse.headers[HttpHeaders.ContentType] shouldBe "audio/mpeg"
+
+                val rangedResponse =
+                    client.get("/rss/podcasts/${token.value}/episodes/$bookId/audio") {
+                        header(HttpHeaders.Range, "bytes=1-2")
+                    }
+                rangedResponse.status shouldBe HttpStatusCode.PartialContent
+                rangedResponse.headers[HttpHeaders.ContentRange] shouldBe "bytes 1-2/4"
+                rangedResponse.headers[HttpHeaders.AcceptRanges] shouldBe "bytes"
+                rangedResponse.body<ByteArray>().toList() shouldContainExactly listOf(2, 3)
+
+                val invalidRangeResponse =
+                    client.get("/rss/podcasts/${token.value}/episodes/$bookId/audio") {
+                        header(HttpHeaders.Range, "bytes=99-100")
+                    }
+                invalidRangeResponse.status shouldBe HttpStatusCode.RequestedRangeNotSatisfiable
+                invalidRangeResponse.headers[HttpHeaders.ContentRange] shouldBe "bytes */4"
             }
         }
 

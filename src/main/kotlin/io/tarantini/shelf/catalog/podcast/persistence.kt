@@ -4,6 +4,7 @@ package io.tarantini.shelf.catalog.podcast
 
 import arrow.core.raise.context.raise
 import io.tarantini.shelf.RaiseContext
+import io.tarantini.shelf.app.toKotlinInstant
 import io.tarantini.shelf.catalog.book.domain.BookId
 import io.tarantini.shelf.catalog.podcast.domain.EpisodeEntry
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
@@ -184,9 +185,6 @@ private fun Podcasts.toRoot() =
         fetchIntervalMinutes = fetch_interval_minutes,
         version = version,
     )
-
-private fun OffsetDateTime?.toKotlinInstant(): Instant? =
-    this?.let { Instant.fromEpochMilliseconds(it.toInstant().toEpochMilli()) }
 
 private fun Instant?.toOffsetDateTimeUtc(): OffsetDateTime? =
     this?.let {

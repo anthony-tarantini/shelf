@@ -107,8 +107,12 @@ class PodcastApiTest :
                     }
                 getResponse.status shouldBe HttpStatusCode.OK
                 val aggregate = getResponse.body<Response<JsonObject>>().data
-                aggregate.getValue("podcast").jsonObject.getValue("id").jsonPrimitive.content shouldBe
-                    podcastId
+                aggregate
+                    .getValue("podcast")
+                    .jsonObject
+                    .getValue("id")
+                    .jsonPrimitive
+                    .content shouldBe podcastId
 
                 val deleteResponse =
                     client.delete("/api/podcasts/$podcastId") {

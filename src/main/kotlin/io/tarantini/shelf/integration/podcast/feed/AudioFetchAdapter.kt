@@ -8,10 +8,12 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-data class DownloadedEpisodeAudio(val bytes: ByteArray, val extension: String)
+data class DownloadedEpisodeAudio(val path: Path, val extension: String, val size: Long)
 
 interface EpisodeAudioFetchAdapter {
     context(_: RaiseContext)
@@ -36,11 +38,12 @@ private class JavaNetEpisodeAudioFetchAdapter(private val httpClient: HttpClient
                     .build()
 
             val response =
-                catch({ httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray()) }) {
+                catch({ httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream()) }) {
                     raise(FeedFetchFailed)
                 }
 
             if (response.statusCode() !in 200..299) {
+                response.body().close()
                 raise(FeedFetchFailed)
             }
 
@@ -49,7 +52,16 @@ private class JavaNetEpisodeAudioFetchAdapter(private val httpClient: HttpClient
                     audioUrl = audioUrl,
                     contentType = response.headers().firstValue("Content-Type").orElse(null),
                 )
-            DownloadedEpisodeAudio(bytes = response.body(), extension = extension)
+            val tempFile = Files.createTempFile("shelf-podcast-episode-", ".tmp")
+            response.body().use { input ->
+                catch({
+                    Files.copy(input, tempFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                }) {
+                    raise(FeedFetchFailed)
+                }
+            }
+            val size = catch({ Files.size(tempFile) }) { raise(FeedFetchFailed) }
+            DownloadedEpisodeAudio(path = tempFile, extension = extension, size = size)
         }
 }
 

@@ -8,7 +8,21 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
-data class EncryptedPayload(val ciphertext: ByteArray, val iv: ByteArray)
+class EncryptedPayload(val ciphertext: ByteArray, val iv: ByteArray) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is EncryptedPayload) return false
+        if (!ciphertext.contentEquals(other.ciphertext)) return false
+        if (!iv.contentEquals(other.iv)) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = ciphertext.contentHashCode()
+        result = 31 * result + iv.contentHashCode()
+        return result
+    }
+}
 
 class EncryptionService(encryptionSecret: String) {
     private val secretKey: SecretKey = deriveKey(encryptionSecret)
