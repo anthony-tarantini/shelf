@@ -93,6 +93,8 @@ class Dependencies(
     val koreaderSyncService: KoreaderSyncService,
     val koreaderAuthService: KoreaderAuthService,
     val opdsService: OpdsService,
+    val audibleAuthService: io.tarantini.shelf.integration.podcast.audible.AudibleAuthService,
+    val audibleAdapter: io.tarantini.shelf.integration.podcast.audible.AudibleAdapter,
     val jwtService: JwtService,
     val authCache: AuthCache,
     val storagePath: String,
@@ -243,6 +245,8 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val activityService = activityService(activityQueries)
         val koreaderSyncService = koreaderSyncService(koreaderQueries, metadataRepository)
         val koreaderAuthService = koreaderAuthService(koreaderQueries, userService, tokenService)
+        val audibleAuthService = io.tarantini.shelf.integration.podcast.audible.audibleAuthService()
+        val audibleAdapter = io.tarantini.shelf.integration.podcast.audible.audibleAdapter()
 
         // Create a managed CoroutineScope for background workers
         val job = SupervisorJob()
@@ -331,6 +335,8 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             koreaderSyncService,
             koreaderAuthService,
             opdsService,
+            audibleAuthService,
+            audibleAdapter,
             jwtService,
             authCache,
             storagePath,
