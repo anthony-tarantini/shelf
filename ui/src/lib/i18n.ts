@@ -103,6 +103,13 @@ const config: Config<Payload> = ({
             loader: async () => (
                 await import('./i18n/en/progress.json')
             ).default,
+        },
+        {
+            locale: 'en',
+            key: 'podcasts',
+            loader: async () => (
+                await import('./i18n/en/podcasts.json')
+            ).default,
         }
     ]
 });

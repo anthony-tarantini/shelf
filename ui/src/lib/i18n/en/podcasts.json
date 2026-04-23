@@ -1,0 +1,57 @@
+{
+  "eyebrow": "Subscriptions",
+  "page_title": "Podcasts",
+  "page_subtitle": "Manage podcast subscriptions and episode feeds.",
+  "empty_state": "No podcast subscriptions yet.",
+  "load_error_title": "Unable to refresh podcasts",
+  "dashboard": {
+    "count_label": "Podcasts",
+    "view_label": "View",
+    "sort_label": "Sort",
+    "sort_alpha_asc": "A-Z",
+    "sort_alpha_desc": "Z-A",
+    "sort_episodes_desc": "Most Episodes",
+    "sort_episodes_asc": "Fewest Episodes"
+  },
+  "card": {
+    "episodes": "{{count}} episodes",
+    "episodes_one": "{{count}} episode",
+    "auto_fetch": "Auto-fetch",
+    "last_fetched": "Last fetched",
+    "never_fetched": "Never fetched"
+  },
+  "subscribe": {
+    "eyebrow": "New Subscription",
+    "title": "Subscribe to Podcast",
+    "subtitle": "Add a podcast feed to your library.",
+    "feed_url_label": "Feed URL",
+    "feed_url_placeholder": "https://example.com/feed.xml",
+    "feed_url_hint": "The RSS or Atom feed URL for the podcast.",
+    "series_label": "Series",
+    "series_placeholder": "Select a series...",
+    "series_hint": "Link this podcast to an existing series.",
+    "series_search_placeholder": "Search series...",
+    "series_new_label": "Or create a new series",
+    "series_new_placeholder": "New series title",
+    "auto_fetch_label": "Auto-fetch episodes",
+    "auto_fetch_hint": "Automatically check for new episodes on a schedule.",
+    "auto_sanitize_label": "Auto-sanitize",
+    "auto_sanitize_hint": "Automatically remove ads from new episodes (coming soon).",
+    "fetch_interval_label": "Fetch interval (minutes)",
+    "fetch_interval_hint": "How often to check for new episodes (1–10,080).",
+    "action": "Subscribe",
+    "loading": "Subscribing...",
+    "success_title": "Subscribed",
+    "success_message": "Podcast subscription created. Episodes will be fetched shortly.",
+    "failed_title": "Subscription failed",
+    "back": "Back to Podcasts",
+    "create_series_failed": "Failed to create series"
+  },
+  "table": {
+    "cover": "Cover",
+    "title": "Title",
+    "episodes": "Episodes",
+    "status": "Status",
+    "last_fetched": "Last Fetched"
+  }
+}

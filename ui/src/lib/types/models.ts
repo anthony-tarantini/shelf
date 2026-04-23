@@ -299,6 +299,55 @@ export interface StagedBatchRequest {
   action: StagedBatchAction;
 }
 
+// Podcast types
+export interface PodcastSummary {
+  id: string;
+  seriesId: string;
+  seriesTitle: string;
+  feedUrl: string;
+  episodeCount: number;
+  autoSanitize: boolean;
+  autoFetch: boolean;
+  lastFetchedAt?: string;
+  version: number;
+  coverPath?: string;
+}
+
+export enum CredentialStatus {
+  HAS_CREDENTIAL = 'HAS_CREDENTIAL',
+  NO_CREDENTIAL = 'NO_CREDENTIAL',
+}
+
+export interface EpisodeEntry {
+  bookId: string;
+  title: string;
+  season: number;
+  episode: number;
+  sanitizationStatus?: string;
+  coverPath?: string;
+  totalTime?: number;
+  publishedAt?: string;
+}
+
+export interface PodcastAggregate {
+  podcast: {
+    id: string;
+    seriesId: string;
+    feedUrl: string;
+    feedToken: string;
+    feedTokenExpiresAt?: string;
+    autoSanitize: boolean;
+    autoFetch: boolean;
+    lastFetchedAt?: string;
+    fetchIntervalMinutes: number;
+    version: number;
+  };
+  seriesId: string;
+  seriesTitle: string;
+  episodes: EpisodeEntry[];
+  credential: CredentialStatus;
+}
+
 // Backward compatibility aliases to minimize breaking changes during migration
 export interface ExternalContributor {
   id: string;

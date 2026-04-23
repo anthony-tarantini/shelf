@@ -69,7 +69,8 @@
 	const catalogNavItems = [
 		{ href: '/', label: 'common.app_shell.library', icon: 'library' },
 		{ href: '/authors', label: 'common.app_shell.authors', icon: 'authors' },
-		{ href: '/series', label: 'common.app_shell.series', icon: 'series' }
+		{ href: '/series', label: 'common.app_shell.series', icon: 'series' },
+		{ href: '/podcasts', label: 'common.app_shell.podcasts', icon: 'podcasts' }
 	];
 
 	const toolNavItems = [
@@ -108,6 +109,8 @@
 				return 'M5 12l5 5L20 7';
 			case 'sync':
 				return 'M21 12a9 9 0 0 1-15.55 6.36L3 16m18-4-2.45-2.36A9 9 0 0 0 3 12m0 0a9 9 0 0 1 15.55-6.36L21 8';
+			case 'podcasts':
+				return 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z';
 			case 'settings':
 				return 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z';
 			default:
@@ -326,7 +329,7 @@
 
 				<nav class="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/95 px-2 py-2 shadow-[0_-8px_24px_rgba(0,0,0,0.12)] backdrop-blur-md lg:hidden" style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
 					<div class="mx-auto grid max-w-xl grid-cols-4 gap-1">
-						{#each catalogNavItems as item (item.href)}
+						{#each catalogNavItems.slice(0, 3) as item (item.href)}
 							<a
 								href={item.href}
 								class="flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold transition-colors {isActive(item.href) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}"
