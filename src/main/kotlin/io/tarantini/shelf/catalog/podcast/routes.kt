@@ -39,7 +39,7 @@ fun Route.podcastRoutes(podcastService: PodcastService, jwtService: JwtService) 
 
     get<PodcastsResource.Id> { resource ->
         sharedCatalogRead(jwtService) {
-            respond({ podcastService.getPodcast(PodcastId(resource.id)) })
+            respond({ podcastService.getPodcastAggregate(PodcastId(resource.id)) })
         }
     }
 
@@ -48,6 +48,22 @@ fun Route.podcastRoutes(podcastService: PodcastService, jwtService: JwtService) 
             respond({
                 val request = call.receive<Request<PodcastRequest>>().data
                 podcastService.updatePodcast(request.toUpdateCommand(resource.id))
+            })
+        }
+    }
+
+    post<PodcastsResource.Id.RotateToken> { resource ->
+        sharedCatalogMutation(jwtService) {
+            respond({
+                podcastService.rotateToken(PodcastId(resource.parent.id))
+            })
+        }
+    }
+
+    post<PodcastsResource.Id.RevokeToken> { resource ->
+        sharedCatalogMutation(jwtService) {
+            respond({
+                podcastService.revokeToken(PodcastId(resource.parent.id))
             })
         }
     }

@@ -330,23 +330,27 @@ export interface EpisodeEntry {
 }
 
 export interface PodcastAggregate {
-  podcast: {
-    id: string;
-    seriesId: string;
-    feedUrl: string;
-    feedToken: string;
-    feedTokenExpiresAt?: string;
-    autoSanitize: boolean;
-    autoFetch: boolean;
-    lastFetchedAt?: string;
-    fetchIntervalMinutes: number;
-    version: number;
-  };
+  podcast: SavedPodcastRoot;
   seriesId: string;
   seriesTitle: string;
   episodes: EpisodeEntry[];
   credential: CredentialStatus;
 }
+
+export interface SavedPodcastRoot {
+  id: string;
+  seriesId: string;
+  feedUrl: string;
+  feedToken: string;
+  feedTokenExpiresAt?: string;
+  autoSanitize: boolean;
+  autoFetch: boolean;
+  lastFetchedAt?: string;
+  fetchIntervalMinutes: number;
+  version: number;
+}
+
+export type SavedPodcastAggregate = PodcastAggregate;
 
 // Backward compatibility aliases to minimize breaking changes during migration
 export interface ExternalContributor {

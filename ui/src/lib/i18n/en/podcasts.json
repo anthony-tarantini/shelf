@@ -47,11 +47,44 @@
     "back": "Back to Podcasts",
     "create_series_failed": "Failed to create series"
   },
+  "detail": {
+    "back": "Back to Podcasts",
+    "episodes_tab": "Episodes",
+    "settings_tab": "Settings",
+    "info_eyebrow": "Podcast Info",
+    "feed_url": "Feed URL",
+    "last_fetched": "Last Fetched",
+    "fetch_interval": "Check every {{minutes}} minutes",
+    "auto_fetch": "Auto-fetch enabled",
+    "auto_sanitize": "Auto-sanitize enabled",
+    "no_episodes": "No episodes found for this podcast."
+  },
+  "settings": {
+    "title": "Podcast Settings",
+    "rss_feed_section": "Private RSS Feed",
+    "rss_feed_description": "Use this URL to listen to this podcast in your favorite player. This URL contains a private token; do not share it.",
+    "copy_rss_url": "Copy RSS URL",
+    "rss_url_copied": "RSS URL copied to clipboard",
+    "rotate_token": "Rotate Token",
+    "rotate_token_hint": "Generates a new token. The current token will remain valid for 7 days.",
+    "revoke_token": "Revoke Token",
+    "revoke_token_hint": "Immediately invalidates all existing tokens. You will need to update your podcast player.",
+    "config_section": "Configuration",
+    "save_settings": "Save Settings",
+    "settings_saved": "Settings saved successfully",
+    "danger_zone": "Danger Zone",
+    "unsubscribe": "Unsubscribe",
+    "unsubscribe_confirm": "Are you sure you want to unsubscribe? This will remove the podcast and all its episodes from your library."
+  },
   "table": {
     "cover": "Cover",
     "title": "Title",
     "episodes": "Episodes",
     "status": "Status",
-    "last_fetched": "Last Fetched"
+    "last_fetched": "Last Fetched",
+    "season": "Season",
+    "episode": "Episode",
+    "duration": "Duration",
+    "published": "Published"
   }
 }

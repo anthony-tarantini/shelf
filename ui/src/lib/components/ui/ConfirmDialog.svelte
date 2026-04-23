@@ -1,6 +1,6 @@
 <script lang="ts">
 	let {
-		open = false,
+		open = $bindable(false),
 		title,
 		message,
 		confirmLabel = 'Confirm',

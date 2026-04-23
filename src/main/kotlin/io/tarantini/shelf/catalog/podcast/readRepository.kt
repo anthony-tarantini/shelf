@@ -3,12 +3,16 @@
 package io.tarantini.shelf.catalog.podcast
 
 import io.tarantini.shelf.RaiseContext
+import io.tarantini.shelf.catalog.podcast.domain.CredentialStatus
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
+import io.tarantini.shelf.catalog.podcast.domain.PodcastAggregate
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import io.tarantini.shelf.catalog.podcast.domain.PodcastSummary
+import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastAggregate
 import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastRoot
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
 import io.tarantini.shelf.catalog.series.domain.SeriesId
+import io.tarantini.shelf.integration.persistence.CredentialsQueries
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,6 +20,9 @@ import kotlinx.coroutines.withContext
 interface PodcastReadRepository {
     context(_: RaiseContext)
     suspend fun getPodcastById(id: PodcastId): SavedPodcastRoot
+
+    context(_: RaiseContext)
+    suspend fun getPodcastAggregateById(id: PodcastId): SavedPodcastAggregate
 
     context(_: RaiseContext)
     suspend fun getPodcastBySeriesId(seriesId: SeriesId): SavedPodcastRoot
@@ -39,14 +46,37 @@ interface PodcastReadRepository {
     suspend fun getMaxEpisodeForSeason(podcastId: PodcastId, season: Int): Int
 }
 
-fun podcastReadRepository(queries: PodcastQueries): PodcastReadRepository =
-    SqlDelightPodcastReadRepository(queries)
+fun podcastReadRepository(
+    queries: PodcastQueries,
+    credentialsQueries: CredentialsQueries,
+): PodcastReadRepository = SqlDelightPodcastReadRepository(queries, credentialsQueries)
 
-private class SqlDelightPodcastReadRepository(private val queries: PodcastQueries) :
-    PodcastReadRepository {
+private class SqlDelightPodcastReadRepository(
+    private val queries: PodcastQueries,
+    private val credentialsQueries: CredentialsQueries,
+) : PodcastReadRepository {
     context(_: RaiseContext)
     override suspend fun getPodcastById(id: PodcastId): SavedPodcastRoot =
         withContext(Dispatchers.IO) { queries.getPodcastById(id) }
+
+    context(_: RaiseContext)
+    override suspend fun getPodcastAggregateById(id: PodcastId): SavedPodcastAggregate =
+        withContext(Dispatchers.IO) {
+            val root = queries.getPodcastById(id)
+            val summary = queries.getPodcastSummaryById(id)
+            val episodes = queries.getEpisodesByPodcastId(id)
+            val hasCredentials = credentialsQueries.hasCredentials(id)
+
+            PodcastAggregate(
+                podcast = root,
+                seriesId = root.seriesId,
+                seriesTitle = summary.seriesTitle,
+                episodes = episodes,
+                credential =
+                    if (hasCredentials) CredentialStatus.HAS_CREDENTIAL
+                    else CredentialStatus.NO_CREDENTIAL,
+            )
+        }
 
     context(_: RaiseContext)
     override suspend fun getPodcastBySeriesId(seriesId: SeriesId): SavedPodcastRoot =

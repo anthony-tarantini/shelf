@@ -5,6 +5,7 @@ package io.tarantini.shelf.catalog.podcast
 import arrow.core.raise.context.raise
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.book.domain.BookId
+import io.tarantini.shelf.catalog.podcast.domain.EpisodeEntry
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
@@ -16,6 +17,7 @@ import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastSummaries
 import io.tarantini.shelf.catalog.podcast.persistence.Podcasts
 import io.tarantini.shelf.catalog.series.domain.SeriesId
+import io.tarantini.shelf.processing.sanitization.domain.SanitizationStatus
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import kotlin.time.Instant
@@ -132,6 +134,26 @@ context(_: RaiseContext)
 fun PodcastQueries.deletePodcast(id: PodcastId) {
     deleteById(id)
 }
+
+context(_: RaiseContext)
+fun PodcastQueries.getEpisodesByPodcastId(podcastId: PodcastId): List<EpisodeEntry> =
+    selectEpisodesByPodcastId(podcastId).executeAsList().map {
+        EpisodeEntry(
+            bookId = it.book_id,
+            title = it.title,
+            season = it.season,
+            episode = it.episode,
+            sanitizationStatus = SanitizationStatus.SKIPPED, // Placeholder until M2
+            coverPath = it.cover_path,
+            totalTime = it.total_time,
+            publishedAt = it.published_at.toKotlinInstant(),
+        )
+    }
+
+context(_: RaiseContext)
+fun io.tarantini.shelf.integration.persistence.CredentialsQueries.hasCredentials(
+    podcastId: PodcastId
+): Boolean = existsByPodcastId(podcastId).executeAsOne()
 
 private fun PodcastSummaries.toSummary() =
     PodcastSummary(

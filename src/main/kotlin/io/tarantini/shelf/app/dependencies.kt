@@ -208,13 +208,16 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             )
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
-        val podcastService = podcastService(podcastQueries)
+        val podcastService = podcastService(podcastQueries, credentialsQueries)
         val encryptionService = EncryptionService(env.integration.encryptionSecret)
         val credentialService = podcastCredentialService(credentialsQueries, encryptionService)
         val podcastFeedFetchService =
             podcastFeedFetchService(
                 readRepository =
-                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(podcastQueries),
+                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(
+                        podcastQueries,
+                        credentialsQueries
+                    ),
                 mutationRepository =
                     io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries),
                 podcastQueries = podcastQueries,
@@ -229,7 +232,10 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val podcastRssService =
             podcastRssService(
                 readRepository =
-                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(podcastQueries),
+                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(
+                        podcastQueries,
+                        credentialsQueries
+                    ),
                 podcastQueries = podcastQueries,
                 storageService = storageService,
                 publicRootUrl = env.http.publicRootUrl,
