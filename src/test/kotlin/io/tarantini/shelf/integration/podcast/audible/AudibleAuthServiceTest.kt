@@ -14,7 +14,7 @@ class AudibleAuthServiceTest : StringSpec({
         recover({
             val session = authService.generateLoginUrl()
             session.loginUrl shouldStartWith "https://www.amazon.com/ap/signin"
-            session.loginUrl shouldContain "openid.oa2.client_id=amzn1.application-oa-client.0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p"
+            session.loginUrl shouldContain "openid.oa2.client_id=device%3Aamzn1.application-oa-client.8df46f88127042a99d63c5d63f9157ec"
             session.loginUrl shouldContain "openid.oa2.response_type=code"
         }) {
             fail("Should not have failed: $it")

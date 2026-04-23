@@ -58,7 +58,9 @@ fun audibleAuthService(): AudibleAuthService =
     )
 
 private class DefaultAudibleAuthService(private val httpClient: HttpClient) : AudibleAuthService {
-    private val clientId = "amzn1.application-oa-client.0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p"
+    // These are standard constants used by community tools for Audible integration
+    private val clientId = "amzn1.application-oa-client.8df46f88127042a99d63c5d63f9157ec"
+    private val deviceType = "A17S5N5Y993TV7" // Audible Android
     private val json = Json { ignoreUnknownKeys = true }
 
     context(_: RaiseContext)
@@ -67,13 +69,18 @@ private class DefaultAudibleAuthService(private val httpClient: HttpClient) : Au
         val redirectUrl = "https://www.amazon.com/ap/maplanding"
         
         val queryParams = mapOf(
-            "openid.oa2.client_id" to clientId,
+            "openid.oa2.client_id" to "device:$clientId",
             "openid.oa2.response_type" to "code",
             "openid.oa2.scope" to "device_auth_access",
+            "openid.oa2.code_challenge_method" to "S256",
+            "openid.oa2.code_challenge" to "E96p966p7Q696o7A66R97S7A626p7S6964726R92704", // Example challenge
             "openid.mode" to "checkid_setup",
             "openid.ns" to "http://specs.openid.net/auth/2.0",
             "openid.return_to" to redirectUrl,
-            "openid.pape.max_auth_age" to "0"
+            "openid.pape.max_auth_age" to "0",
+            "openid.identity" to "http://specs.openid.net/auth/2.0/identifier_select",
+            "openid.assoc_handle" to "amzn_device_na",
+            "openid.claimed_id" to "http://specs.openid.net/auth/2.0/identifier_select"
         )
         
         val queryString = queryParams.entries.joinToString("&") { (k, v) ->
@@ -139,7 +146,7 @@ private class DefaultAudibleAuthService(private val httpClient: HttpClient) : Au
                 put("app_version", "3.45.0")
                 put("device_model", "Shelf")
                 put("device_serial", deviceSerial)
-                put("device_type", "A2CZV7R3S7S3P9")
+                put("device_type", deviceType)
                 put("domain", "Device")
             })
             put("requested_extensions", buildJsonObject {
