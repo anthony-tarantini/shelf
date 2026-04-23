@@ -15,6 +15,9 @@ interface PodcastProvider {
     suspend fun getPodcasts(): List<PodcastSummary>
 
     context(_: RaiseContext)
+    suspend fun getDashboard(): PodcastDashboard
+
+    context(_: RaiseContext)
     suspend fun getPodcast(id: PodcastId): SavedPodcastRoot
 
     context(_: RaiseContext)
@@ -68,6 +71,18 @@ private class PodcastAggregateService(
     context(_: RaiseContext)
     override suspend fun getPodcasts(): List<PodcastSummary> =
         withContext(Dispatchers.IO) { readRepository.getAllPodcasts() }
+
+    context(_: RaiseContext)
+    override suspend fun getDashboard(): PodcastDashboard =
+        withContext(Dispatchers.IO) {
+            val podcasts = readRepository.getAllPodcasts()
+            val hasAudible = readRepository.hasGlobalAudibleCredential()
+            PodcastDashboard(
+                podcasts = podcasts,
+                audibleConnected = hasAudible,
+                audibleUsername = if (hasAudible) "Connected" else null
+            )
+        }
 
     context(_: RaiseContext)
     override suspend fun getPodcast(id: PodcastId): SavedPodcastRoot =

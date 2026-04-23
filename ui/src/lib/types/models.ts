@@ -329,6 +329,12 @@ export interface EpisodeEntry {
   publishedAt?: string;
 }
 
+export interface PodcastDashboard {
+  podcasts: PodcastSummary[];
+  audibleConnected: boolean;
+  audibleUsername?: string;
+}
+
 export interface PodcastAggregate {
   podcast: SavedPodcastRoot;
   seriesId: string;

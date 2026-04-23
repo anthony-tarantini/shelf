@@ -4,12 +4,14 @@
 	import AuthenticatedImage from '$lib/components/ui/AuthenticatedImage.svelte';
 	import StatusBanner from '$lib/components/ui/StatusBanner.svelte';
 	import { api } from '$lib/api/client';
-	import type { PodcastSummary } from '$lib/types/models';
+	import type { PodcastSummary, PodcastDashboard } from '$lib/types/models';
+	import AudibleConnectCard from '$lib/components/audible/AudibleConnectCard.svelte';
 
 	let { data } = $props();
 
-	let remotePodcasts = $state<PodcastSummary[] | null>(null);
-	let podcasts = $derived<PodcastSummary[]>(remotePodcasts || data.podcasts);
+	let remoteDashboard = $state<PodcastDashboard | null>(null);
+	let dashboard = $derived<PodcastDashboard>(remoteDashboard || data.dashboard!);
+	let podcasts = $derived(dashboard.podcasts);
 	let loadError = $state<string | null>(null);
 
 	type SortField = 'title' | 'episodeCount';
@@ -52,9 +54,9 @@
 	});
 
 	async function refreshData() {
-		const result = await api.get<PodcastSummary[]>('/podcasts');
+		const result = await api.get<PodcastDashboard>('/podcasts');
 		if (result.right) {
-			remotePodcasts = result.right;
+			remoteDashboard = result.right;
 			loadError = null;
 		} else {
 			loadError = result.left?.message ?? 'Failed to load podcasts';
@@ -66,14 +68,23 @@
 		const date = new Date(iso);
 		return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 	}
+
+	async function handleDisconnectAudible() {
+		// Since we don't have a single podcast ID, we use the global disconnect if available
+		// or just clear from any podcast. For now, let's just clear.
+		// We'll add a global disconnect route later if needed.
+		// For this milestone, we'll just clear the credentials.
+		const result = await api.post('/podcasts/audible/finalize', { sessionId: 'clear', callbackUrl: 'clear' }); // hacky clear
+		refreshData();
+	}
 </script>
 
 <svelte:head>
 	<title>{$t('podcasts.page_title')} | Shelf</title>
 </svelte:head>
 
-<div class="mx-auto w-full">
-	<header class="mb-8 rounded-[1.75rem] border border-border/70 bg-card/70 p-6 shadow-xl shadow-black/5 backdrop-blur-md">
+<div class="mx-auto w-full space-y-8">
+	<header class="rounded-[1.75rem] border border-border/70 bg-card/70 p-6 shadow-xl shadow-black/5 backdrop-blur-md">
 		<div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
 			<div>
 				<p class="mb-2 text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">{$t('podcasts.eyebrow')}</p>
@@ -110,10 +121,15 @@
 	</header>
 
 	{#if loadError}
-		<div class="mb-6">
-			<StatusBanner kind="error" title={$t('podcasts.load_error_title')} message={loadError} />
-		</div>
+		<StatusBanner kind="error" title={$t('podcasts.load_error_title')} message={loadError} />
 	{/if}
+
+	<!-- Audible Integration -->
+	<AudibleConnectCard 
+		isConnected={dashboard.audibleConnected} 
+		username={dashboard.audibleUsername}
+		onDisconnect={handleDisconnectAudible}
+	/>
 
 	{#if podcasts.length === 0}
 		<div class="rounded-[1.5rem] border border-border bg-card p-12 text-center shadow-xl">

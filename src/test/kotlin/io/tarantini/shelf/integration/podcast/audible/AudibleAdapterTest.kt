@@ -4,15 +4,16 @@ import arrow.core.raise.recover
 import io.kotest.assertions.fail
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.tarantini.shelf.catalog.podcast.domain.AudibleAuthFailed
 
 class AudibleAdapterTest : StringSpec({
-    "audible adapter should return empty library from stub" {
+    "audible adapter should fail on missing token" {
         val adapter = audibleAdapter()
         recover({
-            val library = adapter.fetchLibrary(AudibleCredentials("cookies"))
-            library shouldBe emptyList()
+            adapter.fetchLibrary(AudibleCredentials("invalid-cookies"))
+            fail("Should have failed")
         }) {
-            fail("Should not have failed: $it")
+            it shouldBe AudibleAuthFailed
         }
     }
 })

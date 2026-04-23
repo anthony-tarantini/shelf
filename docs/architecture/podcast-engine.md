@@ -481,86 +481,23 @@ SELECT count(*) > 0 FROM integration_credentials WHERE podcast_id = :podcastId;
 
 ---
 
-## Phase 2: Sanitization Pipeline (The Commercial Crusher) — Milestone 2
+## Phase 2: Sanitization Pipeline (MinusPod Orchestration) — Milestone 2
 
-### 2.1 State Machine
+### 2.1 Overview
+Instead of building a custom ad-detection engine, Shelf uses **MinusPod** as a sidecar container. Shelf acts as the master catalog and feed manager, while MinusPod provides the ad-removal "crushing" service via its REST API.
 
-```
-PENDING → PROCESSING → REVIEW → APPROVED
-  ↑                 ↘           ↗
-  │                  → REJECTED (reverts to original)
-  │                 ↘
-  └── retry ←─────── FAILED (with error_message)
+### 2.2 Integration Flow
+1. **Infrastructure:** MinusPod runs as a sidecar (`minuspod` service in Docker).
+2. **Registration:** When a podcast with `autoSanitize=true` is added to Shelf, Shelf registers the feed with MinusPod.
+3. **Proxying:** Shelf uses MinusPod's "modified" RSS feed or direct audio proxy URLs for episode ingestion.
+4. **Polling:** Shelf polls MinusPod's API to track processing status (Transcribing, Detecting, Splicing).
 
-SKIPPED (terminal — auto_sanitize=false)
-```
+### 2.3 MinusPod Adapter (`integration/podcast/sanitization/MinusPodAdapter.kt`)
+A REST client for MinusPod's `/api/v1/` endpoints:
+- `POST /feeds` — Register a new feed.
+- `GET /feeds/{slug}/episodes` — Track processing status of episodes.
+- `POST /feeds/{slug}/reprocess-all` — Trigger a manual re-crush.
 
-Note: Retry from FAILED creates a new job row (old row kept for history). New row starts at PENDING.
-
-Decider enforces valid transitions:
-
-```kotlin
-object SanitizationDecider {
-    fun transition(
-        current: SanitizationStatus,
-        command: SanitizationCommand,
-    ): Either<SanitizationError, SanitizationStatus> = either {
-        when (command) {
-            is StartProcessing -> {
-                ensure(current == PENDING) { InvalidSanitizationTransition }
-                PROCESSING
-            }
-            is CompleteProcessing -> {
-                ensure(current == PROCESSING) { InvalidSanitizationTransition }
-                REVIEW
-            }
-            is Approve -> {
-                ensure(current == REVIEW) { InvalidSanitizationTransition }
-                APPROVED
-            }
-            is Reject -> {
-                ensure(current == REVIEW) { InvalidSanitizationTransition }
-                REJECTED
-            }
-            is Fail -> {
-                ensure(current == PROCESSING) { InvalidSanitizationTransition }
-                FAILED
-            }
-        }
-    }
-}
-```
-
-### 2.2 Pipeline Stages (All in `processing/sanitization/`)
-
-**Stage 1: Silence Detection** (`SilenceDetector.kt`)
-- Wraps `ffmpeg -af silencedetect=noise=-30dB:d=1.5 -f null -`
-- Parses stderr for `silence_start`/`silence_end` timestamps
-- Returns `List<SilenceSegment(start, end, duration)>`
-- Configurable noise threshold per podcast (some are louder)
-
-**Stage 2: Transcription** (`TranscriptionService.kt`)
-- Extracts low-bitrate mono track: `ffmpeg -i input.m4b -ac 1 -ar 16000 -c:a pcm_s16le temp.wav`
-- Runs `whisper.cpp` CLI: `./main -m ggml-base.en.bin -f temp.wav --output-vtt`
-- Parses VTT into `List<TranscriptSegment(start, end, text)>`
-- All via CLI adapter — no JNI, no Python dependency
-
-**Stage 3: Ad Classification** (`AdClassifier.kt`)
-- Takes transcript segments + silence segments
-- Sends to local LLM (Ollama HTTP API) with structured prompt:
-  ```
-  Identify sponsor/ad segments. Return JSON array of {start, end, confidence, label}.
-  Markers: "promo code", "sponsored by", "support the show", "use code", "listeners get".
-  ```
-- Filters by confidence threshold (configurable, default 0.7)
-- Merges with silence-bordered segments for higher confidence
-
-**Stage 4: Audio Assembly** (`AudioAssembler.kt`)
-- Builds FFmpeg concat filter excluding detected segments
-- Adjusts chapter timestamps: for each removed segment, shift subsequent chapters backward
-- Re-embeds chapters via `ffmpeg -i sanitized.m4b -map_metadata 0 ...`
-- Writes sanitized file to `{original_dir}/sanitized/{filename}`
-- Original file untouched
 
 ### 2.3 Chapter Timestamp Adjustment
 
@@ -1018,52 +955,23 @@ Critical for trust. User must be able to:
 
 ## Implementation Order
 
-### Milestone 1: Podcast Ingestion + RSS Distribution
+### Milestone 1: Podcast Ingestion + RSS Distribution (COMPLETE)
+Steps 1-13.
 
-Core value: subscribe to RSS feeds, auto-fetch episodes, serve via private RSS to podcast players. No sanitization. Ship this first — fully usable without commercial removal.
+### Milestone 1.5: Audible-to-RSS Bridge (COMPLETE)
+14. **Audible Auth:** Implement Amazon login + device registration handshake.
+15. **Audible Adapter:** Fetch library and map metadata to ParsedFeed.
+16. **Audio Pipeline:** Implement FFmpeg decryption wrapper (AAX -> M4B).
+17. **Ingestion Worker:** Coordinate Audible metadata sync and decryption.
+18. **Frontend Components:** Build Connect, Browse, and Import UI.
 
-| Step | Scope | Depends On |
-|------|-------|------------|
-| 1 | Domain primitives + error types (podcast only, no sanitization types) | Nothing |
-| 2 | SQLDelight schemas: `podcasts`, `episode_guids`, `episode_ordering` | Step 1 |
-| 3 | Domain models: PodcastRoot, PodcastAggregate, PodcastSummary, EpisodeEntry | Steps 1-2 |
-| 4 | Persistence adapters | Steps 2-3 |
-| 5 | Read/Mutation repositories | Step 4 |
-| 6 | Feed parser (with XXE hardening) + fetch adapter | Step 1 |
-| 7 | Podcast service + routes (CRUD: subscribe, unsubscribe, list, config) | Steps 5-6 |
-| 8 | Feed fetch worker + episode ingestion (with GUID idempotency) | Steps 6-7 |
-| 9 | Encryption service + credential persistence (`integration_credentials`) | Step 2 |
-| 10 | RSS generation service + token-authenticated routes | Steps 5, 7 |
-| 11 | Frontend: podcast list + subscribe flow | Step 7 |
-| 12 | Frontend: podcast detail + episode list | Steps 8, 10 |
-| 13 | Frontend: feed token display + RSS URL copy | Step 10 |
+### Milestone 2: Commercial Crusher (MinusPod Sidecar)
+19. **Infrastructure:** Add `ttlequals0/minuspod` image to `docker-compose.yaml`.
+20. **MinusPod Client:** Build Kotlin adapter for MinusPod REST API.
+21. **Feed Orchestration:** Update fetch service to swap original URLs for MinusPod proxy URLs.
+22. **Status Integration:** Add "Processing" status to Shelf UI based on MinusPod polling.
+23. **Manual Review:** Adapt UI to allow users to trigger re-processing or review MinusPod segments.
 
-Steps 6 and 9 can run in parallel. Steps 11-13 can start once their backend dependency ships.
-
-**Milestone 1 deliverable:** User can add a podcast feed URL, episodes auto-fetch on schedule, and a private RSS URL serves episodes to Pocket Casts / Overcast / etc. `autoSanitize` field exists on schema but is ignored — all episodes have `sanitizationStatus = null`.
-
----
-
-### Milestone 2: Commercial Crusher (Sanitization Pipeline)
-
-Builds on Milestone 1. Adds ad detection + removal + review workflow. Can be developed independently once Milestone 1 ships.
-
-| Step | Scope | Depends On |
-|------|-------|------------|
-| 14 | SQLDelight schema: `sanitization_jobs` (with partial unique index) | M1 complete |
-| 15 | Sanitization domain: primitives, models, error types, state machine | Step 14 |
-| 16 | FFmpeg adapter (silence detect, concat, chapter adjust) | Nothing |
-| 17 | Whisper adapter (CLI wrapper) | Nothing |
-| 18 | LLM ad classifier (Ollama HTTP) | Step 17 |
-| 19 | Sanitization pipeline service (orchestrates 16-18) | Steps 16-18 |
-| 20 | Sanitization worker + job queue extension | Steps 15, 19 |
-| 21 | Wire `autoSanitize` flag — enqueue jobs on episode ingestion | Step 20 |
-| 22 | Frontend: sanitization review UX (waveform, approve/reject) | Step 20 |
-| 23 | Frontend: auto-sanitize toggle in podcast settings | Step 21 |
-
-Steps 16, 17 can run in parallel (no dependencies). Step 22 can start once step 20 ships.
-
-**Milestone 2 deliverable:** Episodes with `autoSanitize=true` go through silence detection → transcription → LLM classification → audio assembly. User reviews detected segments, approves/rejects. Sanitized audio served via RSS; original preserved.
 
 ---
 

@@ -62,7 +62,7 @@ class PodcastServiceTest :
                     saved
                 }
 
-            val service = podcastService(readRepository, mutationRepository)
+            val service = podcastService(readRepository, mutationRepository, mockk())
             val command =
                 CreatePodcastCommand(
                     seriesId = seriesId,
@@ -138,7 +138,7 @@ class PodcastServiceTest :
                     updated
                 }
 
-            val service = podcastService(readRepository, mutationRepository)
+            val service = podcastService(readRepository, mutationRepository, mockk())
             val result = either {
                 service.updatePodcast(
                     UpdatePodcastCommand(
@@ -187,7 +187,7 @@ class PodcastServiceTest :
                 with(any<RaiseContext>()) { mutationRepository.deletePodcast(podcastId) }
             } coAnswers { calls += "delete" }
 
-            val service = podcastService(readRepository, mutationRepository)
+            val service = podcastService(readRepository, mutationRepository, mockk())
             val result = either { service.deletePodcast(podcastId) }
 
             result.fold({ fail("Should not have failed: $it") }, {})

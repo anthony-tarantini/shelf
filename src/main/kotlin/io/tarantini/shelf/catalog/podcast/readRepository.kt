@@ -39,6 +39,9 @@ interface PodcastReadRepository {
 
     context(_: RaiseContext)
     suspend fun getMaxEpisodeForSeason(podcastId: PodcastId, season: Int): Int
+
+    context(_: RaiseContext)
+    suspend fun hasGlobalAudibleCredential(): Boolean
 }
 
 fun podcastReadRepository(
@@ -105,4 +108,10 @@ private class SqlDelightPodcastReadRepository(
     context(_: RaiseContext)
     override suspend fun getMaxEpisodeForSeason(podcastId: PodcastId, season: Int): Int =
         withContext(Dispatchers.IO) { queries.getMaxEpisodeForSeason(podcastId, season) }
+
+    context(_: RaiseContext)
+    override suspend fun hasGlobalAudibleCredential(): Boolean =
+        withContext(Dispatchers.IO) { 
+            credentialsQueries.existsAnyByType(CredentialType.AUDIBLE_COOKIE.name).executeAsOne()
+        }
 }

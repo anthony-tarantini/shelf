@@ -6,6 +6,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
+import io.tarantini.shelf.catalog.podcast.domain.AudibleAuthFailed
 
 class AudibleAuthServiceTest : StringSpec({
     "audible auth service should generate login url with correct params" {
@@ -20,14 +21,14 @@ class AudibleAuthServiceTest : StringSpec({
         }
     }
 
-    "audible auth service should finalize auth by extracting code" {
+    "audible auth service should attempt finalize auth and fail on network" {
         val authService = audibleAuthService()
         recover({
             val callbackUrl = "https://www.amazon.com/ap/maplanding?openid.oa2.authorization_code=TEST_CODE&other=param"
-            val credentials = authService.finalizeAuth("session-id", callbackUrl)
-            credentials.cookies shouldContain "captured-TEST_CODE"
+            authService.finalizeAuth("session-id", callbackUrl)
+            fail("Should have failed on network call")
         }) {
-            fail("Should not have failed: $it")
+            it shouldBe AudibleAuthFailed
         }
     }
 })

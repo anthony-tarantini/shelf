@@ -42,7 +42,7 @@ fun Route.podcastRoutes(
     }
 
     get<PodcastsResource> {
-        sharedCatalogRead(jwtService) { respond({ podcastService.getPodcasts() }) }
+        sharedCatalogRead(jwtService) { respond({ podcastService.getDashboard() }) }
     }
 
     get<PodcastsResource.Id> { resource ->
