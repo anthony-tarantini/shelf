@@ -39,11 +39,13 @@ import io.tarantini.shelf.integration.koreader.koreaderSyncService
 import io.tarantini.shelf.integration.podcast.feed.episodeAudioFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.feedFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.feedParser
+import io.tarantini.shelf.integration.podcast.libation.LibationManifestParser
+import io.tarantini.shelf.integration.podcast.libation.LibationScanner
 import io.tarantini.shelf.integration.podcast.podcastCredentialService
 import io.tarantini.shelf.integration.security.EncryptionService
 import io.tarantini.shelf.observability.Observability
-import io.tarantini.shelf.observability.observability
 import io.tarantini.shelf.observability.ObservabilityConfig
+import io.tarantini.shelf.observability.observability
 import io.tarantini.shelf.organization.library.LibraryService
 import io.tarantini.shelf.organization.library.libraryService
 import io.tarantini.shelf.organization.settings.SettingsService
@@ -94,9 +96,8 @@ class Dependencies(
     val koreaderSyncService: KoreaderSyncService,
     val koreaderAuthService: KoreaderAuthService,
     val opdsService: OpdsService,
-    val audibleClient: io.tarantini.shelf.integration.podcast.audible.AudibleSidecarClient,
+    val podcastLibationService: io.tarantini.shelf.catalog.podcast.PodcastLibationService,
     val minusPodAdapter: io.tarantini.shelf.integration.podcast.sanitization.MinusPodAdapter,
-    val audibleContentFetchService: io.tarantini.shelf.catalog.podcast.AudibleContentFetchService,
     val jwtService: JwtService,
     val authCache: AuthCache,
     val storagePath: String,
@@ -212,27 +213,46 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             )
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
-        
+
         val encryptionService = EncryptionService(env.integration.encryptionSecret)
         val credentialService = podcastCredentialService(credentialsQueries, encryptionService)
-        
-        val audibleClient =
-            io.tarantini.shelf.integration.podcast.audible.audibleSidecarClient(env.integration.audibleSidecarUrl)
+        val podcastLibationService =
+            io.tarantini.shelf.catalog.podcast.podcastLibationService(
+                enabled = env.integration.libationImportEnabled,
+                dropDirectory = env.integration.libationDropDir,
+                scanner = LibationScanner(LibationManifestParser()),
+                libationImportQueries = libationImportQueries,
+                seriesQueries = seriesQueries,
+                podcastQueries = podcastQueries,
+                bookQueries = bookQueries,
+                metadataQueries = metadataQueries,
+                storageService = storageService,
+            )
         val minusPodAdapter =
             io.tarantini.shelf.integration.podcast.sanitization.minusPodAdapter(
                 env.integration.minuspodUrl,
-                env.integration.minuspodAdminPassword
+                env.integration.minuspodAdminPassword,
             )
 
-        val podcastService = podcastService(podcastQueries, credentialsQueries, credentialService, audibleClient)
-        
+        val podcastService =
+            podcastService(
+                readRepository =
+                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(
+                        podcastQueries,
+                        credentialsQueries,
+                    ),
+                mutationRepository =
+                    io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries),
+                credentialService = credentialService,
+                libationService = podcastLibationService,
+            )
+
         val podcastFeedFetchService =
             podcastFeedFetchService(
                 readRepository =
                     io.tarantini.shelf.catalog.podcast.podcastReadRepository(
                         podcastQueries,
                         credentialsQueries,
-                        audibleClient
                     ),
                 mutationRepository =
                     io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries),
@@ -251,28 +271,10 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                     io.tarantini.shelf.catalog.podcast.podcastReadRepository(
                         podcastQueries,
                         credentialsQueries,
-                        audibleClient
                     ),
                 podcastQueries = podcastQueries,
                 storageService = storageService,
                 publicRootUrl = env.http.publicRootUrl,
-            )
-            
-        val audibleContentFetchService =
-            io.tarantini.shelf.catalog.podcast.audibleContentFetchService(
-                readRepository =
-                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(
-                        podcastQueries,
-                        credentialsQueries,
-                        audibleClient
-                    ),
-                mutationRepository =
-                    io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries),
-                podcastQueries = podcastQueries,
-                bookQueries = bookQueries,
-                metadataQueries = metadataQueries,
-                storageService = storageService,
-                audibleClient = audibleClient,
             )
 
         val activityService = activityService(activityQueries)
@@ -347,6 +349,14 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             )
         podcastScheduler.start()
 
+        val libationScheduler =
+            LibationScanScheduler(
+                scope = scope,
+                libationService = podcastLibationService,
+                intervalSeconds = env.integration.libationScanIntervalSeconds,
+            )
+        libationScheduler.start()
+
         return Dependencies(
             checks,
             userService,
@@ -366,9 +376,8 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             koreaderSyncService,
             koreaderAuthService,
             opdsService,
-            audibleClient,
+            podcastLibationService,
             minusPodAdapter,
-            audibleContentFetchService,
             jwtService,
             authCache,
             storagePath,

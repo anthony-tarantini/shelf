@@ -331,8 +331,7 @@ export interface EpisodeEntry {
 
 export interface PodcastDashboard {
   podcasts: PodcastSummary[];
-  audibleConnected: boolean;
-  audibleUsername?: string;
+  libation: LibationScanStatus;
 }
 
 export interface PodcastAggregate {
@@ -341,8 +340,23 @@ export interface PodcastAggregate {
   seriesTitle: string;
   episodes: EpisodeEntry[];
   credential: CredentialStatus;
-  audibleConnected: boolean;
-  audibleUsername?: string;
+}
+
+export interface LibationScanStatus {
+  enabled: boolean;
+  running: boolean;
+  lastRunId?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  lastScanAt?: string;
+  lastSuccessAt?: string;
+  discoveredCount: number;
+  validManifestCount: number;
+  invalidManifestCount: number;
+  importedCreatedCount: number;
+  importedSkippedCount: number;
+  importedFailedCount: number;
+  lastError?: string;
 }
 
 export interface SavedPodcastRoot {

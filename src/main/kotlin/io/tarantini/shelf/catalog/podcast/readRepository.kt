@@ -7,12 +7,9 @@ import io.tarantini.shelf.catalog.podcast.domain.*
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.integration.persistence.CredentialsQueries
-import io.tarantini.shelf.integration.podcast.audible.AudibleSidecarClient
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import arrow.core.raise.context.either
-import arrow.core.getOrElse
 
 interface PodcastReadRepository {
     context(_: RaiseContext)
@@ -41,21 +38,16 @@ interface PodcastReadRepository {
 
     context(_: RaiseContext)
     suspend fun getMaxEpisodeForSeason(podcastId: PodcastId, season: Int): Int
-
-    context(_: RaiseContext)
-    suspend fun getAudibleStatus(): Pair<Boolean, String?>
 }
 
 fun podcastReadRepository(
     queries: PodcastQueries,
     credentialsQueries: CredentialsQueries,
-    audibleClient: AudibleSidecarClient,
-): PodcastReadRepository = SqlDelightPodcastReadRepository(queries, credentialsQueries, audibleClient)
+): PodcastReadRepository = SqlDelightPodcastReadRepository(queries, credentialsQueries)
 
 private class SqlDelightPodcastReadRepository(
     private val queries: PodcastQueries,
     private val credentialsQueries: CredentialsQueries,
-    private val audibleClient: AudibleSidecarClient,
 ) : PodcastReadRepository {
     context(_: RaiseContext)
     override suspend fun getPodcastById(id: PodcastId): SavedPodcastRoot =
@@ -68,7 +60,6 @@ private class SqlDelightPodcastReadRepository(
             val summary = queries.getPodcastSummaryById(id)
             val episodes = queries.getEpisodesByPodcastId(id)
             val hasCredentials = credentialsQueries.hasCredentials(id)
-            val audibleStatus = getAudibleStatus()
 
             PodcastAggregate(
                 podcast = root,
@@ -78,8 +69,6 @@ private class SqlDelightPodcastReadRepository(
                 credential =
                     if (hasCredentials) CredentialStatus.HAS_CREDENTIAL
                     else CredentialStatus.NO_CREDENTIAL,
-                audibleConnected = audibleStatus.first,
-                audibleUsername = audibleStatus.second
             )
         }
 
@@ -110,12 +99,4 @@ private class SqlDelightPodcastReadRepository(
     context(_: RaiseContext)
     override suspend fun getMaxEpisodeForSeason(podcastId: PodcastId, season: Int): Int =
         withContext(Dispatchers.IO) { queries.getMaxEpisodeForSeason(podcastId, season) }
-
-    context(_: RaiseContext)
-    override suspend fun getAudibleStatus(): Pair<Boolean, String?> {
-        return either {
-            val status = audibleClient.getAuthStatus()
-            status.connected to status.username
-        }.getOrElse { false to null }
-    }
 }

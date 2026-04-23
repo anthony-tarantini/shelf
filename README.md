@@ -32,6 +32,7 @@ Shelf is a modern, type-safe book management backend built with **Kotlin**, **Kt
 - **Directory Scanning:** Recursive server-side scanning for media files (EPUB, MP3) with automatic metadata extraction.
 - **JWT Authentication:** Secure user identity and authenticated routes with full privacy scoping.
 - **Private Media Access:** Book files are served through explicit API routes instead of raw disk mounts.
+- **Libation Container Ingestion:** Podcast imports use a Libation container writing manifests/audio into a shared drop directory scanned by Shelf.
 - **Explicit Access Policy:** Shared catalog access and user-owned resource checks use named policy helpers rather than ad hoc authorization branches.
 - **Optimized API:** `Summary` views for listing; comprehensive `Aggregate` views for detail pages.
 - **Responsive Web UI:** Mobile-first catalog and reader shell with dedicated phone navigation.
@@ -215,6 +216,7 @@ In hybrid mode, the backend entrypoint injects the JVM agent and disables agent-
 - backend readiness: `http://localhost:8080/readiness`
 - backend metrics: `http://localhost:8080/metrics`
 - Grafana LGTM: `http://localhost:3001`
+- Libation container: `http://localhost:5299`
 
 Frontend waits for backend health before starting. Backend health is based on `/readiness`.
 
@@ -225,6 +227,28 @@ Compose-specific networking defaults:
 - `COMPOSE_OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317`
 
 Keep plain `localhost` only for host-facing URLs such as browser access to the frontend, backend, or Grafana.
+
+### Libation Import Contract
+
+Shelf treats Libation as a containerized producer and consumes files from a shared drop directory.
+
+- `docker-compose.yaml` mounts `./data/libation-export` into backend at `/storage/libation-import`
+- backend env defaults:
+  - `LIBATION_IMPORT_ENABLED=true`
+  - `LIBATION_DROP_DIR=/storage/libation-import`
+  - `LIBATION_SCAN_INTERVAL_SECONDS=300`
+- `libation` service mounts:
+  - `./data/libation` as Libation config/state
+  - `./data/libation-export` as export output
+
+Manual and status endpoints:
+
+- `POST /api/podcasts/libation/scan`
+- `GET /api/podcasts/libation/status`
+
+Shelf persists Libation scan/import history in database tables:
+- `libation_import_runs` (run-level summaries)
+- `libation_import_records` (source idempotency and per-item status)
 
 ## Releases
 

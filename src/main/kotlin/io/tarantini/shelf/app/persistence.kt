@@ -39,6 +39,7 @@ import io.tarantini.shelf.catalog.series.persistence.Series
 import io.tarantini.shelf.integration.koreader.persistence.Koreader_progress
 import io.tarantini.shelf.integration.koreader.persistence.Koreader_users
 import io.tarantini.shelf.integration.persistence.Integration_credentials
+import io.tarantini.shelf.integration.persistence.Libation_import_records
 import io.tarantini.shelf.organization.library.domain.LibraryId
 import io.tarantini.shelf.organization.library.persistence.Libraries
 import io.tarantini.shelf.organization.settings.persistence.User_settings
@@ -175,6 +176,12 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
                 transcript_pathAdapter = StoragePath.adapter,
             ),
         integration_credentialsAdapter = Integration_credentials.Adapter(PodcastId.adapter),
+        libation_import_recordsAdapter =
+            Libation_import_records.Adapter(
+                series_idAdapter = SeriesId.adapter,
+                podcast_idAdapter = PodcastId.adapter,
+                book_idAdapter = BookId.adapter,
+            ),
         user_settingsAdapter = User_settings.Adapter(UserId.adapter),
     )
 }

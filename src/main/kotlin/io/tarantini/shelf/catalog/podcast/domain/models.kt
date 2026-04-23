@@ -96,11 +96,7 @@ typealias SavedPodcastRoot = PodcastRoot<PersistenceState.Persisted>
 typealias NewPodcastRoot = PodcastRoot<PersistenceState.Unsaved>
 
 @Serializable
-data class PodcastDashboard(
-    val podcasts: List<PodcastSummary>,
-    val audibleConnected: Boolean,
-    val audibleUsername: String? = null,
-)
+data class PodcastDashboard(val podcasts: List<PodcastSummary>, val libation: LibationScanStatus)
 
 @Serializable
 data class PodcastAggregate<S : PersistenceState>(
@@ -109,8 +105,6 @@ data class PodcastAggregate<S : PersistenceState>(
     val seriesTitle: String,
     val episodes: List<EpisodeEntry> = emptyList(),
     val credential: CredentialStatus,
-    val audibleConnected: Boolean = false,
-    val audibleUsername: String? = null,
 )
 
 typealias SavedPodcastAggregate = PodcastAggregate<PersistenceState.Persisted>
@@ -148,3 +142,21 @@ enum class CredentialStatus {
     HAS_CREDENTIAL,
     NO_CREDENTIAL,
 }
+
+@Serializable
+data class LibationScanStatus(
+    val enabled: Boolean,
+    val running: Boolean,
+    val lastRunId: String? = null,
+    val startedAt: Instant? = null,
+    val finishedAt: Instant? = null,
+    val lastScanAt: Instant? = null,
+    val lastSuccessAt: Instant? = null,
+    val discoveredCount: Int = 0,
+    val validManifestCount: Int = 0,
+    val invalidManifestCount: Int = 0,
+    val importedCreatedCount: Int = 0,
+    val importedSkippedCount: Int = 0,
+    val importedFailedCount: Int = 0,
+    val lastError: String? = null,
+)

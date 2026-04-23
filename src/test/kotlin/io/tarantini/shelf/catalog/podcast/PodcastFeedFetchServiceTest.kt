@@ -48,7 +48,7 @@ class PodcastFeedFetchServiceTest :
                         val readRepo =
                             podcastReadRepository(
                                 deps.database.podcastQueries,
-                                deps.database.credentialsQueries
+                                deps.database.credentialsQueries,
                             )
                         val feedService =
                             podcastFeedFetchService(
@@ -157,7 +157,7 @@ class PodcastFeedFetchServiceTest :
                         val readRepo =
                             podcastReadRepository(
                                 deps.database.podcastQueries,
-                                deps.database.credentialsQueries
+                                deps.database.credentialsQueries,
                             )
                         val credentialService =
                             podcastCredentialService(

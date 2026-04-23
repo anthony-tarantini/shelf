@@ -16,6 +16,7 @@ This project follows a strict **Domain-Driven Design (DDD)** approach. Before ma
 -   When running the full compose stack, use the dedicated `COMPOSE_*` env vars from `example.env` for container-to-container addresses. Do not point compose services at `localhost` for Postgres, Valkey, backend, or LGTM.
 -   Use `dev.docker-compose.yaml` for bind-mounted hot reload and keep `docker-compose.yaml` for the image-based stack.
 -   Do not run both compose modes simultaneously unless you also remap their ports.
+-   Podcast ingestion from walled gardens is Libation-container-only. Use the shared drop directory (`./data/libation-export`) and avoid reintroducing direct Audible login flows in Shelf.
 
 ### 2. Coding Standards
 -   **Style:** We use **Spotless** with the `ktfmt` formatter to maintain consistent code style.

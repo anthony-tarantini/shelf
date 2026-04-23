@@ -26,7 +26,7 @@ class PodcastRepositoryTest :
                 val readRepo =
                     podcastReadRepository(
                         deps.database.podcastQueries,
-                        deps.database.credentialsQueries
+                        deps.database.credentialsQueries,
                     )
 
                 recover({
@@ -70,7 +70,7 @@ class PodcastRepositoryTest :
                 val readRepo =
                     podcastReadRepository(
                         deps.database.podcastQueries,
-                        deps.database.credentialsQueries
+                        deps.database.credentialsQueries,
                     )
 
                 recover({

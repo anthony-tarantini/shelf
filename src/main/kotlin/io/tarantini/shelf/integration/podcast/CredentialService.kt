@@ -6,14 +6,14 @@ import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import io.tarantini.shelf.integration.persistence.CredentialsQueries
 import io.tarantini.shelf.integration.podcast.feed.FeedFetchCredentials
-import io.tarantini.shelf.integration.security.EncryptionService
 import io.tarantini.shelf.integration.security.EncryptedPayload
+import io.tarantini.shelf.integration.security.EncryptionService
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 enum class CredentialType {
     HTTP_BASIC,
@@ -62,7 +62,8 @@ private class DefaultPodcastCredentialService(
     context(_: RaiseContext)
     override suspend fun getFeedCredentials(podcastId: PodcastId): FeedFetchCredentials? =
         withContext(Dispatchers.IO) {
-            val row = queries.selectByPodcastId(podcastId).executeAsOneOrNull() ?: return@withContext null
+            val row =
+                queries.selectByPodcastId(podcastId).executeAsOneOrNull() ?: return@withContext null
             val decrypted =
                 encryptionService.decrypt(
                     EncryptedPayload(ciphertext = row.encrypted_value, iv = row.iv)
@@ -72,7 +73,10 @@ private class DefaultPodcastCredentialService(
         }
 
     context(_: RaiseContext)
-    override suspend fun saveFeedCredentials(podcastId: PodcastId, credentials: FeedFetchCredentials) {
+    override suspend fun saveFeedCredentials(
+        podcastId: PodcastId,
+        credentials: FeedFetchCredentials,
+    ) {
         withContext(Dispatchers.IO) {
             val stored = credentials.toStored()
             val encrypted = encryptionService.encrypt(json.encodeToString(stored).toByteArray())

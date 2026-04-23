@@ -4,7 +4,6 @@ package io.tarantini.shelf.catalog.podcast
 
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.podcast.domain.*
-import io.tarantini.shelf.integration.persistence.CredentialsQueries
 import io.tarantini.shelf.integration.podcast.PodcastCredentialService
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
@@ -50,24 +49,15 @@ fun podcastService(
     readRepository: PodcastReadRepository,
     mutationRepository: PodcastMutationRepository,
     credentialService: PodcastCredentialService,
-): PodcastService = PodcastAggregateService(readRepository, mutationRepository, credentialService)
-
-fun podcastService(
-    queries: io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries,
-    credentialsQueries: CredentialsQueries,
-    credentialService: PodcastCredentialService,
-    audibleClient: io.tarantini.shelf.integration.podcast.audible.AudibleSidecarClient,
+    libationService: PodcastLibationService,
 ): PodcastService =
-    podcastService(
-        readRepository = podcastReadRepository(queries, credentialsQueries, audibleClient),
-        mutationRepository = podcastMutationRepository(queries),
-        credentialService = credentialService,
-    )
+    PodcastAggregateService(readRepository, mutationRepository, credentialService, libationService)
 
 private class PodcastAggregateService(
     private val readRepository: PodcastReadRepository,
     private val mutationRepository: PodcastMutationRepository,
     private val credentialService: PodcastCredentialService,
+    private val libationService: PodcastLibationService,
 ) : PodcastService {
     context(_: RaiseContext)
     override suspend fun getPodcasts(): List<PodcastSummary> =
@@ -77,12 +67,7 @@ private class PodcastAggregateService(
     override suspend fun getDashboard(): PodcastDashboard =
         withContext(Dispatchers.IO) {
             val podcasts = readRepository.getAllPodcasts()
-            val audibleStatus = readRepository.getAudibleStatus()
-            PodcastDashboard(
-                podcasts = podcasts,
-                audibleConnected = audibleStatus.first,
-                audibleUsername = audibleStatus.second
-            )
+            PodcastDashboard(podcasts = podcasts, libation = libationService.getStatus())
         }
 
     context(_: RaiseContext)
@@ -142,9 +127,7 @@ private class PodcastAggregateService(
 
     context(_: RaiseContext)
     override suspend fun clearFeedCredentials(id: PodcastId) {
-        withContext(Dispatchers.IO) {
-            credentialService.clearFeedCredentials(id)
-        }
+        withContext(Dispatchers.IO) { credentialService.clearFeedCredentials(id) }
     }
 
     context(_: RaiseContext)

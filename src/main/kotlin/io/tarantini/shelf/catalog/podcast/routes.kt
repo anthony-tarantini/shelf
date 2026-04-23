@@ -12,22 +12,15 @@ import io.ktor.server.routing.Route
 import io.tarantini.shelf.app.Request
 import io.tarantini.shelf.app.respond
 import io.tarantini.shelf.catalog.podcast.domain.*
-import io.tarantini.shelf.catalog.series.domain.SeriesId
-import io.tarantini.shelf.integration.podcast.audible.AudibleSidecarClient
-import io.tarantini.shelf.integration.podcast.audible.AudibleTitle
-import io.tarantini.shelf.integration.podcast.sanitization.MinusPodAdapter
 import io.tarantini.shelf.user.auth.JwtService
 import io.tarantini.shelf.user.auth.sharedCatalogMutation
 import io.tarantini.shelf.user.auth.sharedCatalogRead
 import kotlin.uuid.ExperimentalUuidApi
-import kotlinx.serialization.Serializable
 
 fun Route.podcastRoutes(
     podcastService: PodcastService,
     jwtService: JwtService,
-    audibleClient: AudibleSidecarClient,
-    minusPodAdapter: MinusPodAdapter,
-    audibleContentFetchService: AudibleContentFetchService,
+    libationService: PodcastLibationService,
 ) {
     post<PodcastsResource> {
         sharedCatalogMutation(jwtService) {
@@ -42,9 +35,7 @@ fun Route.podcastRoutes(
     }
 
     get<PodcastsResource> {
-        sharedCatalogRead(jwtService) { 
-            respond({ podcastService.getDashboard() })
-        }
+        sharedCatalogRead(jwtService) { respond({ podcastService.getDashboard() }) }
     }
 
     get<PodcastsResource.Id> { resource ->
@@ -64,17 +55,13 @@ fun Route.podcastRoutes(
 
     post<PodcastsResource.Id.RotateToken> { resource ->
         sharedCatalogMutation(jwtService) {
-            respond({
-                podcastService.rotateToken(PodcastId(resource.parent.id))
-            })
+            respond({ podcastService.rotateToken(PodcastId(resource.parent.id)) })
         }
     }
 
     post<PodcastsResource.Id.RevokeToken> { resource ->
         sharedCatalogMutation(jwtService) {
-            respond({
-                podcastService.revokeToken(PodcastId(resource.parent.id))
-            })
+            respond({ podcastService.revokeToken(PodcastId(resource.parent.id)) })
         }
     }
 
@@ -87,51 +74,11 @@ fun Route.podcastRoutes(
         }
     }
 
-    // Audible Sidecar Routes
-    post<PodcastsResource.Audible.Connect> {
-        sharedCatalogMutation(jwtService) {
-            respond({
-                mapOf("loginUrl" to audibleClient.getLoginUrl())
-            })
-        }
+    post<PodcastsResource.Libation.Scan> {
+        sharedCatalogMutation(jwtService) { respond({ libationService.scanNow() }) }
     }
 
-    post<PodcastsResource.Audible.Finalize> {
-        sharedCatalogMutation(jwtService) {
-            respond({
-                val request = call.receive<Request<FinalizeAudibleAuthRequest>>().data
-                audibleClient.finalizeAuth(request.callbackUrl)
-            })
-        }
-    }
-
-    get<PodcastsResource.Audible.Library> {
-        sharedCatalogRead(jwtService) {
-            respond({ audibleClient.fetchLibrary() })
-        }
-    }
-
-    post<PodcastsResource.Audible.Import> {
-        sharedCatalogMutation(jwtService) {
-            respond({
-                val request = call.receive<Request<AudibleImportRequest>>().data
-                audibleContentFetchService.importAudibleTitle(
-                    request.asin,
-                    SeriesId(request.seriesId),
-                    request.autoFetch,
-                    request.autoSanitize
-                )
-            }, HttpStatusCode.Created)
-        }
+    get<PodcastsResource.Libation.Status> {
+        sharedCatalogRead(jwtService) { respond({ libationService.getStatus() }) }
     }
 }
-
-@Serializable data class FinalizeAudibleAuthRequest(val callbackUrl: String)
-
-@Serializable
-data class AudibleImportRequest(
-    val asin: String,
-    val seriesId: String,
-    val autoFetch: Boolean,
-    val autoSanitize: Boolean,
-)

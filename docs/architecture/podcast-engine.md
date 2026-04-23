@@ -951,6 +951,31 @@ Critical for trust. User must be able to:
 4. Toggle between sanitized and original audio playback
 5. See transcript text for each detected segment
 
+### 0.4 Sidecar Modules
+
+```
+libation/            — .NET-based Libation container (Dockerized)
+  exports manifests + audio into shared drop directory for Shelf scans
+minuspod/            — ttlequals0/minuspod container for ad-removal
+```
+
+---
+
+## Phase 1: Data Model & Persistence
+...
+### 2.3 MinusPod Adapter (`integration/podcast/sanitization/MinusPodAdapter.kt`)
+...
+### 2.4 Libation Scanner (`integration/podcast/libation/*`)
+Shelf consumes Libation export artifacts from a shared filesystem drop directory:
+- Parse manifest JSON files
+- Validate required fields (`asin`, `title`, `audioFile`)
+- Validate relative audio paths stay under the configured drop directory
+- Persist run-level summaries in `libation_import_runs`
+- Persist per-source idempotency state in `libation_import_records` using `source_key = libation:{asin}`
+- Expose scan status via:
+  - `POST /podcasts/libation/scan`
+  - `GET /podcasts/libation/status`
+
 ---
 
 ## Implementation Order
@@ -958,12 +983,12 @@ Critical for trust. User must be able to:
 ### Milestone 1: Podcast Ingestion + RSS Distribution (COMPLETE)
 Steps 1-13.
 
-### Milestone 1.5: Audible-to-RSS Bridge (COMPLETE)
-14. **Audible Auth:** Implement Amazon login + device registration handshake.
-15. **Audible Adapter:** Fetch library and map metadata to ParsedFeed.
-16. **Audio Pipeline:** Implement FFmpeg decryption wrapper (AAX -> M4B).
-17. **Ingestion Worker:** Coordinate Audible metadata sync and decryption.
-18. **Frontend Components:** Build Connect, Browse, and Import UI.
+### Milestone 1.5: Libation Container Bridge (COMPLETE)
+14. **Infrastructure:** Add `libation` service to compose files.
+15. **Scanner Adapter:** Build Kotlin parser/scanner for Libation manifests under `integration/podcast/libation`.
+16. **Scheduler:** Add periodic Libation scan scheduler controlled by env configuration.
+17. **Frontend Integration:** Replace Audible dashboard widgets/routes with Libation scan + status UI.
+18. **Dashboard Integration:** Wire Libation scan status into the Podcasts dashboard model.
 
 ### Milestone 2: Commercial Crusher (MinusPod Sidecar)
 19. **Infrastructure:** Add `ttlequals0/minuspod` image to `docker-compose.yaml`.
@@ -981,7 +1006,7 @@ Steps 1-13.
 1. **Storage layout** — Episodes under `{storage_root}/podcasts/{series_id}/` or reuse existing book storage layout?
 2. **Multi-user** — Podcast subscriptions per-user or shared catalog? Current Book/Series are shared. Recommend shared, matching existing pattern.
 3. **Rate limiting RSS endpoint** — Feed readers can be aggressive. Need per-token rate limiting?
-4. **Walled garden adapters** (Audible/Wondery) — Future milestone? RSS-based podcasts are simpler and cover most use cases. Recommend shipping RSS-first, walled gardens later.
+4. **Walled garden adapters** — Libation is the supported bridge path for proprietary catalogs; avoid in-app auth adapters.
 
 ### Milestone 2
 5. **Whisper model size** — `base.en` (141MB) vs `small.en` (466MB)? Accuracy vs. speed tradeoff. Recommend `base.en` default, configurable.

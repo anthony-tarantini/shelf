@@ -39,7 +39,9 @@ data class Env(
 
     data class Integration(
         val encryptionSecret: String,
-        val audibleSidecarUrl: String,
+        val libationImportEnabled: Boolean,
+        val libationDropDir: String,
+        val libationScanIntervalSeconds: Long,
         val minuspodUrl: String,
         val minuspodAdminPassword: String,
     ) {
@@ -50,7 +52,11 @@ data class Env(
                         getenv("ENCRYPTION_SECRET")
                             ?: getenv("JWT_SECRET")
                             ?: "insecure-local-default-change-me",
-                    audibleSidecarUrl = getenv("AUDIBLE_SIDECAR_URL") ?: "http://audible-sidecar:8080",
+                    libationImportEnabled =
+                        getenv("LIBATION_IMPORT_ENABLED")?.toBooleanStrictOrNull() ?: true,
+                    libationDropDir = getenv("LIBATION_DROP_DIR") ?: "./data/libation-export",
+                    libationScanIntervalSeconds =
+                        getenv("LIBATION_SCAN_INTERVAL_SECONDS")?.toLongOrNull() ?: 300,
                     minuspodUrl = getenv("MINUSPOD_URL") ?: "http://minuspod:8080",
                     minuspodAdminPassword = getenv("MINUSPOD_ADMIN_PASSWORD") ?: "admin",
                 )

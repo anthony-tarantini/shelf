@@ -66,8 +66,12 @@ services:
       OTEL_JAVAAGENT_ENABLED: ${OTEL_JAVAAGENT_ENABLED:-false}
       OTEL_JAVAAGENT_PATH: /opt/opentelemetry-javaagent.jar
       OTEL_INSTRUMENTATION_KTOR_ENABLED: ${OTEL_INSTRUMENTATION_KTOR_ENABLED:-}
+      LIBATION_IMPORT_ENABLED: ${LIBATION_IMPORT_ENABLED:-true}
+      LIBATION_DROP_DIR: ${LIBATION_DROP_DIR:-/storage/libation-import}
+      LIBATION_SCAN_INTERVAL_SECONDS: ${LIBATION_SCAN_INTERVAL_SECONDS:-300}
     volumes:
       - ./storage:${COMPOSE_STORAGE_PATH:-/storage}
+      - ./data/libation-export:/storage/libation-import
 
   frontend:
     build:
@@ -114,13 +118,11 @@ services:
     volumes:
       - ./data/minuspod:/app/data
 
-  audible-sidecar:
-    build:
-      context: ./audible-sidecar
+  libation:
+    image: ${LIBATION_IMAGE:-rmcrackan/libation:latest}
     restart: always
     ports:
-      - "8082:8080"
+      - "5299:5299"
     volumes:
-      - ./data/audible:/app/data
-      - ./storage:${COMPOSE_STORAGE_PATH:-/storage}
-
+      - ./data/libation:/config
+      - ./data/libation-export:/exports

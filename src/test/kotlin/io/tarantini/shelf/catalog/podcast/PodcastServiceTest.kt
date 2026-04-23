@@ -25,6 +25,7 @@ class PodcastServiceTest :
         "createPodcast orchestrates command to repository" {
             val readRepository = mockk<PodcastReadRepository>()
             val mutationRepository = mockk<PodcastMutationRepository>()
+            val libationService = mockk<PodcastLibationService>()
             val seriesId = SeriesId.fromRaw(Uuid.random())
             val saved =
                 PodcastRoot.fromRaw(
@@ -62,7 +63,8 @@ class PodcastServiceTest :
                     saved
                 }
 
-            val service = podcastService(readRepository, mutationRepository, mockk())
+            val service =
+                podcastService(readRepository, mutationRepository, mockk(), libationService)
             val command =
                 CreatePodcastCommand(
                     seriesId = seriesId,
@@ -82,6 +84,7 @@ class PodcastServiceTest :
         "updatePodcast loads existing and preserves missing fields" {
             val readRepository = mockk<PodcastReadRepository>()
             val mutationRepository = mockk<PodcastMutationRepository>()
+            val libationService = mockk<PodcastLibationService>()
             val podcastId = PodcastId.fromRaw(Uuid.random())
             val seriesId = SeriesId.fromRaw(Uuid.random())
             val existing =
@@ -138,7 +141,8 @@ class PodcastServiceTest :
                     updated
                 }
 
-            val service = podcastService(readRepository, mutationRepository, mockk())
+            val service =
+                podcastService(readRepository, mutationRepository, mockk(), libationService)
             val result = either {
                 service.updatePodcast(
                     UpdatePodcastCommand(
@@ -157,6 +161,7 @@ class PodcastServiceTest :
         "deletePodcast loads first then deletes" {
             val readRepository = mockk<PodcastReadRepository>()
             val mutationRepository = mockk<PodcastMutationRepository>()
+            val libationService = mockk<PodcastLibationService>()
             val podcastId = PodcastId.fromRaw(Uuid.random())
             val seriesId = SeriesId.fromRaw(Uuid.random())
             val existing =
@@ -187,7 +192,8 @@ class PodcastServiceTest :
                 with(any<RaiseContext>()) { mutationRepository.deletePodcast(podcastId) }
             } coAnswers { calls += "delete" }
 
-            val service = podcastService(readRepository, mutationRepository, mockk())
+            val service =
+                podcastService(readRepository, mutationRepository, mockk(), libationService)
             val result = either { service.deletePodcast(podcastId) }
 
             result.fold({ fail("Should not have failed: $it") }, {})

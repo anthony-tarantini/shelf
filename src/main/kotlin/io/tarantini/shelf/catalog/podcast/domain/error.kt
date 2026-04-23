@@ -38,5 +38,4 @@ object FeedAuthRequired : PodcastIntegrationError
 
 data class FeedRateLimited(val retryAfterSeconds: Int?) : PodcastIntegrationError
 
-object AudibleAuthFailed : PodcastIntegrationError
-
+data class LibationScanFailed(val reason: String? = null) : PodcastIntegrationError
