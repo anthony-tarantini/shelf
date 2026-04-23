@@ -7,23 +7,21 @@
 	interface Props {
 		isConnected: boolean;
 		username?: string;
-		onDisconnect?: () => void;
+		onRefresh?: () => void;
 	}
 
-	let { isConnected, username, onDisconnect }: Props = $props();
+	let { isConnected, username }: Props = $props();
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
 
 	async function handleConnect() {
 		isLoading = true;
 		error = null;
-		const result = await api.post<{ loginUrl: string; sessionId: string }>('/podcasts/audible/connect', {});
+		const result = await api.post<{ loginUrl: string }>('/podcasts/audible/connect', {});
 		isLoading = false;
 		
 		if (result.right) {
-			// Store sessionId in sessionStorage for finalization
-			sessionStorage.setItem('audible_session_id', result.right.sessionId);
-			// Redirect to Amazon login
+			// Sidecar login proxy handles capture automatically
 			window.location.href = result.right.loginUrl;
 		} else if (result.left) {
 			error = result.left.message;
@@ -66,13 +64,6 @@
 				>
 					{$t('podcasts.settings.audible_browse')}
 				</a>
-				<button
-					type="button"
-					onclick={onDisconnect}
-					class="rounded-lg border border-border bg-background px-4 py-2 text-xs font-bold text-foreground transition-all hover:bg-accent"
-				>
-					{$t('podcasts.settings.audible_disconnect')}
-				</button>
 			{:else}
 				<button
 					type="button"

@@ -5,7 +5,7 @@
 		asin: string;
 		title: string;
 		author: string;
-		type: 'PODCAST' | 'AUDIOBOOK';
+		type: string;
 		imageUrl?: string;
 	}
 

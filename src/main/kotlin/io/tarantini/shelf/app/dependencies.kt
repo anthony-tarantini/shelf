@@ -43,6 +43,7 @@ import io.tarantini.shelf.integration.podcast.podcastCredentialService
 import io.tarantini.shelf.integration.security.EncryptionService
 import io.tarantini.shelf.observability.Observability
 import io.tarantini.shelf.observability.observability
+import io.tarantini.shelf.observability.ObservabilityConfig
 import io.tarantini.shelf.organization.library.LibraryService
 import io.tarantini.shelf.organization.library.libraryService
 import io.tarantini.shelf.organization.settings.SettingsService
@@ -93,9 +94,8 @@ class Dependencies(
     val koreaderSyncService: KoreaderSyncService,
     val koreaderAuthService: KoreaderAuthService,
     val opdsService: OpdsService,
-    val audibleAuthService: io.tarantini.shelf.integration.podcast.audible.AudibleAuthService,
-    val audibleAdapter: io.tarantini.shelf.integration.podcast.audible.AudibleAdapter,
-    val ffmpegAdapter: io.tarantini.shelf.integration.podcast.audio.FfmpegAdapter,
+    val audibleClient: io.tarantini.shelf.integration.podcast.audible.AudibleSidecarClient,
+    val minusPodAdapter: io.tarantini.shelf.integration.podcast.sanitization.MinusPodAdapter,
     val audibleContentFetchService: io.tarantini.shelf.catalog.podcast.AudibleContentFetchService,
     val jwtService: JwtService,
     val authCache: AuthCache,
@@ -119,7 +119,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
     val jwtService = jwtService(env.auth)
     val observability =
         observability(
-            io.tarantini.shelf.observability.ObservabilityConfig(
+            ObservabilityConfig(
                 enabled = env.observability.enabled,
                 serviceName = env.observability.serviceName,
                 environment = env.observability.environment,
@@ -212,15 +212,27 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             )
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
+        
         val encryptionService = EncryptionService(env.integration.encryptionSecret)
         val credentialService = podcastCredentialService(credentialsQueries, encryptionService)
-        val podcastService = podcastService(podcastQueries, credentialsQueries, credentialService)
+        
+        val audibleClient =
+            io.tarantini.shelf.integration.podcast.audible.audibleSidecarClient(env.integration.audibleSidecarUrl)
+        val minusPodAdapter =
+            io.tarantini.shelf.integration.podcast.sanitization.minusPodAdapter(
+                env.integration.minuspodUrl,
+                env.integration.minuspodAdminPassword
+            )
+
+        val podcastService = podcastService(podcastQueries, credentialsQueries, credentialService, audibleClient)
+        
         val podcastFeedFetchService =
             podcastFeedFetchService(
                 readRepository =
                     io.tarantini.shelf.catalog.podcast.podcastReadRepository(
                         podcastQueries,
-                        credentialsQueries
+                        credentialsQueries,
+                        audibleClient
                     ),
                 mutationRepository =
                     io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries),
@@ -238,24 +250,21 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 readRepository =
                     io.tarantini.shelf.catalog.podcast.podcastReadRepository(
                         podcastQueries,
-                        credentialsQueries
+                        credentialsQueries,
+                        audibleClient
                     ),
                 podcastQueries = podcastQueries,
                 storageService = storageService,
                 publicRootUrl = env.http.publicRootUrl,
             )
-        val activityService = activityService(activityQueries)
-        val koreaderSyncService = koreaderSyncService(koreaderQueries, metadataRepository)
-        val koreaderAuthService = koreaderAuthService(koreaderQueries, userService, tokenService)
-        val audibleAuthService = io.tarantini.shelf.integration.podcast.audible.audibleAuthService()
-        val audibleAdapter = io.tarantini.shelf.integration.podcast.audible.audibleAdapter()
-        val ffmpegAdapter = io.tarantini.shelf.integration.podcast.audio.ffmpegAdapter()
+            
         val audibleContentFetchService =
             io.tarantini.shelf.catalog.podcast.audibleContentFetchService(
                 readRepository =
                     io.tarantini.shelf.catalog.podcast.podcastReadRepository(
                         podcastQueries,
-                        credentialsQueries
+                        credentialsQueries,
+                        audibleClient
                     ),
                 mutationRepository =
                     io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries),
@@ -263,10 +272,12 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 bookQueries = bookQueries,
                 metadataQueries = metadataQueries,
                 storageService = storageService,
-                credentialService = credentialService,
-                audibleAdapter = audibleAdapter,
-                ffmpegAdapter = ffmpegAdapter,
+                audibleClient = audibleClient,
             )
+
+        val activityService = activityService(activityQueries)
+        val koreaderSyncService = koreaderSyncService(koreaderQueries, metadataRepository)
+        val koreaderAuthService = koreaderAuthService(koreaderQueries, userService, tokenService)
 
         // Create a managed CoroutineScope for background workers
         val job = SupervisorJob()
@@ -355,9 +366,8 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             koreaderSyncService,
             koreaderAuthService,
             opdsService,
-            audibleAuthService,
-            audibleAdapter,
-            ffmpegAdapter,
+            audibleClient,
+            minusPodAdapter,
             audibleContentFetchService,
             jwtService,
             authCache,

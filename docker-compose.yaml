@@ -102,3 +102,25 @@ services:
       - "3001:3000"
       - "4317:4317"
       - "4318:4318"
+
+  minuspod:
+    image: ttlequals0/minuspod:latest
+    restart: always
+    ports:
+      - "8081:8080"
+    environment:
+      ADMIN_PASSWORD: ${MINUSPOD_ADMIN_PASSWORD:-admin}
+      BASE_URL: ${MINUSPOD_BASE_URL:-http://localhost:8081}
+    volumes:
+      - ./data/minuspod:/app/data
+
+  audible-sidecar:
+    build:
+      context: ./audible-sidecar
+    restart: always
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./data/audible:/app/data
+      - ./storage:${COMPOSE_STORAGE_PATH:-/storage}
+

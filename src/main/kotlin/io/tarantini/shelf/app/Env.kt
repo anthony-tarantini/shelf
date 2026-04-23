@@ -37,14 +37,22 @@ data class Env(
             )
     }
 
-    data class Integration(val encryptionSecret: String) {
+    data class Integration(
+        val encryptionSecret: String,
+        val audibleSidecarUrl: String,
+        val minuspodUrl: String,
+        val minuspodAdminPassword: String,
+    ) {
         companion object {
             fun fromEnv() =
                 Integration(
                     encryptionSecret =
                         getenv("ENCRYPTION_SECRET")
                             ?: getenv("JWT_SECRET")
-                            ?: "insecure-local-default-change-me"
+                            ?: "insecure-local-default-change-me",
+                    audibleSidecarUrl = getenv("AUDIBLE_SIDECAR_URL") ?: "http://audible-sidecar:8080",
+                    minuspodUrl = getenv("MINUSPOD_URL") ?: "http://minuspod:8080",
+                    minuspodAdminPassword = getenv("MINUSPOD_ADMIN_PASSWORD") ?: "admin",
                 )
         }
     }

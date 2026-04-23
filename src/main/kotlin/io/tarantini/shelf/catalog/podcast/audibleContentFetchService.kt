@@ -3,21 +3,18 @@ package io.tarantini.shelf.catalog.podcast
 import arrow.core.raise.context.either
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.tarantini.shelf.RaiseContext
-import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.book.persistence.BookQueries
 import io.tarantini.shelf.catalog.metadata.persistence.MetadataQueries
 import io.tarantini.shelf.catalog.podcast.domain.*
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
-import io.tarantini.shelf.catalog.series.domain.SeriesId
-import io.tarantini.shelf.integration.podcast.PodcastCredentialService
 import io.tarantini.shelf.integration.podcast.audible.*
-import io.tarantini.shelf.integration.podcast.audio.FfmpegAdapter
 import io.tarantini.shelf.integration.podcast.feed.ParsedEpisode
 import io.tarantini.shelf.processing.storage.StorageService
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import io.tarantini.shelf.catalog.series.domain.SeriesId
 
 private val logger = KotlinLogging.logger {}
 
@@ -47,9 +44,7 @@ fun audibleContentFetchService(
     bookQueries: BookQueries,
     metadataQueries: MetadataQueries,
     storageService: StorageService,
-    credentialService: PodcastCredentialService,
-    audibleAdapter: AudibleAdapter,
-    ffmpegAdapter: FfmpegAdapter,
+    audibleClient: AudibleSidecarClient,
 ): AudibleContentFetchService =
     DefaultAudibleContentFetchService(
         readRepository = readRepository,
@@ -58,9 +53,7 @@ fun audibleContentFetchService(
         bookQueries = bookQueries,
         metadataQueries = metadataQueries,
         storageService = storageService,
-        credentialService = credentialService,
-        audibleAdapter = audibleAdapter,
-        ffmpegAdapter = ffmpegAdapter,
+        audibleClient = audibleClient,
     )
 
 private class DefaultAudibleContentFetchService(
@@ -70,9 +63,7 @@ private class DefaultAudibleContentFetchService(
     private val bookQueries: BookQueries,
     private val metadataQueries: MetadataQueries,
     private val storageService: StorageService,
-    private val credentialService: PodcastCredentialService,
-    private val audibleAdapter: AudibleAdapter,
-    private val ffmpegAdapter: FfmpegAdapter,
+    private val audibleClient: AudibleSidecarClient,
 ) : AudibleContentFetchService {
     @OptIn(ExperimentalUuidApi::class)
     context(_: RaiseContext)
@@ -80,17 +71,11 @@ private class DefaultAudibleContentFetchService(
         val podcast = mutationRepository.getPodcastById(podcastId)
         val asin = podcast.feedUrl.value.removePrefix("audible://")
         
-        val cookieCred = credentialService.getFeedCredentials(podcastId) as? io.tarantini.shelf.integration.podcast.feed.FeedFetchCredentials.AudibleCookie
-            ?: return logger.warn { "No Audible cookies for podcast $podcastId" }
-        
-        val activationBytes = credentialService.getFeedCredentials(podcastId) as? io.tarantini.shelf.integration.podcast.feed.FeedFetchCredentials.AudibleActivationBytes
-        
-        val audibleCreds = AudibleCredentials(cookieCred.cookie, activationBytes?.bytes)
-        val parsed = audibleAdapter.getPodcastFeed(asin, audibleCreds)
+        val parsed = audibleClient.getPodcastFeed(asin)
 
         var ingested = 0
         parsed.episodes.forEach { episode ->
-            val result = either { ingestAudibleEpisode(podcastId, episode, audibleCreds) }
+            val result = either { ingestAudibleEpisode(podcastId, episode) }
             result.fold(
                 { err -> logger.warn { "Audible episode ingestion failed: $err" } },
                 { inserted -> if (inserted) ingested += 1 }
@@ -128,11 +113,10 @@ private class DefaultAudibleContentFetchService(
     private suspend fun ingestAudibleEpisode(
         podcastId: PodcastId, 
         episode: ParsedEpisode, 
-        creds: AudibleCredentials
     ): Boolean {
         if (readRepository.guidExists(podcastId, episode.guid)) return false
         
-        // TODO: Implement actual secure download and ffmpeg decryption
+        // TODO: Download already-decrypted file from sidecar and save to storageService
         return false
     }
 }

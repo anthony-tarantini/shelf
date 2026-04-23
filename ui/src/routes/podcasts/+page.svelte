@@ -70,11 +70,7 @@
 	}
 
 	async function handleDisconnectAudible() {
-		// Since we don't have a single podcast ID, we use the global disconnect if available
-		// or just clear from any podcast. For now, let's just clear.
-		// We'll add a global disconnect route later if needed.
-		// For this milestone, we'll just clear the credentials.
-		const result = await api.post('/podcasts/audible/finalize', { sessionId: 'clear', callbackUrl: 'clear' }); // hacky clear
+		await api.delete('/podcasts/audible/connect'); // simplified
 		refreshData();
 	}
 </script>
@@ -128,7 +124,7 @@
 	<AudibleConnectCard 
 		isConnected={dashboard.audibleConnected} 
 		username={dashboard.audibleUsername}
-		onDisconnect={handleDisconnectAudible}
+		onRefresh={refreshData}
 	/>
 
 	{#if podcasts.length === 0}

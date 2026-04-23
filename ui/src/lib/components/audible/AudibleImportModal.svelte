@@ -23,7 +23,6 @@
 	
 	let autoFetch = $state(true);
 	let autoSanitize = $state(true);
-	let fetchIntervalMinutes = $state(1440); // Once a day default for Audible
 
 	$effect(() => {
 		if (seriesSearch.length > 1) {
@@ -49,7 +48,6 @@
 
 	async function handleSubmit() {
 		if (!selectedSeriesId) {
-			// Create new series first
 			isLoading = true;
 			const newSeries = await api.post<{ id: string }>('/series', { title: seriesSearch || title });
 			if (newSeries.right) {
@@ -63,7 +61,7 @@
 
 		if (selectedSeriesId) {
 			isLoading = true;
-			await onImport(selectedSeriesId, autoFetch, autoSanitize);
+			await onImport(selectedSeriesId!, autoFetch, autoSanitize);
 			isLoading = false;
 			onClose();
 		}

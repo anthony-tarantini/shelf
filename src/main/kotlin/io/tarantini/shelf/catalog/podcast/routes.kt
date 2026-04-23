@@ -13,9 +13,9 @@ import io.tarantini.shelf.app.Request
 import io.tarantini.shelf.app.respond
 import io.tarantini.shelf.catalog.podcast.domain.*
 import io.tarantini.shelf.catalog.series.domain.SeriesId
-import io.tarantini.shelf.integration.podcast.audible.AudibleAdapter
-import io.tarantini.shelf.integration.podcast.audible.AudibleAuthService
+import io.tarantini.shelf.integration.podcast.audible.AudibleSidecarClient
 import io.tarantini.shelf.integration.podcast.audible.AudibleTitle
+import io.tarantini.shelf.integration.podcast.sanitization.MinusPodAdapter
 import io.tarantini.shelf.user.auth.JwtService
 import io.tarantini.shelf.user.auth.sharedCatalogMutation
 import io.tarantini.shelf.user.auth.sharedCatalogRead
@@ -25,8 +25,8 @@ import kotlinx.serialization.Serializable
 fun Route.podcastRoutes(
     podcastService: PodcastService,
     jwtService: JwtService,
-    audibleAuthService: AudibleAuthService,
-    audibleAdapter: AudibleAdapter,
+    audibleClient: AudibleSidecarClient,
+    minusPodAdapter: MinusPodAdapter,
     audibleContentFetchService: AudibleContentFetchService,
 ) {
     post<PodcastsResource> {
@@ -42,7 +42,9 @@ fun Route.podcastRoutes(
     }
 
     get<PodcastsResource> {
-        sharedCatalogRead(jwtService) { respond({ podcastService.getDashboard() }) }
+        sharedCatalogRead(jwtService) { 
+            respond({ podcastService.getDashboard() })
+        }
     }
 
     get<PodcastsResource.Id> { resource ->
@@ -85,37 +87,27 @@ fun Route.podcastRoutes(
         }
     }
 
-    delete<PodcastsResource.Id.Audible> { resource ->
+    // Audible Sidecar Routes
+    post<PodcastsResource.Audible.Connect> {
         sharedCatalogMutation(jwtService) {
             respond({
-                val podcastId = PodcastId(resource.parent.id)
-                podcastService.clearFeedCredentials(podcastId)
-            }, HttpStatusCode.NoContent)
+                mapOf("loginUrl" to audibleClient.getLoginUrl())
+            })
         }
-    }
-
-    post<PodcastsResource.Audible.Connect> {
-        sharedCatalogMutation(jwtService) { respond({ audibleAuthService.generateLoginUrl() }) }
     }
 
     post<PodcastsResource.Audible.Finalize> {
         sharedCatalogMutation(jwtService) {
             respond({
                 val request = call.receive<Request<FinalizeAudibleAuthRequest>>().data
-                audibleAuthService.finalizeAuth(request.sessionId, request.callbackUrl)
+                audibleClient.finalizeAuth(request.callbackUrl)
             })
         }
     }
 
     get<PodcastsResource.Audible.Library> {
         sharedCatalogRead(jwtService) {
-            respond({
-                // We'd usually get these from the session/user context
-                // For this milestone, we'll try to find any existing Audible credentials
-                // Or we can pass them in the header if the UI sends them.
-                // For now, return empty if no credentials found.
-                emptyList<AudibleTitle>()
-            })
+            respond({ audibleClient.fetchLibrary() })
         }
     }
 
@@ -134,7 +126,7 @@ fun Route.podcastRoutes(
     }
 }
 
-@Serializable data class FinalizeAudibleAuthRequest(val sessionId: String, val callbackUrl: String)
+@Serializable data class FinalizeAudibleAuthRequest(val callbackUrl: String)
 
 @Serializable
 data class AudibleImportRequest(

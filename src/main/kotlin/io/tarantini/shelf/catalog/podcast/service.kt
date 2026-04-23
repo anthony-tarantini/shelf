@@ -4,8 +4,8 @@ package io.tarantini.shelf.catalog.podcast
 
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.podcast.domain.*
-import io.tarantini.shelf.integration.podcast.PodcastCredentialService
 import io.tarantini.shelf.integration.persistence.CredentialsQueries
+import io.tarantini.shelf.integration.podcast.PodcastCredentialService
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -56,9 +56,10 @@ fun podcastService(
     queries: io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries,
     credentialsQueries: CredentialsQueries,
     credentialService: PodcastCredentialService,
+    audibleClient: io.tarantini.shelf.integration.podcast.audible.AudibleSidecarClient,
 ): PodcastService =
     podcastService(
-        readRepository = podcastReadRepository(queries, credentialsQueries),
+        readRepository = podcastReadRepository(queries, credentialsQueries, audibleClient),
         mutationRepository = podcastMutationRepository(queries),
         credentialService = credentialService,
     )
@@ -76,11 +77,11 @@ private class PodcastAggregateService(
     override suspend fun getDashboard(): PodcastDashboard =
         withContext(Dispatchers.IO) {
             val podcasts = readRepository.getAllPodcasts()
-            val hasAudible = readRepository.hasGlobalAudibleCredential()
+            val audibleStatus = readRepository.getAudibleStatus()
             PodcastDashboard(
                 podcasts = podcasts,
-                audibleConnected = hasAudible,
-                audibleUsername = if (hasAudible) "Connected" else null
+                audibleConnected = audibleStatus.first,
+                audibleUsername = audibleStatus.second
             )
         }
 

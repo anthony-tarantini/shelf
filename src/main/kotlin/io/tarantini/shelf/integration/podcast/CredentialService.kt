@@ -6,14 +6,14 @@ import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import io.tarantini.shelf.integration.persistence.CredentialsQueries
 import io.tarantini.shelf.integration.podcast.feed.FeedFetchCredentials
-import io.tarantini.shelf.integration.security.EncryptedPayload
 import io.tarantini.shelf.integration.security.EncryptionService
+import io.tarantini.shelf.integration.security.EncryptedPayload
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
 
 enum class CredentialType {
     HTTP_BASIC,
@@ -46,15 +46,12 @@ interface PodcastCredentialService {
 
     context(_: RaiseContext)
     suspend fun hasFeedCredentials(podcastId: PodcastId): Boolean
-
-    context(_: RaiseContext)
-    suspend fun hasCredential(podcastId: PodcastId, type: CredentialType): Boolean
 }
 
 fun podcastCredentialService(
-    credentialsQueries: CredentialsQueries,
+    queries: CredentialsQueries,
     encryptionService: EncryptionService,
-): PodcastCredentialService = DefaultPodcastCredentialService(credentialsQueries, encryptionService)
+): PodcastCredentialService = DefaultPodcastCredentialService(queries, encryptionService)
 
 private class DefaultPodcastCredentialService(
     private val queries: CredentialsQueries,
@@ -65,8 +62,7 @@ private class DefaultPodcastCredentialService(
     context(_: RaiseContext)
     override suspend fun getFeedCredentials(podcastId: PodcastId): FeedFetchCredentials? =
         withContext(Dispatchers.IO) {
-            val row =
-                queries.selectByPodcastId(podcastId).executeAsOneOrNull() ?: return@withContext null
+            val row = queries.selectByPodcastId(podcastId).executeAsOneOrNull() ?: return@withContext null
             val decrypted =
                 encryptionService.decrypt(
                     EncryptedPayload(ciphertext = row.encrypted_value, iv = row.iv)
@@ -76,14 +72,10 @@ private class DefaultPodcastCredentialService(
         }
 
     context(_: RaiseContext)
-    override suspend fun saveFeedCredentials(
-        podcastId: PodcastId,
-        credentials: FeedFetchCredentials,
-    ) {
+    override suspend fun saveFeedCredentials(podcastId: PodcastId, credentials: FeedFetchCredentials) {
         withContext(Dispatchers.IO) {
             val stored = credentials.toStored()
-            val encrypted =
-                encryptionService.encrypt(json.encodeToString(stored).encodeToByteArray())
+            val encrypted = encryptionService.encrypt(json.encodeToString(stored).toByteArray())
             queries.upsert(
                 podcastId = podcastId,
                 credentialType = stored.type,
@@ -101,12 +93,6 @@ private class DefaultPodcastCredentialService(
     context(_: RaiseContext)
     override suspend fun hasFeedCredentials(podcastId: PodcastId): Boolean =
         withContext(Dispatchers.IO) { queries.existsByPodcastId(podcastId).executeAsOne() }
-
-    context(_: RaiseContext)
-    override suspend fun hasCredential(podcastId: PodcastId, type: CredentialType): Boolean =
-        withContext(Dispatchers.IO) {
-            queries.selectByPodcastId(podcastId).executeAsOneOrNull()?.credential_type == type.name
-        }
 }
 
 private fun FeedFetchCredentials.toStored(): StoredFeedCredential =
