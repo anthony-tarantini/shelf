@@ -21,6 +21,10 @@ sealed interface FeedFetchCredentials {
     data class Bearer(val token: String) : FeedFetchCredentials
 
     data class Headers(val values: Map<String, String>) : FeedFetchCredentials
+
+    data class AudibleCookie(val cookie: String) : FeedFetchCredentials
+
+    data class AudibleActivationBytes(val bytes: String) : FeedFetchCredentials
 }
 
 interface FeedFetchAdapter {
@@ -59,6 +63,8 @@ private class JavaNetFeedFetchAdapter(private val httpClient: HttpClient) : Feed
                     requestBuilder.header("Authorization", "Bearer ${credentials.token}")
                 is FeedFetchCredentials.Headers ->
                     credentials.values.forEach { (k, v) -> requestBuilder.header(k, v) }
+                is FeedFetchCredentials.AudibleCookie,
+                is FeedFetchCredentials.AudibleActivationBytes,
                 null -> {}
             }
 

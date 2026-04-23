@@ -19,6 +19,8 @@ enum class CredentialType {
     HTTP_BASIC,
     BEARER,
     HEADERS,
+    AUDIBLE_COOKIE,
+    AUDIBLE_ACTIVATION_BYTES,
 }
 
 @Serializable
@@ -28,6 +30,8 @@ private data class StoredFeedCredential(
     val password: String? = null,
     val token: String? = null,
     val headers: Map<String, String>? = null,
+    val cookie: String? = null,
+    val bytes: String? = null,
 )
 
 interface PodcastCredentialService {
@@ -108,6 +112,10 @@ private fun FeedFetchCredentials.toStored(): StoredFeedCredential =
             StoredFeedCredential(type = CredentialType.BEARER.name, token = token)
         is FeedFetchCredentials.Headers ->
             StoredFeedCredential(type = CredentialType.HEADERS.name, headers = values)
+        is FeedFetchCredentials.AudibleCookie ->
+            StoredFeedCredential(type = CredentialType.AUDIBLE_COOKIE.name, cookie = cookie)
+        is FeedFetchCredentials.AudibleActivationBytes ->
+            StoredFeedCredential(type = CredentialType.AUDIBLE_ACTIVATION_BYTES.name, bytes = bytes)
     }
 
 private fun StoredFeedCredential.toFetchCredentials(): FeedFetchCredentials? =
@@ -122,5 +130,8 @@ private fun StoredFeedCredential.toFetchCredentials(): FeedFetchCredentials? =
             FeedFetchCredentials.Bearer(t)
         }
         CredentialType.HEADERS.name -> FeedFetchCredentials.Headers(headers ?: emptyMap())
+        CredentialType.AUDIBLE_COOKIE.name -> cookie?.let { FeedFetchCredentials.AudibleCookie(it) }
+        CredentialType.AUDIBLE_ACTIVATION_BYTES.name ->
+            bytes?.let { FeedFetchCredentials.AudibleActivationBytes(it) }
         else -> null
     }

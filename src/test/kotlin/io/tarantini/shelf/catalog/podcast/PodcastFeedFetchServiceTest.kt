@@ -45,7 +45,11 @@ class PodcastFeedFetchServiceTest :
                 withServer(
                     block = { baseUrl ->
                         val mutationRepo = podcastMutationRepository(deps.database.podcastQueries)
-                        val readRepo = podcastReadRepository(deps.database.podcastQueries)
+                        val readRepo =
+                            podcastReadRepository(
+                                deps.database.podcastQueries,
+                                deps.database.credentialsQueries
+                            )
                         val feedService =
                             podcastFeedFetchService(
                                 readRepository = readRepo,
@@ -150,7 +154,11 @@ class PodcastFeedFetchServiceTest :
                 withServer(
                     block = { baseUrl ->
                         val mutationRepo = podcastMutationRepository(deps.database.podcastQueries)
-                        val readRepo = podcastReadRepository(deps.database.podcastQueries)
+                        val readRepo =
+                            podcastReadRepository(
+                                deps.database.podcastQueries,
+                                deps.database.credentialsQueries
+                            )
                         val credentialService =
                             podcastCredentialService(
                                 deps.database.credentialsQueries,

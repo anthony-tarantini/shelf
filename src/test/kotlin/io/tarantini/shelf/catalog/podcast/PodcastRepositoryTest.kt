@@ -23,7 +23,11 @@ class PodcastRepositoryTest :
                 val seriesId =
                     deps.database.seriesQueries.insert(unique("podcast-series")).executeAsOne()
                 val mutationRepo = podcastMutationRepository(deps.database.podcastQueries)
-                val readRepo = podcastReadRepository(deps.database.podcastQueries)
+                val readRepo =
+                    podcastReadRepository(
+                        deps.database.podcastQueries,
+                        deps.database.credentialsQueries
+                    )
 
                 recover({
                     val created =
@@ -63,7 +67,11 @@ class PodcastRepositoryTest :
                 val seriesId =
                     deps.database.seriesQueries.insert(unique("podcast-series")).executeAsOne()
                 val mutationRepo = podcastMutationRepository(deps.database.podcastQueries)
-                val readRepo = podcastReadRepository(deps.database.podcastQueries)
+                val readRepo =
+                    podcastReadRepository(
+                        deps.database.podcastQueries,
+                        deps.database.credentialsQueries
+                    )
 
                 recover({
                     val created =

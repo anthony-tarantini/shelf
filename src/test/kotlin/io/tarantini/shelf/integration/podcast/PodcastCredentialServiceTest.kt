@@ -68,4 +68,50 @@ class PodcastCredentialServiceTest :
                 }
             }
         }
+
+        "credential service should support Audible credentials" {
+            testWithDeps { deps ->
+                val mutationRepo = podcastMutationRepository(deps.database.podcastQueries)
+                val credentialService =
+                    podcastCredentialService(
+                        deps.database.credentialsQueries,
+                        EncryptionService("test-encryption-secret"),
+                    )
+
+                val seriesId = deps.database.seriesQueries.insert(unique("series")).executeAsOne()
+                val podcast =
+                    recover({
+                        mutationRepo.createPodcast(
+                            PodcastRoot.new(
+                                seriesId = seriesId,
+                                feedUrl = FeedUrl.fromRaw("https://example.com/audible"),
+                                feedToken = FeedToken.generate(),
+                            )
+                        )
+                    }) {
+                        fail("Should not have failed: $it")
+                    }
+
+                val cookie = "audible-session=123"
+                val activationBytes = "deadbeef"
+
+                recover({
+                    credentialService.saveFeedCredentials(
+                        podcast.id.id,
+                        FeedFetchCredentials.AudibleCookie(cookie),
+                    )
+                    credentialService.getFeedCredentials(podcast.id.id) shouldBe
+                        FeedFetchCredentials.AudibleCookie(cookie)
+
+                    credentialService.saveFeedCredentials(
+                        podcast.id.id,
+                        FeedFetchCredentials.AudibleActivationBytes(activationBytes),
+                    )
+                    credentialService.getFeedCredentials(podcast.id.id) shouldBe
+                        FeedFetchCredentials.AudibleActivationBytes(activationBytes)
+                }) {
+                    fail("Should not have failed: $it")
+                }
+            }
+        }
     })
