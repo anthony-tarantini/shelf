@@ -24,6 +24,8 @@ import io.tarantini.shelf.catalog.opds.opdsService
 import io.tarantini.shelf.catalog.podcast.PodcastService
 import io.tarantini.shelf.catalog.podcast.podcastFeedFetchService
 import io.tarantini.shelf.catalog.podcast.podcastService
+import io.tarantini.shelf.catalog.podcast.rss.PodcastRssService
+import io.tarantini.shelf.catalog.podcast.rss.podcastRssService
 import io.tarantini.shelf.catalog.search.SearchService
 import io.tarantini.shelf.catalog.search.searchService
 import io.tarantini.shelf.catalog.series.SeriesService
@@ -82,6 +84,7 @@ class Dependencies(
     val seriesService: SeriesService,
     val searchService: SearchService,
     val podcastService: PodcastService,
+    val podcastRssService: PodcastRssService,
     val libraryService: LibraryService,
     val storageService: StorageService,
     val activityService: ActivityService,
@@ -223,6 +226,14 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 feedParser = feedParser(),
                 audioFetchAdapter = episodeAudioFetchAdapter(),
             )
+        val podcastRssService =
+            podcastRssService(
+                readRepository =
+                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(podcastQueries),
+                podcastQueries = podcastQueries,
+                storageService = storageService,
+                publicRootUrl = env.http.publicRootUrl,
+            )
         val activityService = activityService(activityQueries)
         val koreaderSyncService = koreaderSyncService(koreaderQueries, metadataRepository)
         val koreaderAuthService = koreaderAuthService(koreaderQueries, userService, tokenService)
@@ -305,6 +316,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             seriesService,
             searchService,
             podcastService,
+            podcastRssService,
             libraryService,
             storageService,
             activityService,

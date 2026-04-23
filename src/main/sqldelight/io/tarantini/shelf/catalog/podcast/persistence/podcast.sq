@@ -103,6 +103,32 @@ selectGuidByPodcastAndGuid:
 SELECT guid FROM episode_guids
 WHERE podcast_id = :podcastId AND guid = :guid;
 
+selectRssEpisodesByPodcastId:
+SELECT
+    eo.book_id,
+    b.title,
+    eo.season,
+    eo.episode,
+    eo.published_at,
+    e.path AS audio_path,
+    e.size AS audio_size
+FROM episode_ordering eo
+JOIN books b ON b.id = eo.book_id
+JOIN editions e ON e.book_id = eo.book_id
+WHERE eo.podcast_id = :podcastId
+ORDER BY eo.season ASC, eo.episode ASC;
+
+selectPodcastEpisodeAudioByBookId:
+SELECT
+    e.path AS audio_path,
+    e.size AS audio_size
+FROM episode_ordering eo
+JOIN editions e ON e.book_id = eo.book_id
+WHERE eo.podcast_id = :podcastId
+  AND eo.book_id = :bookId
+ORDER BY CASE WHEN e.format = 'AUDIOBOOK' THEN 0 ELSE 1 END ASC, lower(e.sys_period) DESC
+LIMIT 1;
+
 insert:
 INSERT INTO podcasts (series_id, feed_url, feed_token, auto_sanitize, auto_fetch, fetch_interval_minutes)
 VALUES (:seriesId, :feedUrl, :feedToken, :autoSanitize, :autoFetch, :fetchIntervalMinutes)
