@@ -95,6 +95,8 @@ class Dependencies(
     val opdsService: OpdsService,
     val audibleAuthService: io.tarantini.shelf.integration.podcast.audible.AudibleAuthService,
     val audibleAdapter: io.tarantini.shelf.integration.podcast.audible.AudibleAdapter,
+    val ffmpegAdapter: io.tarantini.shelf.integration.podcast.audio.FfmpegAdapter,
+    val audibleContentFetchService: io.tarantini.shelf.catalog.podcast.AudibleContentFetchService,
     val jwtService: JwtService,
     val authCache: AuthCache,
     val storagePath: String,
@@ -247,6 +249,24 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val koreaderAuthService = koreaderAuthService(koreaderQueries, userService, tokenService)
         val audibleAuthService = io.tarantini.shelf.integration.podcast.audible.audibleAuthService()
         val audibleAdapter = io.tarantini.shelf.integration.podcast.audible.audibleAdapter()
+        val ffmpegAdapter = io.tarantini.shelf.integration.podcast.audio.ffmpegAdapter()
+        val audibleContentFetchService =
+            io.tarantini.shelf.catalog.podcast.audibleContentFetchService(
+                readRepository =
+                    io.tarantini.shelf.catalog.podcast.podcastReadRepository(
+                        podcastQueries,
+                        credentialsQueries
+                    ),
+                mutationRepository =
+                    io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries),
+                podcastQueries = podcastQueries,
+                bookQueries = bookQueries,
+                metadataQueries = metadataQueries,
+                storageService = storageService,
+                credentialService = credentialService,
+                audibleAdapter = audibleAdapter,
+                ffmpegAdapter = ffmpegAdapter,
+            )
 
         // Create a managed CoroutineScope for background workers
         val job = SupervisorJob()
@@ -337,6 +357,8 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             opdsService,
             audibleAuthService,
             audibleAdapter,
+            ffmpegAdapter,
+            audibleContentFetchService,
             jwtService,
             authCache,
             storagePath,

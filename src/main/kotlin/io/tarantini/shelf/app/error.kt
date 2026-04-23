@@ -52,6 +52,9 @@ import io.tarantini.shelf.catalog.metadata.domain.MetadataNotFound
 import io.tarantini.shelf.catalog.metadata.domain.ShortASIN
 import io.tarantini.shelf.catalog.metadata.domain.ShortISBN
 import io.tarantini.shelf.catalog.metadata.domain.ShortISBN13
+import io.tarantini.shelf.catalog.podcast.domain.AudibleAuthFailed
+import io.tarantini.shelf.catalog.podcast.domain.AudibleDeviceRegistrationFailed
+import io.tarantini.shelf.catalog.podcast.domain.AudibleInvalidSession
 import io.tarantini.shelf.catalog.podcast.domain.EmptyFeedUrl
 import io.tarantini.shelf.catalog.podcast.domain.EmptyPodcastId
 import io.tarantini.shelf.catalog.podcast.domain.FeedAuthRequired
@@ -214,6 +217,10 @@ private fun PodcastError.toHttpResponse(): Pair<HttpStatusCode, String> =
             HttpStatusCode.TooManyRequests to
                 (retryAfterSeconds?.let { "Feed rate limited. Retry after $it seconds" }
                     ?: "Feed rate limited")
+        AudibleAuthFailed -> HttpStatusCode.Unauthorized to "Audible authentication failed"
+        AudibleDeviceRegistrationFailed ->
+            HttpStatusCode.InternalServerError to "Audible device registration failed"
+        AudibleInvalidSession -> HttpStatusCode.Unauthorized to "Audible session invalid"
     }
 
 private fun SanitizationError.toHttpResponse(): Pair<HttpStatusCode, String> =

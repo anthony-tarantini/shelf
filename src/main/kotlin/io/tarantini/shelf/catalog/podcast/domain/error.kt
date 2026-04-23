@@ -37,3 +37,13 @@ object FeedParseFailed : PodcastIntegrationError
 object FeedAuthRequired : PodcastIntegrationError
 
 data class FeedRateLimited(val retryAfterSeconds: Int?) : PodcastIntegrationError
+
+// Audible specific errors
+sealed interface AudibleError : PodcastIntegrationError
+
+object AudibleAuthFailed : AudibleError
+
+object AudibleDeviceRegistrationFailed : AudibleError
+
+object AudibleInvalidSession : AudibleError
+
