@@ -254,7 +254,6 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 readRepository = podcastReadRepository,
                 mutationRepository = podcastMutationRepository,
                 credentialService = credentialService,
-                libationService = podcastLibationService,
             )
 
         val podcastFeedFetchService =

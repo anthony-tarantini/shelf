@@ -49,15 +49,12 @@ fun podcastService(
     readRepository: PodcastReadRepository,
     mutationRepository: PodcastMutationRepository,
     credentialService: PodcastCredentialService,
-    libationService: PodcastLibationService,
-): PodcastService =
-    PodcastAggregateService(readRepository, mutationRepository, credentialService, libationService)
+): PodcastService = PodcastAggregateService(readRepository, mutationRepository, credentialService)
 
 private class PodcastAggregateService(
     private val readRepository: PodcastReadRepository,
     private val mutationRepository: PodcastMutationRepository,
     private val credentialService: PodcastCredentialService,
-    private val libationService: PodcastLibationService,
 ) : PodcastService {
     context(_: RaiseContext)
     override suspend fun getPodcasts(): List<PodcastSummary> =
@@ -67,7 +64,7 @@ private class PodcastAggregateService(
     override suspend fun getDashboard(): PodcastDashboard =
         withContext(Dispatchers.IO) {
             val podcasts = readRepository.getAllPodcasts()
-            PodcastDashboard(podcasts = podcasts, libation = libationService.getStatus())
+            PodcastDashboard(podcasts = podcasts)
         }
 
     context(_: RaiseContext)

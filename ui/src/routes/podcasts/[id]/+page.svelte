@@ -40,7 +40,7 @@
 			</div>
 
 			{#if episodes.length > 0}
-				<PodcastEpisodeList {episodes} />
+				<PodcastEpisodeList podcastId={aggregate.podcast.id} {episodes} />
 			{:else}
 				<div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/30 py-20 text-center">
 					<div class="mb-4 rounded-full bg-accent/30 p-4 text-muted-foreground">

@@ -41,6 +41,27 @@
       "publish_title": "3. Publish to the library",
       "publish_description": "Once staged data looks right, publish it into the shared catalog for signed-in readers."
     },
+    "libation": {
+      "eyebrow": "Libation",
+      "title": "Libation Import Scanner",
+      "enabled": "Container scanner is enabled.",
+      "disabled": "Container scanner is disabled.",
+      "scan_now": "Scan now",
+      "scan_running": "Scanning...",
+      "scan_failed": "Libation scan failed",
+      "never_scanned": "Never scanned",
+      "unknown": "Unknown",
+      "run_id": "Run ID",
+      "started_at": "Started",
+      "finished_at": "Finished",
+      "last_scan": "Last scan",
+      "discovered": "Manifests found",
+      "valid": "Valid",
+      "invalid": "Invalid",
+      "created": "Imported",
+      "skipped": "Skipped",
+      "failed": "Failed"
+    },
     "queue_cta": {
       "eyebrow": "Need the queue?",
       "title": "Review staged imports after each batch.",

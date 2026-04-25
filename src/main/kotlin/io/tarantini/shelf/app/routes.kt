@@ -61,12 +61,7 @@ fun Application.routes(deps: Dependencies) = routing {
     )
     metadataRoutes(deps.metadataService, deps.jwtService)
     with(deps.sqlDriver) { searchRoutes(deps.searchService, deps.activityService, deps.jwtService) }
-    podcastRoutes(
-        deps.podcastService,
-        deps.jwtService,
-        deps.podcastLibationService,
-        deps.storageService,
-    )
+    podcastRoutes(deps.podcastService, deps.jwtService, deps.storageService)
     podcastRssRoutes(deps.podcastRssService, deps.storageService)
     seriesRoutes(
         deps.seriesService,
@@ -78,7 +73,7 @@ fun Application.routes(deps: Dependencies) = routing {
     )
     with(deps.sqlDriver) { opdsRoutes(deps.opdsService) }
     libraryRoutes(deps.jwtService, deps.libraryService, deps.bookService)
-    importRoutes(deps.importService, deps.jwtService, deps.userService)
+    importRoutes(deps.importService, deps.podcastLibationService, deps.jwtService, deps.userService)
     with(deps.database) {
         stagedRoutes(deps.jwtService, deps.stagedBookService, deps.storageService)
     }

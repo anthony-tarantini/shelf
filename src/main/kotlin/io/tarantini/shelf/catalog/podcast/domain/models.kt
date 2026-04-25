@@ -94,8 +94,7 @@ typealias SavedPodcastRoot = PodcastRoot<PersistenceState.Persisted>
 
 typealias NewPodcastRoot = PodcastRoot<PersistenceState.Unsaved>
 
-@Serializable
-data class PodcastDashboard(val podcasts: List<PodcastSummary>, val libation: LibationScanStatus)
+@Serializable data class PodcastDashboard(val podcasts: List<PodcastSummary>)
 
 @Serializable
 data class PodcastAggregate<S : PersistenceState>(

@@ -25,6 +25,7 @@ import io.tarantini.shelf.app.Request
 import io.tarantini.shelf.app.Response
 import io.tarantini.shelf.app.respond
 import io.tarantini.shelf.catalog.book.respondEither
+import io.tarantini.shelf.catalog.podcast.PodcastLibationService
 import io.tarantini.shelf.processing.import.domain.*
 import io.tarantini.shelf.processing.import.domain.promoteStagedBook
 import io.tarantini.shelf.processing.import.domain.toCommand
@@ -41,6 +42,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 
 fun Route.importRoutes(
     importService: ImportService,
+    podcastLibationService: PodcastLibationService,
     jwtService: JwtService,
     userService: UserService,
 ) {
@@ -102,6 +104,14 @@ fun Route.importRoutes(
                     ifRight = { progress -> call.respond(Response(progress)) },
                 )
         }
+    }
+
+    post<ImportApiResource.Libation.Scan> {
+        sharedCatalogMutation(jwtService) { respond({ podcastLibationService.scanNow() }) }
+    }
+
+    get<ImportApiResource.Libation.Status> {
+        sharedCatalogRead(jwtService) { respond({ podcastLibationService.getStatus() }) }
     }
 }
 

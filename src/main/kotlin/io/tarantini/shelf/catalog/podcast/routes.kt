@@ -29,7 +29,6 @@ import kotlin.uuid.ExperimentalUuidApi
 fun Route.podcastRoutes(
     podcastService: PodcastService,
     jwtService: JwtService,
-    libationService: PodcastLibationService,
     storageService: StorageService,
 ) {
     post<PodcastsResource> {
@@ -61,6 +60,36 @@ fun Route.podcastRoutes(
                         podcastService.getPodcastAggregate(PodcastId(resource.parent.id))
                     val coverPath =
                         ensureNotNull(aggregate.episodes.firstNotNullOfOrNull { it.coverPath }) {
+                            PodcastNotFound
+                        }
+                    val (length, channel) = storageService.getReadChannel(coverPath)
+                    call.response.header(HttpHeaders.CacheControl, "public, max-age=86400")
+                    object : OutgoingContent.ReadChannelContent() {
+                        override val contentLength = length
+                        override val contentType =
+                            when (coverPath.extension().lowercase()) {
+                                "png" -> ContentType.Image.PNG
+                                "webp" -> ContentType.parse("image/webp")
+                                else -> ContentType.Image.JPEG
+                            }
+
+                        override fun readFrom() = channel
+                    }
+                }
+                .fold({ err: AppError -> respond(err) }, { content -> call.respond(content) })
+        }
+    }
+
+    get<PodcastsResource.Id.EpisodeCover> { resource ->
+        sharedCatalogRead(jwtService) {
+            either {
+                    val aggregate =
+                        podcastService.getPodcastAggregate(PodcastId(resource.parent.id))
+                    val episodeId = PodcastEpisodeId(resource.episodeId)
+                    val coverPath =
+                        ensureNotNull(
+                            aggregate.episodes.firstOrNull { it.id == episodeId }?.coverPath
+                        ) {
                             PodcastNotFound
                         }
                     val (length, channel) = storageService.getReadChannel(coverPath)
@@ -118,13 +147,5 @@ fun Route.podcastRoutes(
                 HttpStatusCode.NoContent,
             )
         }
-    }
-
-    post<PodcastsResource.Libation.Scan> {
-        sharedCatalogMutation(jwtService) { respond({ libationService.scanNow() }) }
-    }
-
-    get<PodcastsResource.Libation.Status> {
-        sharedCatalogRead(jwtService) { respond({ libationService.getStatus() }) }
     }
 }

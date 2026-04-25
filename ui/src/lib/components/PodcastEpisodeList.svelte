@@ -1,15 +1,15 @@
 <script lang="ts">
 	import type { EpisodeEntry } from '$lib/types/models';
-	import { resolve } from '$app/paths';
 	import { t } from '$lib/i18n';
 	import AuthenticatedImage from './ui/AuthenticatedImage.svelte';
 	import { formatDuration } from '$lib/utils';
 
 	interface Props {
+		podcastId: string;
 		episodes: EpisodeEntry[];
 	}
 
-	let { episodes }: Props = $props();
+	let { podcastId, episodes }: Props = $props();
 
 	function formatDate(iso?: string) {
 		if (!iso) return '';
@@ -34,13 +34,13 @@
 			</tr>
 		</thead>
 		<tbody class="divide-y divide-border/50">
-			{#each episodes as episode (episode.bookId)}
+			{#each episodes as episode (episode.id)}
 				<tr class="group transition-colors hover:bg-primary/5">
 					<td class="p-4">
-						<a href={resolve(`/books/${episode.bookId}`)} class="block">
+						<a href={`/podcasts/${podcastId}`} class="block">
 							{#if episode.coverPath}
 								<AuthenticatedImage
-									src={`/api/books/${episode.bookId}/cover?v=${encodeURIComponent(episode.coverPath)}`}
+									src={`/api/podcasts/${podcastId}/episodes/${episode.id}/cover?v=${encodeURIComponent(episode.coverPath)}`}
 									alt=""
 									class="h-14 w-10 bg-background object-contain p-0.5 shadow-sm transition-transform group-hover:scale-105"
 								/>
@@ -52,7 +52,7 @@
 						</a>
 					</td>
 					<td class="p-4">
-						<a href={resolve(`/books/${episode.bookId}`)} class="block font-semibold text-foreground hover:text-primary transition-colors">
+						<a href={`/podcasts/${podcastId}`} class="block font-semibold text-foreground hover:text-primary transition-colors">
 							{episode.title}
 						</a>
 					</td>

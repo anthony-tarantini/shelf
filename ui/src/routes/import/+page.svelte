@@ -5,6 +5,19 @@
 	import FormField from '$lib/components/ui/FormField.svelte';
 	import { t } from '$lib/i18n';
 	import { progress } from '$lib/state/progress.svelte';
+	import type { LibationScanStatus } from '$lib/types/models';
+
+	let { data } = $props();
+	const emptyLibationStatus: LibationScanStatus = {
+		enabled: false,
+		running: false,
+		discoveredCount: 0,
+		validManifestCount: 0,
+		invalidManifestCount: 0,
+		importedCreatedCount: 0,
+		importedSkippedCount: 0,
+		importedFailedCount: 0
+	};
 
 	let fileInput: HTMLInputElement | null = $state(null);
 	let uploading = $state(false);
@@ -15,6 +28,14 @@
 	let scanning = $state(false);
 	let scanError = $state<string | null>(null);
 	let scanSuccess = $state(false);
+	let initialLibation = $derived(data.libation ?? emptyLibationStatus);
+	let libation = $state<LibationScanStatus>(emptyLibationStatus);
+	let libationError = $state<string | null>(null);
+	let libationScanInFlight = $state(false);
+
+	$effect(() => {
+		libation = initialLibation;
+	});
 
 	async function handleUpload() {
 		if (!fileInput?.files?.[0]) {
@@ -64,6 +85,41 @@
 			scanPath = '';
 		}
 	}
+
+	function formatScanTime(iso?: string): string {
+		if (!iso) return $t('import.ingest.libation.never_scanned');
+		const date = new Date(iso);
+		return date.toLocaleDateString(undefined, {
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit'
+		});
+	}
+
+	function shortRunId(runId?: string): string {
+		if (!runId) return $t('import.ingest.libation.unknown');
+		return runId.slice(0, 8);
+	}
+
+	async function refreshLibationStatus() {
+		const result = await api.get<LibationScanStatus>('/import/libation/status');
+		if (result.right) {
+			libation = result.right;
+		}
+	}
+
+	async function runLibationScan() {
+		libationScanInFlight = true;
+		libationError = null;
+		const result = await api.post('/import/libation/scan', {});
+		libationScanInFlight = false;
+		if (result.left) {
+			libationError = result.left.message;
+			return;
+		}
+		await refreshLibationStatus();
+	}
 </script>
 
 <div class="mx-auto max-w-6xl">
@@ -76,6 +132,51 @@
 			</div>
 		</div>
 	</header>
+
+	<div class="mb-8 rounded-[1.5rem] border border-border bg-card p-6 shadow-xl">
+		<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div>
+				<p class="text-[10px] font-bold uppercase tracking-[0.28em] text-muted-foreground">{$t('import.ingest.libation.eyebrow')}</p>
+				<h3 class="mt-1 text-xl font-bold text-foreground">{$t('import.ingest.libation.title')}</h3>
+				<p class="mt-1 text-sm text-muted-foreground">
+					{#if libation.enabled}
+						{$t('import.ingest.libation.enabled')}
+					{:else}
+						{$t('import.ingest.libation.disabled')}
+					{/if}
+				</p>
+			</div>
+			<button
+				type="button"
+				onclick={runLibationScan}
+				disabled={!libation.enabled || libationScanInFlight || libation.running}
+				class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				{#if libationScanInFlight || libation.running}
+					{$t('import.ingest.libation.scan_running')}
+				{:else}
+					{$t('import.ingest.libation.scan_now')}
+				{/if}
+			</button>
+		</div>
+		<div class="mt-4 grid grid-cols-1 gap-3 text-sm text-muted-foreground sm:grid-cols-10">
+			<div>{$t('import.ingest.libation.run_id')}: <span class="font-semibold text-foreground">{shortRunId(libation.lastRunId)}</span></div>
+			<div>{$t('import.ingest.libation.started_at')}: <span class="font-semibold text-foreground">{formatScanTime(libation.startedAt)}</span></div>
+			<div>{$t('import.ingest.libation.finished_at')}: <span class="font-semibold text-foreground">{formatScanTime(libation.finishedAt)}</span></div>
+			<div>{$t('import.ingest.libation.last_scan')}: <span class="font-semibold text-foreground">{formatScanTime(libation.lastScanAt)}</span></div>
+			<div>{$t('import.ingest.libation.discovered')}: <span class="font-semibold text-foreground">{libation.discoveredCount}</span></div>
+			<div>{$t('import.ingest.libation.valid')}: <span class="font-semibold text-foreground">{libation.validManifestCount}</span></div>
+			<div>{$t('import.ingest.libation.invalid')}: <span class="font-semibold text-foreground">{libation.invalidManifestCount}</span></div>
+			<div>{$t('import.ingest.libation.created')}: <span class="font-semibold text-foreground">{libation.importedCreatedCount}</span></div>
+			<div>{$t('import.ingest.libation.skipped')}: <span class="font-semibold text-foreground">{libation.importedSkippedCount}</span></div>
+			<div>{$t('import.ingest.libation.failed')}: <span class="font-semibold text-foreground">{libation.importedFailedCount}</span></div>
+		</div>
+		{#if libationError || libation.lastError}
+			<div class="mt-4">
+				<StatusBanner kind="error" title={$t('import.ingest.libation.scan_failed')} message={libationError ?? libation.lastError ?? ''} />
+			</div>
+		{/if}
+	</div>
 
 	<div class="grid gap-8 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.85fr)] xl:items-stretch">
 		<div class="h-full">

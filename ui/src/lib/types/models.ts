@@ -319,7 +319,7 @@ export enum CredentialStatus {
 }
 
 export interface EpisodeEntry {
-  bookId: string;
+  id: string;
   title: string;
   season: number;
   episode: number;
@@ -331,7 +331,6 @@ export interface EpisodeEntry {
 
 export interface PodcastDashboard {
   podcasts: PodcastSummary[];
-  libation: LibationScanStatus;
 }
 
 export interface PodcastAggregate {

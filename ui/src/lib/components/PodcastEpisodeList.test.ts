@@ -4,7 +4,7 @@ import PodcastEpisodeList from './PodcastEpisodeList.svelte';
 
 const mockEpisodes: any[] = [
 	{
-		bookId: 'book-1',
+		id: 'episode-1',
 		title: 'Episode One',
 		season: 1,
 		episode: 1,
@@ -13,7 +13,7 @@ const mockEpisodes: any[] = [
 		coverPath: 'path/1'
 	},
 	{
-		bookId: 'book-2',
+		id: 'episode-2',
 		title: 'Episode Two',
 		season: 1,
 		episode: 2,
@@ -25,7 +25,7 @@ const mockEpisodes: any[] = [
 
 describe('PodcastEpisodeList', () => {
 	it('should render episode titles and numbers', () => {
-		render(PodcastEpisodeList, { props: { episodes: mockEpisodes } });
+		render(PodcastEpisodeList, { props: { podcastId: 'podcast-1', episodes: mockEpisodes } });
 
 		expect(screen.getByText('Episode One')).toBeInTheDocument();
 		expect(screen.getByText('Episode Two')).toBeInTheDocument();
@@ -34,7 +34,7 @@ describe('PodcastEpisodeList', () => {
 	});
 
 	it('should format durations correctly', () => {
-		render(PodcastEpisodeList, { props: { episodes: mockEpisodes } });
+		render(PodcastEpisodeList, { props: { podcastId: 'podcast-1', episodes: mockEpisodes } });
 
 		// 3600s = 1:00:00 or 60:00 depending on implementation
 		expect(screen.getByText('1:00:00')).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe('PodcastEpisodeList', () => {
 	});
 
 	it('should render cover placeholders when available', () => {
-		render(PodcastEpisodeList, { props: { episodes: mockEpisodes } });
+		render(PodcastEpisodeList, { props: { podcastId: 'podcast-1', episodes: mockEpisodes } });
 
 		// Since AuthenticatedImage starts with a placeholder div
 		const links = screen.getAllByRole('link');

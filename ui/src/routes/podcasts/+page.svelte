@@ -1,20 +1,16 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
-	import { resolve } from '$app/paths';
-	import AuthenticatedImage from '$lib/components/ui/AuthenticatedImage.svelte';
-	import StatusBanner from '$lib/components/ui/StatusBanner.svelte';
-	import { api } from '$lib/api/client';
-	import type { PodcastDashboard } from '$lib/types/models';
+import { resolve } from '$app/paths';
+import AuthenticatedImage from '$lib/components/ui/AuthenticatedImage.svelte';
+import StatusBanner from '$lib/components/ui/StatusBanner.svelte';
+import type { PodcastDashboard } from '$lib/types/models';
 
 	let { data } = $props();
 
-	let remoteDashboard = $state<PodcastDashboard | null>(null);
-	let dashboard = $derived<PodcastDashboard>(remoteDashboard || data.dashboard!);
-	let podcasts = $derived(dashboard.podcasts);
-	let libation = $derived(dashboard.libation);
-	let loadError = $state<string | null>(null);
-	let scanError = $state<string | null>(null);
-	let scanInFlight = $state(false);
+let remoteDashboard = $state<PodcastDashboard | null>(null);
+let dashboard = $derived<PodcastDashboard>(remoteDashboard || data.dashboard!);
+let podcasts = $derived(dashboard.podcasts);
+let loadError = $state<string | null>(null);
 
 	type SortField = 'title' | 'episodeCount';
 	type SortDir = 'ASC' | 'DESC';
@@ -55,43 +51,10 @@
 		return sortDir === 'DESC' ? $t('podcasts.dashboard.sort_episodes_desc') : $t('podcasts.dashboard.sort_episodes_asc');
 	});
 
-	async function refreshData() {
-		const result = await api.get<PodcastDashboard>('/podcasts');
-		if (result.right) {
-			remoteDashboard = result.right;
-			loadError = null;
-		} else {
-			loadError = result.left?.message ?? 'Failed to load podcasts';
-		}
-	}
-
 	function formatLastFetched(iso?: string): string {
 		if (!iso) return $t('podcasts.card.never_fetched');
 		const date = new Date(iso);
 		return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-	}
-
-		function formatScanTime(iso?: string): string {
-			if (!iso) return $t('podcasts.libation.never_scanned');
-			const date = new Date(iso);
-			return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-		}
-
-		function shortRunId(runId?: string): string {
-			if (!runId) return $t('podcasts.libation.unknown');
-			return runId.slice(0, 8);
-		}
-
-	async function runLibationScan() {
-		scanInFlight = true;
-		scanError = null;
-		const result = await api.post('/podcasts/libation/scan', {});
-		scanInFlight = false;
-		if (result.left) {
-			scanError = result.left.message;
-			return;
-		}
-		await refreshData();
 	}
 </script>
 
@@ -139,51 +102,6 @@
 	{#if loadError}
 		<StatusBanner kind="error" title={$t('podcasts.load_error_title')} message={loadError} />
 	{/if}
-
-	<div class="rounded-[1.5rem] border border-border bg-card p-6 shadow-xl">
-		<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-			<div>
-				<p class="text-[10px] font-bold uppercase tracking-[0.28em] text-muted-foreground">{$t('podcasts.libation.eyebrow')}</p>
-				<h3 class="mt-1 text-xl font-bold text-foreground">{$t('podcasts.libation.title')}</h3>
-				<p class="mt-1 text-sm text-muted-foreground">
-					{#if libation.enabled}
-						{$t('podcasts.libation.enabled')}
-					{:else}
-						{$t('podcasts.libation.disabled')}
-					{/if}
-				</p>
-			</div>
-			<button
-				type="button"
-				onclick={runLibationScan}
-				disabled={!libation.enabled || scanInFlight || libation.running}
-				class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-			>
-				{#if scanInFlight || libation.running}
-					{$t('podcasts.libation.scan_running')}
-				{:else}
-					{$t('podcasts.libation.scan_now')}
-				{/if}
-			</button>
-		</div>
-		<div class="mt-4 grid grid-cols-1 gap-3 text-sm text-muted-foreground sm:grid-cols-10">
-			<div>{$t('podcasts.libation.run_id')}: <span class="font-semibold text-foreground">{shortRunId(libation.lastRunId)}</span></div>
-			<div>{$t('podcasts.libation.started_at')}: <span class="font-semibold text-foreground">{formatScanTime(libation.startedAt)}</span></div>
-			<div>{$t('podcasts.libation.finished_at')}: <span class="font-semibold text-foreground">{formatScanTime(libation.finishedAt)}</span></div>
-			<div>{$t('podcasts.libation.last_scan')}: <span class="font-semibold text-foreground">{formatScanTime(libation.lastScanAt)}</span></div>
-			<div>{$t('podcasts.libation.discovered')}: <span class="font-semibold text-foreground">{libation.discoveredCount}</span></div>
-			<div>{$t('podcasts.libation.valid')}: <span class="font-semibold text-foreground">{libation.validManifestCount}</span></div>
-			<div>{$t('podcasts.libation.invalid')}: <span class="font-semibold text-foreground">{libation.invalidManifestCount}</span></div>
-			<div>{$t('podcasts.libation.created')}: <span class="font-semibold text-foreground">{libation.importedCreatedCount}</span></div>
-			<div>{$t('podcasts.libation.skipped')}: <span class="font-semibold text-foreground">{libation.importedSkippedCount}</span></div>
-			<div>{$t('podcasts.libation.failed')}: <span class="font-semibold text-foreground">{libation.importedFailedCount}</span></div>
-		</div>
-		{#if scanError || libation.lastError}
-			<div class="mt-4">
-				<StatusBanner kind="error" title={$t('podcasts.libation.scan_failed')} message={scanError ?? libation.lastError ?? ''} />
-			</div>
-		{/if}
-	</div>
 
 	{#if podcasts.length === 0}
 		<div class="rounded-[1.5rem] border border-border bg-card p-12 text-center shadow-xl">

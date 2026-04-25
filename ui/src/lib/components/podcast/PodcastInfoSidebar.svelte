@@ -24,7 +24,7 @@
 	<div class="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
 		{#if episodes.length > 0 && episodes[0].coverPath}
 			<AuthenticatedImage
-				src={`/api/books/${episodes[0].bookId}/cover?v=${encodeURIComponent(episodes[0].coverPath)}`}
+				src={`/api/podcasts/${podcast.id}/cover?v=${encodeURIComponent(episodes[0].coverPath)}`}
 				alt={aggregate.seriesTitle}
 				class="aspect-[3/4] w-full object-cover"
 			/>

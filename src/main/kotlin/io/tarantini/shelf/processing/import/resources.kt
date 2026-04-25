@@ -3,6 +3,7 @@
 package io.tarantini.shelf.processing.import
 
 import io.ktor.resources.Resource
+import io.tarantini.shelf.app.RootResource
 import io.tarantini.shelf.catalog.book.BooksResource
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -49,4 +50,14 @@ class ImportResource(val parent: BooksResource = BooksResource()) {
     @Resource("scan") class Scan(val parent: ImportResource)
 
     @Resource("progress") class Progress(val parent: ImportResource)
+}
+
+@Resource("import")
+class ImportApiResource(val parent: RootResource = RootResource) {
+    @Resource("libation")
+    class Libation(val parent: ImportApiResource = ImportApiResource()) {
+        @Resource("scan") class Scan(val parent: Libation = Libation())
+
+        @Resource("status") class Status(val parent: Libation = Libation())
+    }
 }
