@@ -15,8 +15,8 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.tarantini.shelf.app.AppError
 import io.tarantini.shelf.app.respond
-import io.tarantini.shelf.catalog.book.domain.BookId
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
+import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId
 import io.tarantini.shelf.processing.storage.StorageService
 import java.io.RandomAccessFile
 import java.nio.file.Files
@@ -45,11 +45,11 @@ fun Route.podcastRssRoutes(rssService: PodcastRssService, storageService: Storag
             )
     }
 
-    get("/rss/podcasts/{token}/episodes/{bookId}/audio") {
+    get("/rss/podcasts/{token}/episodes/{episodeId}/audio") {
         either {
                 val token = FeedToken(call.parameters["token"])
-                val bookId = BookId(call.parameters["bookId"])
-                rssService.resolveAudio(token, bookId)
+                val episodeId = PodcastEpisodeId(call.parameters["episodeId"])
+                rssService.resolveAudio(token, episodeId)
             }
             .fold(
                 { err: AppError -> respond(err) },

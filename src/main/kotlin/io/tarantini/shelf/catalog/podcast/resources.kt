@@ -19,5 +19,7 @@ data class PodcastsResource(val parent: RootResource = RootResource) {
         @Resource("rotate-token") data class RotateToken(val parent: Id)
 
         @Resource("revoke-token") data class RevokeToken(val parent: Id)
+
+        @Resource("credentials") data class Credentials(val parent: Id)
     }
 }

@@ -98,3 +98,4 @@ Use Arrow Either/AppError + Raise DSL (`either { }`, `.bind()`); no exceptions i
 20. **Mutation repositories:** Domains with decider-driven mutations should expose a `*MutationRepository` interface for testability. Services accept the repository as a parameter with a default implementation. Read-only queries may stay as direct `*Queries` calls.
 21. **Route thinness:** Routes should avoid business projections (`Aggregate -> Summary`) and ad hoc error folds. Put these in Service/provider interfaces so routes stay boundary-only.
 22. **Logging format rollout:** Keep backend JSON logging env-gated through `OBSERVABILITY_JSON_LOGS_ENABLED`; line format remains the safe default for local readability.
+23. **Podcast data ownership:** Podcast episodes are podcast-domain records. Do not persist podcast episode ingestion data in `books`/`editions`; keep podcast storage/query models isolated.

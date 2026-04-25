@@ -4,6 +4,7 @@ import arrow.core.raise.catch
 import arrow.core.raise.context.raise
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.podcast.domain.FeedFetchFailed
+import io.tarantini.shelf.catalog.podcast.domain.audioExtensionFromMime
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -66,22 +67,7 @@ private class JavaNetEpisodeAudioFetchAdapter(private val httpClient: HttpClient
 }
 
 private fun guessExtension(audioUrl: String, contentType: String?): String {
-    val byType =
-        contentType?.lowercase()?.substringBefore(';')?.trim()?.let {
-            when (it) {
-                "audio/mpeg",
-                "audio/mp3" -> "mp3"
-                "audio/mp4",
-                "audio/x-m4a" -> "m4a"
-                "audio/x-m4b" -> "m4b"
-                "audio/aac" -> "aac"
-                "audio/ogg" -> "ogg"
-                "audio/flac" -> "flac"
-                "audio/wav",
-                "audio/x-wav" -> "wav"
-                else -> null
-            }
-        }
+    val byType = contentType?.let { audioExtensionFromMime(it) }
     if (byType != null) return byType
 
     val candidate =

@@ -4,27 +4,27 @@ package io.tarantini.shelf.catalog.podcast
 
 import arrow.core.raise.context.either
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.tarantini.shelf.catalog.book.domain.BookId
-import io.tarantini.shelf.catalog.book.persistence.BookQueries
-import io.tarantini.shelf.catalog.metadata.domain.ASIN
-import io.tarantini.shelf.catalog.metadata.domain.BookFormat
-import io.tarantini.shelf.catalog.metadata.persistence.MetadataQueries
+import io.tarantini.shelf.app.toOffsetDateTimeUtc
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
+import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.catalog.series.persistence.SeriesQueries
 import io.tarantini.shelf.integration.persistence.LibationImportQueries
 import io.tarantini.shelf.integration.podcast.libation.LibationResolvedManifest
+import io.tarantini.shelf.processing.audiobook.ffmpeg
 import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.processing.storage.StorageService
 import java.nio.file.Files
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.concurrent.TimeUnit
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.extension
+import kotlin.io.path.pathString
 import kotlin.time.Clock
-import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,8 +35,6 @@ class LibationManifestImporter(
     private val libationImportQueries: LibationImportQueries,
     private val seriesQueries: SeriesQueries,
     private val podcastQueries: PodcastQueries,
-    private val bookQueries: BookQueries,
-    private val metadataQueries: MetadataQueries,
     private val storageService: StorageService,
 ) {
     suspend fun importManifest(
@@ -49,37 +47,30 @@ class LibationManifestImporter(
             val record =
                 libationImportQueries.selectRecordBySourceKey(sourceKey).executeAsOneOrNull()
 
-            val existingPodcastId = record?.podcast_id
-            if (
-                record?.status == "IMPORTED" &&
-                    existingPodcastId != null &&
-                    guidExists(existingPodcastId, guid)
-            ) {
-                upsertImportRecord(
-                    sourceKey = sourceKey,
-                    manifest = manifest,
-                    seriesId = record.series_id,
-                    podcastId = record.podcast_id,
-                    bookId = record.book_id,
-                    status = "IMPORTED",
-                    lastError = null,
-                    firstImportedAt = record.first_imported_at,
-                )
-                return@withContext LibationImportOutcome.Skipped
-            }
-
             val seriesId =
                 record?.series_id
                     ?: findOrCreateSeriesIdForRun(manifest.seriesTitle, runSeriesByTitle)
-            val podcastId = record?.podcast_id ?: createPodcastForSeries(seriesId, manifest.asin)
+            val podcastId = record?.podcast_id ?: findOrCreatePodcastForSeries(seriesId)
 
-            if (guidExists(podcastId, guid)) {
+            // Idempotency: if guid is already claimed, update record and optionally backfill cover.
+            val existingEpisodeId =
+                record?.episode_id
+                    ?: podcastQueries
+                        .selectEpisodeIdByPodcastAndGuid(podcastId = podcastId, guid = guid)
+                        .executeAsOneOrNull()
+            if (existingEpisodeId != null) {
+                backfillCoverIfMissing(
+                    episodeId = existingEpisodeId,
+                    seriesId = seriesId,
+                    podcastId = podcastId,
+                    manifest = manifest,
+                )
                 upsertImportRecord(
                     sourceKey = sourceKey,
                     manifest = manifest,
                     seriesId = seriesId,
                     podcastId = podcastId,
-                    bookId = record?.book_id,
+                    episodeId = existingEpisodeId,
                     status = "IMPORTED",
                     lastError = null,
                     firstImportedAt =
@@ -88,9 +79,9 @@ class LibationManifestImporter(
                 return@withContext LibationImportOutcome.Skipped
             }
 
-            val storagePath = episodeAudioStoragePath(seriesId, podcastId, manifest)
+            val audioPath = episodeAudioStoragePath(seriesId, podcastId, manifest)
             val copied =
-                either { storageService.save(storagePath, manifest.audioPath) }
+                either { storageService.save(audioPath, manifest.audioPath) }
                     .fold({ false }, { true })
             if (!copied) {
                 upsertImportRecord(
@@ -98,7 +89,7 @@ class LibationManifestImporter(
                     manifest = manifest,
                     seriesId = seriesId,
                     podcastId = podcastId,
-                    bookId = record?.book_id,
+                    episodeId = record?.episode_id,
                     status = "FAILED",
                     lastError = "Failed to copy audio file to managed storage.",
                     firstImportedAt = record?.first_imported_at,
@@ -107,61 +98,50 @@ class LibationManifestImporter(
                     "Failed to copy audio file to managed storage."
                 )
             }
+            val coverPath = extractAndPersistCover(seriesId, podcastId, manifest)
 
             val result = runCatching {
                 podcastQueries.transactionWithResult {
-                    if (guidExists(podcastId, guid)) {
-                        return@transactionWithResult LibationImportOutcome.Skipped
-                    }
-
-                    val bookId =
-                        bookQueries.insert(title = manifest.title, coverPath = null).executeAsOne()
-                    val claimed =
+                    // Re-check idempotency under transaction.
+                    val claimedEpisodeId =
                         podcastQueries
-                            .claimEpisodeGuid(podcastId = podcastId, guid = guid, bookId = bookId)
+                            .selectEpisodeIdByPodcastAndGuid(podcastId = podcastId, guid = guid)
                             .executeAsOneOrNull()
-
-                    if (claimed == null) {
-                        bookQueries.deleteById(bookId).executeAsOneOrNull()
+                    if (claimedEpisodeId != null) {
                         return@transactionWithResult LibationImportOutcome.Skipped
                     }
 
                     val season = 0
-                    val episode =
+                    val nextEpisode =
                         podcastQueries.selectMaxEpisodeForSeason(podcastId, season).executeAsOne() +
                             1
+                    val episodeId =
+                        podcastQueries
+                            .insertEpisode(
+                                podcastId = podcastId,
+                                title = manifest.title,
+                                coverPath = coverPath,
+                                audioPath = audioPath,
+                                audioSize = Files.size(manifest.audioPath),
+                                totalTime = manifest.durationSeconds,
+                                season = season,
+                                episode = nextEpisode,
+                                publishedAt = null,
+                            )
+                            .executeAsOne()
 
-                    podcastQueries.insertEpisodeOrdering(
-                        podcastId = podcastId,
-                        bookId = bookId,
-                        season = season,
-                        episode = episode,
-                        publishedAt = null,
-                    )
-
-                    metadataQueries.insertMetadata(
-                        bookId = bookId,
-                        title = manifest.title,
-                        description = manifest.description,
-                        publisher = null,
-                        published = manifest.publishedYear,
-                        language = null,
-                    )
-
-                    metadataQueries.insertEdition(
-                        bookId = bookId,
-                        format = BookFormat.AUDIOBOOK,
-                        path = storagePath,
-                        fileHash = null,
-                        narrator = null,
-                        translator = null,
-                        isbn10 = null,
-                        isbn13 = null,
-                        asin = ASIN.fromRaw(manifest.asin),
-                        pages = null,
-                        totalTime = manifest.durationSeconds,
-                        size = Files.size(manifest.audioPath),
-                    )
+                    val claimed =
+                        podcastQueries
+                            .claimEpisodeGuid(
+                                podcastId = podcastId,
+                                guid = guid,
+                                episodeId = episodeId,
+                            )
+                            .executeAsOneOrNull()
+                    if (claimed == null) {
+                        podcastQueries.deleteEpisodeById(episodeId)
+                        return@transactionWithResult LibationImportOutcome.Skipped
+                    }
 
                     podcastQueries.bumpVersion(podcastId)
                     podcastQueries.updateLastFetched(
@@ -174,7 +154,7 @@ class LibationManifestImporter(
                         manifest = manifest,
                         seriesId = seriesId,
                         podcastId = podcastId,
-                        bookId = bookId,
+                        episodeId = episodeId,
                         status = "IMPORTED",
                         lastError = null,
                         firstImportedAt =
@@ -191,7 +171,7 @@ class LibationManifestImporter(
                     manifest = manifest,
                     seriesId = seriesId,
                     podcastId = podcastId,
-                    bookId = record?.book_id,
+                    episodeId = record?.episode_id,
                     status = "FAILED",
                     lastError = error.message ?: "Unknown import error",
                     firstImportedAt = record?.first_imported_at,
@@ -205,7 +185,7 @@ class LibationManifestImporter(
         manifest: LibationResolvedManifest,
         seriesId: SeriesId?,
         podcastId: PodcastId?,
-        bookId: BookId?,
+        episodeId: PodcastEpisodeId?,
         status: String,
         lastError: String?,
         firstImportedAt: OffsetDateTime?,
@@ -215,7 +195,8 @@ class LibationManifestImporter(
             asin = manifest.asin,
             seriesId = seriesId,
             podcastId = podcastId,
-            bookId = bookId,
+            episodeId = episodeId,
+            bookId = null,
             manifestPath = manifest.manifestPath.toString(),
             audioPath = manifest.audioPath.toString(),
             status = status,
@@ -233,22 +214,18 @@ class LibationManifestImporter(
             seriesQueries.insert(seriesTitle).executeAsOne()
         }
 
-    private fun createPodcastForSeries(seriesId: SeriesId, asin: String): PodcastId =
-        podcastQueries
-            .insert(
-                seriesId = seriesId,
-                feedUrl = FeedUrl.fromRaw("https://libation.local/${asin.lowercase()}"),
-                feedToken = FeedToken.generate(),
-                autoSanitize = true,
-                autoFetch = true,
-                fetchIntervalMinutes = 1_440,
-            )
-            .executeAsOne()
-
-    private fun guidExists(podcastId: PodcastId, guid: String): Boolean =
-        podcastQueries
-            .selectGuidByPodcastAndGuid(podcastId = podcastId, guid = guid)
-            .executeAsOneOrNull() != null
+    private fun findOrCreatePodcastForSeries(seriesId: SeriesId): PodcastId =
+        podcastQueries.selectBySeriesId(seriesId).executeAsOneOrNull()?.id
+            ?: podcastQueries
+                .insert(
+                    seriesId = seriesId,
+                    feedUrl = FeedUrl.fromRaw("https://libation.local/series/${seriesId.value}"),
+                    feedToken = FeedToken.generate(),
+                    autoSanitize = true,
+                    autoFetch = false,
+                    fetchIntervalMinutes = 1_440,
+                )
+                .executeAsOne()
 
     private fun episodeAudioStoragePath(
         seriesId: SeriesId,
@@ -262,6 +239,87 @@ class LibationManifestImporter(
         return base.resolve("$title-$asin.$extension")
     }
 
+    private suspend fun extractAndPersistCover(
+        seriesId: SeriesId,
+        podcastId: PodcastId,
+        manifest: LibationResolvedManifest,
+    ): StoragePath? =
+        withContext(Dispatchers.IO) {
+            val tempCover =
+                extractEmbeddedCoverToTemp(manifest.audioPath) ?: return@withContext null
+            val coverPath = episodeCoverStoragePath(seriesId, podcastId, manifest)
+            try {
+                val saved =
+                    either { storageService.save(coverPath, tempCover) }.fold({ false }, { true })
+                if (!saved) {
+                    logger.warn { "Failed to persist Libation embedded cover to managed storage." }
+                    return@withContext null
+                }
+                // Thumbnail generation is optional for import success.
+                either { storageService.generateThumbnail(coverPath) }
+                coverPath
+            } finally {
+                runCatching { tempCover.deleteIfExists() }
+            }
+        }
+
+    private suspend fun backfillCoverIfMissing(
+        episodeId: PodcastEpisodeId?,
+        seriesId: SeriesId?,
+        podcastId: PodcastId?,
+        manifest: LibationResolvedManifest,
+    ) {
+        if (episodeId == null || seriesId == null || podcastId == null) return
+        withContext(Dispatchers.IO) {
+            val existing =
+                podcastQueries.selectEpisodeById(episodeId).executeAsOneOrNull()
+                    ?: return@withContext
+            if (existing.cover_path != null) return@withContext
+            val coverPath =
+                extractAndPersistCover(seriesId, podcastId, manifest) ?: return@withContext
+            podcastQueries.updateEpisodeCoverPath(coverPath = coverPath, episodeId = episodeId)
+        }
+    }
+
+    private fun extractEmbeddedCoverToTemp(audioPath: java.nio.file.Path): java.nio.file.Path? {
+        val tempCover = Files.createTempFile("shelf-libation-cover-", ".jpg")
+        val process =
+            runCatching { ffmpeg(audioPath, tempCover).start() }
+                .getOrElse {
+                    runCatching { tempCover.deleteIfExists() }
+                    logger.debug { "Libation cover extraction skipped: ffmpeg unavailable." }
+                    return null
+                }
+
+        return try {
+            if (!process.waitFor(30, TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                runCatching { tempCover.deleteIfExists() }
+                logger.debug { "Libation cover extraction timed out for ${audioPath.pathString}." }
+                null
+            } else if (process.exitValue() == 0 && Files.size(tempCover) > 0) {
+                tempCover
+            } else {
+                runCatching { tempCover.deleteIfExists() }
+                null
+            }
+        } catch (_: Exception) {
+            runCatching { tempCover.deleteIfExists() }
+            null
+        }
+    }
+
+    private fun episodeCoverStoragePath(
+        seriesId: SeriesId,
+        podcastId: PodcastId,
+        manifest: LibationResolvedManifest,
+    ): StoragePath {
+        val base = StoragePath.fromRaw("podcasts/${seriesId.value}/${podcastId.value}/episodes")
+        val title = StoragePath.safeSegment(manifest.title, "episode")
+        val asin = StoragePath.safeSegment(manifest.asin.lowercase(), "asin")
+        return base.resolve("$title-$asin-cover.jpg")
+    }
+
     private fun sourceKey(asin: String): String = "libation:${asin.lowercase()}"
 }
 
@@ -272,6 +330,3 @@ sealed interface LibationImportOutcome {
 
     data class Failed(val message: String) : LibationImportOutcome
 }
-
-private fun Instant.toOffsetDateTimeUtc(): OffsetDateTime =
-    OffsetDateTime.ofInstant(java.time.Instant.ofEpochMilli(toEpochMilliseconds()), ZoneOffset.UTC)

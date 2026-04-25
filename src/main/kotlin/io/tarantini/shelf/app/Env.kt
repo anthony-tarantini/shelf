@@ -44,15 +44,17 @@ data class Env(
         val libationScanIntervalSeconds: Long,
         val podcastScheduleIntervalSeconds: Long,
         val minuspodUrl: String,
-        val minuspodAdminPassword: String,
+        val minuspodAdminPassword: String?,
     ) {
         companion object {
-            fun fromEnv() =
-                Integration(
-                    encryptionSecret =
-                        getenv("ENCRYPTION_SECRET")
-                            ?: getenv("JWT_SECRET")
-                            ?: "insecure-local-default-change-me",
+            private const val INSECURE_DEFAULT_SECRET = "insecure-local-default-change-me"
+
+            fun fromEnv(): Integration {
+                val encryptionSecret = getenv("ENCRYPTION_SECRET") ?: INSECURE_DEFAULT_SECRET
+                val minuspodPassword = getenv("MINUSPOD_ADMIN_PASSWORD")
+
+                return Integration(
+                    encryptionSecret = encryptionSecret,
                     libationImportEnabled =
                         getenv("LIBATION_IMPORT_ENABLED")?.toBooleanStrictOrNull() ?: true,
                     libationDropDir = getenv("LIBATION_DROP_DIR") ?: "./data/libation-export",
@@ -61,8 +63,9 @@ data class Env(
                     podcastScheduleIntervalSeconds =
                         getenv("PODCAST_SCHEDULE_INTERVAL_SECONDS")?.toLongOrNull() ?: 60,
                     minuspodUrl = getenv("MINUSPOD_URL") ?: "http://minuspod:8080",
-                    minuspodAdminPassword = getenv("MINUSPOD_ADMIN_PASSWORD") ?: "admin",
+                    minuspodAdminPassword = minuspodPassword,
                 )
+            }
         }
     }
 

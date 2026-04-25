@@ -108,21 +108,17 @@ private class PodcastAggregateService(
     context(_: RaiseContext)
     override suspend fun rotateToken(id: PodcastId): SavedPodcastRoot =
         withContext(Dispatchers.IO) {
-            mutationRepository.getPodcastById(id)
             val newToken = FeedToken.generate()
             val graceExpiresAt =
                 kotlin.time.Clock.System.now().plus(kotlin.time.Duration.parse("7d"))
             mutationRepository.rotateToken(id, newToken, graceExpiresAt)
-            mutationRepository.getPodcastById(id)
         }
 
     context(_: RaiseContext)
     override suspend fun revokeToken(id: PodcastId): SavedPodcastRoot =
         withContext(Dispatchers.IO) {
-            mutationRepository.getPodcastById(id)
             val newToken = FeedToken.generate()
             mutationRepository.revokeToken(id, newToken)
-            mutationRepository.getPodcastById(id)
         }
 
     context(_: RaiseContext)

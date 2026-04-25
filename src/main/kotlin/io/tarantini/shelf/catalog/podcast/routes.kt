@@ -102,6 +102,15 @@ fun Route.podcastRoutes(
         }
     }
 
+    delete<PodcastsResource.Id.Credentials> { resource ->
+        sharedCatalogMutation(jwtService) {
+            respond(
+                { podcastService.clearFeedCredentials(PodcastId(resource.parent.id)) },
+                HttpStatusCode.NoContent,
+            )
+        }
+    }
+
     delete<PodcastsResource.Id> { resource ->
         sharedCatalogMutation(jwtService) {
             respond(

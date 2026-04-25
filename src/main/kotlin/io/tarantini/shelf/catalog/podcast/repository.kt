@@ -3,12 +3,13 @@
 package io.tarantini.shelf.catalog.podcast
 
 import io.tarantini.shelf.RaiseContext
-import io.tarantini.shelf.catalog.book.domain.BookId
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.NewPodcastRoot
+import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastRoot
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
+import io.tarantini.shelf.processing.storage.StoragePath
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
@@ -46,16 +47,20 @@ interface PodcastMutationRepository {
     suspend fun bumpVersion(id: PodcastId): SavedPodcastRoot
 
     context(_: RaiseContext)
-    suspend fun claimGuid(podcastId: PodcastId, guid: String, bookId: BookId): String?
+    suspend fun claimGuid(podcastId: PodcastId, guid: String, episodeId: PodcastEpisodeId): String?
 
     context(_: RaiseContext)
-    suspend fun createEpisodeOrdering(
+    suspend fun createEpisode(
         podcastId: PodcastId,
-        bookId: BookId,
+        title: String,
+        coverPath: StoragePath?,
+        audioPath: StoragePath,
+        audioSize: Long,
+        totalTime: Double?,
         season: Int,
         episode: Int,
         publishedAt: Instant?,
-    )
+    ): PodcastEpisodeId
 
     context(_: RaiseContext)
     suspend fun deletePodcast(id: PodcastId)
@@ -141,27 +146,37 @@ private class SqlDelightPodcastMutationRepository(private val queries: PodcastQu
         }
 
     context(_: RaiseContext)
-    override suspend fun claimGuid(podcastId: PodcastId, guid: String, bookId: BookId): String? =
-        withContext(Dispatchers.IO) { queries.claimGuid(podcastId, guid, bookId) }
+    override suspend fun claimGuid(
+        podcastId: PodcastId,
+        guid: String,
+        episodeId: PodcastEpisodeId,
+    ): String? = withContext(Dispatchers.IO) { queries.claimGuid(podcastId, guid, episodeId) }
 
     context(_: RaiseContext)
-    override suspend fun createEpisodeOrdering(
+    override suspend fun createEpisode(
         podcastId: PodcastId,
-        bookId: BookId,
+        title: String,
+        coverPath: StoragePath?,
+        audioPath: StoragePath,
+        audioSize: Long,
+        totalTime: Double?,
         season: Int,
         episode: Int,
         publishedAt: Instant?,
-    ) {
+    ): PodcastEpisodeId =
         withContext(Dispatchers.IO) {
-            queries.createEpisodeOrdering(
+            queries.createEpisode(
                 podcastId = podcastId,
-                bookId = bookId,
+                title = title,
+                coverPath = coverPath,
+                audioPath = audioPath,
+                audioSize = audioSize,
+                totalTime = totalTime,
                 season = season,
                 episode = episode,
                 publishedAt = publishedAt,
             )
         }
-    }
 
     context(_: RaiseContext)
     override suspend fun deletePodcast(id: PodcastId) {

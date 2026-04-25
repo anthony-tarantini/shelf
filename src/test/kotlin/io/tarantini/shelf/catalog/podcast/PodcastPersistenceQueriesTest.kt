@@ -6,6 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.tarantini.shelf.IntegrationSpec
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
+import io.tarantini.shelf.processing.storage.StoragePath
 import java.time.OffsetDateTime
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -37,18 +38,50 @@ class PodcastPersistenceQueriesTest :
             testWithDeps { deps ->
                 val (podcastId, _) = createPodcast(deps)
                 val guid = unique("guid")
-                val firstBook =
-                    deps.database.bookQueries.insert(unique("podcast-book"), null).executeAsOne()
-                val secondBook =
-                    deps.database.bookQueries.insert(unique("podcast-book"), null).executeAsOne()
+                val firstEpisode =
+                    deps.database.podcastQueries
+                        .insertEpisode(
+                            podcastId = podcastId,
+                            title = unique("episode"),
+                            coverPath = null,
+                            audioPath = StoragePath.fromRaw("podcasts/tests/one.mp3"),
+                            audioSize = 100,
+                            totalTime = 10.0,
+                            season = 1,
+                            episode = 1,
+                            publishedAt = OffsetDateTime.now(),
+                        )
+                        .executeAsOne()
+                val secondEpisode =
+                    deps.database.podcastQueries
+                        .insertEpisode(
+                            podcastId = podcastId,
+                            title = unique("episode"),
+                            coverPath = null,
+                            audioPath = StoragePath.fromRaw("podcasts/tests/two.mp3"),
+                            audioSize = 100,
+                            totalTime = 10.0,
+                            season = 1,
+                            episode = 2,
+                            publishedAt = OffsetDateTime.now(),
+                        )
+                        .executeAsOne()
 
                 val firstClaim =
                     deps.database.podcastQueries
-                        .claimEpisodeGuid(podcastId = podcastId, guid = guid, bookId = firstBook)
+                        .claimEpisodeGuid(
+                            podcastId = podcastId,
+                            guid = guid,
+                            episodeId = firstEpisode,
+                        )
                         .executeAsOne()
                 val secondClaim =
                     deps.database.podcastQueries
-                        .claimEpisodeGuid(podcastId = podcastId, guid = guid, bookId = secondBook)
+                        .claimEpisodeGuid(
+                            podcastId = podcastId,
+                            guid = guid,
+                            episodeId = secondEpisode,
+                        )
                         .executeAsOneOrNull()
 
                 firstClaim shouldBe guid
@@ -188,23 +221,49 @@ class PodcastPersistenceQueriesTest :
         "selectMaxEpisodeForSeason should return max episode for season" {
             testWithDeps { deps ->
                 val (podcastId, _) = createPodcast(deps)
-                val bookA = deps.database.bookQueries.insert(unique("book-a"), null).executeAsOne()
-                val bookB = deps.database.bookQueries.insert(unique("book-b"), null).executeAsOne()
+                val episodeA =
+                    deps.database.podcastQueries
+                        .insertEpisode(
+                            podcastId = podcastId,
+                            title = unique("episode-a"),
+                            coverPath = null,
+                            audioPath = StoragePath.fromRaw("podcasts/tests/a.mp3"),
+                            audioSize = 100,
+                            totalTime = 10.0,
+                            season = 1,
+                            episode = 4,
+                            publishedAt = OffsetDateTime.now().minusDays(2),
+                        )
+                        .executeAsOne()
+                val episodeB =
+                    deps.database.podcastQueries
+                        .insertEpisode(
+                            podcastId = podcastId,
+                            title = unique("episode-b"),
+                            coverPath = null,
+                            audioPath = StoragePath.fromRaw("podcasts/tests/b.mp3"),
+                            audioSize = 100,
+                            totalTime = 10.0,
+                            season = 1,
+                            episode = 9,
+                            publishedAt = OffsetDateTime.now().minusDays(1),
+                        )
+                        .executeAsOne()
 
-                deps.database.podcastQueries.insertEpisodeOrdering(
-                    podcastId = podcastId,
-                    bookId = bookA,
-                    season = 1,
-                    episode = 4,
-                    publishedAt = OffsetDateTime.now().minusDays(2),
-                )
-                deps.database.podcastQueries.insertEpisodeOrdering(
-                    podcastId = podcastId,
-                    bookId = bookB,
-                    season = 1,
-                    episode = 9,
-                    publishedAt = OffsetDateTime.now().minusDays(1),
-                )
+                deps.database.podcastQueries
+                    .claimEpisodeGuid(
+                        podcastId = podcastId,
+                        guid = unique("guid-a"),
+                        episodeId = episodeA,
+                    )
+                    .executeAsOne()
+                deps.database.podcastQueries
+                    .claimEpisodeGuid(
+                        podcastId = podcastId,
+                        guid = unique("guid-b"),
+                        episodeId = episodeB,
+                    )
+                    .executeAsOne()
 
                 deps.database.podcastQueries
                     .selectMaxEpisodeForSeason(podcastId, 1)

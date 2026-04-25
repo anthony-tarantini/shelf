@@ -5,10 +5,11 @@ package io.tarantini.shelf.catalog.podcast
 import arrow.core.raise.context.raise
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.toKotlinInstant
-import io.tarantini.shelf.catalog.book.domain.BookId
+import io.tarantini.shelf.app.toOffsetDateTimeUtc
 import io.tarantini.shelf.catalog.podcast.domain.EpisodeEntry
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
+import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import io.tarantini.shelf.catalog.podcast.domain.PodcastNotFound
 import io.tarantini.shelf.catalog.podcast.domain.PodcastRoot
@@ -19,8 +20,7 @@ import io.tarantini.shelf.catalog.podcast.persistence.PodcastSummaries
 import io.tarantini.shelf.catalog.podcast.persistence.Podcasts
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.processing.sanitization.domain.SanitizationStatus
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
+import io.tarantini.shelf.processing.storage.StoragePath
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -103,8 +103,12 @@ fun PodcastQueries.getDuePodcasts(): List<SavedPodcastRoot> =
     selectDuePodcasts().executeAsList().map { it.toRoot() }
 
 context(_: RaiseContext)
-fun PodcastQueries.claimGuid(podcastId: PodcastId, guid: String, bookId: BookId): String? =
-    claimEpisodeGuid(podcastId = podcastId, guid = guid, bookId = bookId).executeAsOneOrNull()
+fun PodcastQueries.claimGuid(
+    podcastId: PodcastId,
+    guid: String,
+    episodeId: PodcastEpisodeId,
+): String? =
+    claimEpisodeGuid(podcastId = podcastId, guid = guid, episodeId = episodeId).executeAsOneOrNull()
 
 context(_: RaiseContext)
 fun PodcastQueries.guidExists(podcastId: PodcastId, guid: String): Boolean =
@@ -115,21 +119,29 @@ fun PodcastQueries.getMaxEpisodeForSeason(podcastId: PodcastId, season: Int): In
     selectMaxEpisodeForSeason(podcastId, season).executeAsOne()
 
 context(_: RaiseContext)
-fun PodcastQueries.createEpisodeOrdering(
+fun PodcastQueries.createEpisode(
     podcastId: PodcastId,
-    bookId: BookId,
+    title: String,
+    coverPath: StoragePath?,
+    audioPath: StoragePath,
+    audioSize: Long,
+    totalTime: Double?,
     season: Int,
     episode: Int,
     publishedAt: Instant?,
-) {
-    insertEpisodeOrdering(
-        podcastId = podcastId,
-        bookId = bookId,
-        season = season,
-        episode = episode,
-        publishedAt = publishedAt.toOffsetDateTimeUtc(),
-    )
-}
+): PodcastEpisodeId =
+    insertEpisode(
+            podcastId = podcastId,
+            title = title,
+            coverPath = coverPath,
+            audioPath = audioPath,
+            audioSize = audioSize,
+            totalTime = totalTime,
+            season = season,
+            episode = episode,
+            publishedAt = publishedAt.toOffsetDateTimeUtc(),
+        )
+        .executeAsOne()
 
 context(_: RaiseContext)
 fun PodcastQueries.deletePodcast(id: PodcastId) {
@@ -140,7 +152,7 @@ context(_: RaiseContext)
 fun PodcastQueries.getEpisodesByPodcastId(podcastId: PodcastId): List<EpisodeEntry> =
     selectEpisodesByPodcastId(podcastId).executeAsList().map {
         EpisodeEntry(
-            bookId = it.book_id,
+            id = it.id,
             title = it.title,
             season = it.season,
             episode = it.episode,
@@ -185,11 +197,3 @@ private fun Podcasts.toRoot() =
         fetchIntervalMinutes = fetch_interval_minutes,
         version = version,
     )
-
-private fun Instant?.toOffsetDateTimeUtc(): OffsetDateTime? =
-    this?.let {
-        OffsetDateTime.ofInstant(
-            java.time.Instant.ofEpochMilli(it.toEpochMilliseconds()),
-            ZoneOffset.UTC,
-        )
-    }

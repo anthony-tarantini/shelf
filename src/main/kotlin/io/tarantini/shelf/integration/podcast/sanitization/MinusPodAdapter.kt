@@ -47,7 +47,7 @@ data class MinusPodEpisode(
     val proxyUrl: String? = null,
 )
 
-fun minusPodAdapter(baseUrl: String, adminPassword: String): MinusPodAdapter =
+fun minusPodAdapter(baseUrl: String, adminPassword: String?): MinusPodAdapter =
     DefaultMinusPodAdapter(
         baseUrl,
         adminPassword,
@@ -56,7 +56,7 @@ fun minusPodAdapter(baseUrl: String, adminPassword: String): MinusPodAdapter =
 
 private class DefaultMinusPodAdapter(
     private val baseUrl: String,
-    private val adminPassword: String,
+    private val adminPassword: String?,
     private val httpClient: HttpClient,
 ) : MinusPodAdapter {
     private val json = Json { ignoreUnknownKeys = true }
@@ -65,13 +65,13 @@ private class DefaultMinusPodAdapter(
     override suspend fun registerFeed(feedUrl: String): MinusPodFeed {
         val payload = buildJsonObject { put("url", feedUrl) }
 
-        val request =
+        val builder =
             HttpRequest.newBuilder()
                 .uri(URI("$baseUrl/api/v1/feeds"))
                 .header("Content-Type", "application/json")
-                .header("X-Admin-Password", adminPassword)
                 .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
-                .build()
+        adminPassword?.let { builder.header("X-Admin-Password", it) }
+        val request = builder.build()
 
         val response =
             withContext(Dispatchers.IO) {
@@ -88,12 +88,10 @@ private class DefaultMinusPodAdapter(
 
     context(_: RaiseContext)
     override suspend fun listEpisodes(slug: String): List<MinusPodEpisode> {
-        val request =
-            HttpRequest.newBuilder()
-                .uri(URI("$baseUrl/api/v1/feeds/$slug/episodes"))
-                .header("X-Admin-Password", adminPassword)
-                .GET()
-                .build()
+        val builder =
+            HttpRequest.newBuilder().uri(URI("$baseUrl/api/v1/feeds/$slug/episodes")).GET()
+        adminPassword?.let { builder.header("X-Admin-Password", it) }
+        val request = builder.build()
 
         val response =
             withContext(Dispatchers.IO) {
@@ -110,12 +108,12 @@ private class DefaultMinusPodAdapter(
 
     context(_: RaiseContext)
     override suspend fun triggerReprocess(slug: String) {
-        val request =
+        val builder =
             HttpRequest.newBuilder()
                 .uri(URI("$baseUrl/api/v1/feeds/$slug/reprocess-all"))
-                .header("X-Admin-Password", adminPassword)
                 .POST(HttpRequest.BodyPublishers.noBody())
-                .build()
+        adminPassword?.let { builder.header("X-Admin-Password", it) }
+        val request = builder.build()
 
         val response =
             withContext(Dispatchers.IO) {

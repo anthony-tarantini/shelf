@@ -26,6 +26,7 @@ This project follows a strict **Domain-Driven Design (DDD)** approach. Before ma
 -   **Series Modeling:** Do not assume series title uniqueness across the whole catalog; use IDs/scoped resolution rules.
 -   **Boundary Mapping:** For complex mutations, keep request DTOs at the route boundary and map them into validated domain commands before service calls.
 -   **Thin Routes:** Keep read projections and asset/path selection logic in service/provider interfaces; route files should remain boundary adapters.
+-   **Podcast Separation:** Keep podcast episode ingestion data in podcast-domain persistence (`podcast_episodes`, `episode_guids`) rather than `books`/`editions`.
 -   **Orchestration Pattern:** For complex write paths, prefer `load -> domain decider/aggregate decisions -> repository persist -> domain event handling` over monolithic service scripts.
 -   **Typed Error Flows:** Do not throw ad hoc exceptions from domain/service logic for expected behavior; use typed `AppError` + `RaiseContext`.
 

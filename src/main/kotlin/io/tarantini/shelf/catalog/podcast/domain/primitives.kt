@@ -41,6 +41,27 @@ value class PodcastId private constructor(override val value: Uuid) : UuidValueC
 
 @JvmInline
 @Serializable
+value class PodcastEpisodeId private constructor(override val value: Uuid) : UuidValueClass {
+    companion object {
+        context(_: RaiseContext)
+        operator fun invoke(raw: String?): PodcastEpisodeId {
+            ensureNotNull(raw) { InvalidEpisodeIndex }
+            ensure(raw.isNotEmpty()) { InvalidEpisodeIndex }
+            return PodcastEpisodeId(ensureNotNull(Uuid.parseOrNull(raw)) { InvalidEpisodeIndex })
+        }
+
+        fun fromRaw(value: Uuid) = PodcastEpisodeId(value)
+
+        fun fromRaw(value: UUID) = PodcastEpisodeId(value.toKotlinUuid())
+
+        fun fromRaw(value: String) = PodcastEpisodeId(Uuid.parse(value))
+
+        val adapter = object : UuidAdapter<PodcastEpisodeId>(::fromRaw) {}
+    }
+}
+
+@JvmInline
+@Serializable
 value class FeedUrl private constructor(override val value: String) : StringValueClass {
     companion object {
         context(_: RaiseContext)

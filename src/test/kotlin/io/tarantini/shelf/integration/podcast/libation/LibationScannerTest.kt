@@ -70,4 +70,41 @@ class LibationScannerTest :
             result.invalidManifestCount shouldBe 1
             result.manifests.shouldHaveSize(0)
         }
+
+        "scan supports audio-only exports by inferring metadata from file paths" {
+            val root = Files.createTempDirectory("libation-audio-only")
+            val seriesDir = root.resolve("Once We Were Spacemen [B0FZD2PWVV]").createDirectories()
+            val audioPath =
+                seriesDir.resolve(
+                    "Once We Were Spacemen with Nathan Fillion & Alan Tudyk | Episode 1 [B0FZV3RCXV].mp3"
+                )
+            Files.write(audioPath, byteArrayOf(4, 5, 6))
+
+            val result = LibationScanner(LibationManifestParser()).scan(root)
+            result.discoveredCount shouldBe 1
+            result.validManifestCount shouldBe 1
+            result.invalidManifestCount shouldBe 0
+            result.manifests.shouldHaveSize(1)
+            val manifest = result.manifests.first()
+            manifest.asin shouldBe "B0FZV3RCXV"
+            manifest.title shouldBe
+                "Once We Were Spacemen with Nathan Fillion & Alan Tudyk | Episode 1"
+            manifest.seriesTitle shouldBe "Once We Were Spacemen"
+            manifest.audioPath shouldBe audioPath.toRealPath()
+            manifest.description shouldBe null
+            manifest.publishedYear shouldBe null
+            manifest.durationSeconds shouldBe null
+        }
+
+        "scan marks audio-only exports invalid when ASIN cannot be inferred" {
+            val root = Files.createTempDirectory("libation-audio-invalid")
+            val audioPath = root.resolve("episode-without-asin.mp3")
+            Files.write(audioPath, byteArrayOf(1, 2, 3))
+
+            val result = LibationScanner(LibationManifestParser()).scan(root)
+            result.discoveredCount shouldBe 1
+            result.validManifestCount shouldBe 0
+            result.invalidManifestCount shouldBe 1
+            result.manifests.shouldHaveSize(0)
+        }
     })

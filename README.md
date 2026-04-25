@@ -33,6 +33,7 @@ Shelf is a modern, type-safe book management backend built with **Kotlin**, **Kt
 - **JWT Authentication:** Secure user identity and authenticated routes with full privacy scoping.
 - **Private Media Access:** Book files are served through explicit API routes instead of raw disk mounts.
 - **Libation Container Ingestion:** Podcast imports use a Libation container writing manifests/audio into a shared drop directory scanned by Shelf.
+- **Podcast-Native Persistence:** Podcast episodes are stored in podcast-domain tables (`podcast_episodes`, `episode_guids`) instead of `books`/`editions`.
 - **Explicit Access Policy:** Shared catalog access and user-owned resource checks use named policy helpers rather than ad hoc authorization branches.
 - **Optimized API:** `Summary` views for listing; comprehensive `Aggregate` views for detail pages.
 - **Responsive Web UI:** Mobile-first catalog and reader shell with dedicated phone navigation.
@@ -218,6 +219,8 @@ In hybrid mode, the backend entrypoint injects the JVM agent and disables agent-
 - Grafana LGTM: `http://localhost:3001`
 - Libation container: `http://localhost:5299`
 
+The `libation` service is built from the local `./libation` directory by default (tag: `LIBATION_IMAGE`, default `tarantini-io/shelf/libation:local`).
+
 Frontend waits for backend health before starting. Backend health is based on `/readiness`.
 
 Compose-specific networking defaults:
@@ -240,6 +243,7 @@ Shelf treats Libation as a containerized producer and consumes files from a shar
 - `libation` service mounts:
   - `./data/libation` as Libation config/state
   - `./data/libation-export` as export output
+  - optional runtime overrides: `LIBATION_PUID`, `LIBATION_PGID`, `LIBATION_TZ`
 
 Manual and status endpoints:
 

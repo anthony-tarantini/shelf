@@ -4,7 +4,6 @@ package io.tarantini.shelf.catalog.podcast.domain
 
 import io.tarantini.shelf.app.Identity
 import io.tarantini.shelf.app.PersistenceState
-import io.tarantini.shelf.catalog.book.domain.BookId
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.processing.sanitization.domain.SanitizationStatus
 import io.tarantini.shelf.processing.storage.StoragePath
@@ -101,15 +100,12 @@ data class PodcastDashboard(val podcasts: List<PodcastSummary>, val libation: Li
 @Serializable
 data class PodcastAggregate<S : PersistenceState>(
     val podcast: PodcastRoot<S>,
-    val seriesId: SeriesId,
     val seriesTitle: String,
     val episodes: List<EpisodeEntry> = emptyList(),
     val credential: CredentialStatus,
 )
 
 typealias SavedPodcastAggregate = PodcastAggregate<PersistenceState.Persisted>
-
-typealias NewPodcastAggregate = PodcastAggregate<PersistenceState.Unsaved>
 
 @Serializable
 data class PodcastSummary(
@@ -127,7 +123,7 @@ data class PodcastSummary(
 
 @Serializable
 data class EpisodeEntry(
-    val bookId: BookId,
+    val id: PodcastEpisodeId,
     val title: String,
     val season: Int,
     val episode: Int,

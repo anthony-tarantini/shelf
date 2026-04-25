@@ -214,6 +214,16 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
 
+        if (env.integration.encryptionSecret == "insecure-local-default-change-me") {
+            logger.warn {
+                "ENCRYPTION_SECRET is not set — using insecure default. Set ENCRYPTION_SECRET for production."
+            }
+        }
+        if (env.integration.minuspodAdminPassword == null) {
+            logger.warn {
+                "MINUSPOD_ADMIN_PASSWORD is not set — MinusPod requests will not include auth."
+            }
+        }
         val encryptionService = EncryptionService(env.integration.encryptionSecret)
         val credentialService = podcastCredentialService(credentialsQueries, encryptionService)
         val podcastLibationService =
@@ -224,8 +234,6 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 libationImportQueries = libationImportQueries,
                 seriesQueries = seriesQueries,
                 podcastQueries = podcastQueries,
-                bookQueries = bookQueries,
-                metadataQueries = metadataQueries,
                 storageService = storageService,
             )
         val minusPodAdapter =
@@ -254,8 +262,6 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 readRepository = podcastReadRepository,
                 mutationRepository = podcastMutationRepository,
                 podcastQueries = podcastQueries,
-                bookQueries = bookQueries,
-                metadataQueries = metadataQueries,
                 storageService = storageService,
                 credentialService = credentialService,
                 feedFetchAdapter = feedFetchAdapter(),

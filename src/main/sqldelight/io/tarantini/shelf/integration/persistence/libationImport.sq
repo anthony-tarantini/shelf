@@ -1,5 +1,6 @@
 import io.tarantini.shelf.catalog.book.domain.BookId;
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId;
+import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId;
 import io.tarantini.shelf.catalog.series.domain.SeriesId;
 
 CREATE TABLE IF NOT EXISTS libation_import_runs (
@@ -21,6 +22,7 @@ CREATE TABLE IF NOT EXISTS libation_import_records (
     asin TEXT NOT NULL,
     series_id UUID AS SeriesId REFERENCES series(id) ON DELETE SET NULL,
     podcast_id UUID AS PodcastId REFERENCES podcasts(id) ON DELETE SET NULL,
+    episode_id UUID AS PodcastEpisodeId REFERENCES podcast_episodes(id) ON DELETE SET NULL,
     book_id UUID AS BookId REFERENCES books(id) ON DELETE SET NULL,
     manifest_path TEXT NOT NULL,
     audio_path TEXT NOT NULL,
@@ -60,11 +62,11 @@ SELECT * FROM libation_import_records WHERE source_key = :sourceKey;
 
 upsertRecord:
 INSERT INTO libation_import_records (
-    source_key, asin, series_id, podcast_id, book_id,
+    source_key, asin, series_id, podcast_id, episode_id, book_id,
     manifest_path, audio_path, status, last_error, first_imported_at, last_seen_at, updated_at
 )
 VALUES (
-    :sourceKey, :asin, :seriesId, :podcastId, :bookId,
+    :sourceKey, :asin, :seriesId, :podcastId, :episodeId, :bookId,
     :manifestPath, :audioPath, :status, :lastError, :firstImportedAt, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 )
 ON CONFLICT (source_key)
@@ -72,6 +74,7 @@ DO UPDATE SET
     asin = EXCLUDED.asin,
     series_id = EXCLUDED.series_id,
     podcast_id = EXCLUDED.podcast_id,
+    episode_id = EXCLUDED.episode_id,
     book_id = EXCLUDED.book_id,
     manifest_path = EXCLUDED.manifest_path,
     audio_path = EXCLUDED.audio_path,

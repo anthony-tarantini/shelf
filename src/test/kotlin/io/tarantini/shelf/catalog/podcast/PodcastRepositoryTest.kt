@@ -10,6 +10,7 @@ import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
 import io.tarantini.shelf.catalog.podcast.domain.PodcastRoot
+import io.tarantini.shelf.processing.storage.StoragePath
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
@@ -84,11 +85,21 @@ class PodcastRepositoryTest :
                             )
                         )
 
-                    val book =
-                        deps.database.bookQueries.insert(unique("ep-book"), null).executeAsOne()
+                    val episodeId =
+                        mutationRepo.createEpisode(
+                            podcastId = created.id.id,
+                            title = unique("episode"),
+                            coverPath = null,
+                            audioPath = StoragePath.fromRaw("podcasts/tests/repo-episode.mp3"),
+                            audioSize = 100L,
+                            totalTime = 60.0,
+                            season = 0,
+                            episode = 1,
+                            publishedAt = null,
+                        )
                     val guid = unique("guid")
-                    mutationRepo.claimGuid(created.id.id, guid, book) shouldBe guid
-                    mutationRepo.claimGuid(created.id.id, guid, book) shouldBe null
+                    mutationRepo.claimGuid(created.id.id, guid, episodeId) shouldBe guid
+                    mutationRepo.claimGuid(created.id.id, guid, episodeId) shouldBe null
                     readRepo.guidExists(created.id.id, guid) shouldBe true
 
                     mutationRepo.markFetched(

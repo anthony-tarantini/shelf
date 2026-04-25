@@ -336,7 +336,6 @@ export interface PodcastDashboard {
 
 export interface PodcastAggregate {
   podcast: SavedPodcastRoot;
-  seriesId: string;
   seriesTitle: string;
   episodes: EpisodeEntry[];
   credential: CredentialStatus;

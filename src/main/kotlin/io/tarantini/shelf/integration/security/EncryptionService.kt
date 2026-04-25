@@ -1,5 +1,6 @@
 package io.tarantini.shelf.integration.security
 
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
@@ -42,8 +43,16 @@ class EncryptionService(encryptionSecret: String) {
     }
 
     private fun deriveKey(secret: String): SecretKey {
+        val salt = deriveSalt(secret)
         val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-        val spec = PBEKeySpec(secret.toCharArray(), "shelf-integration".toByteArray(), 100_000, 256)
+        val spec = PBEKeySpec(secret.toCharArray(), salt, 100_000, 256)
         return SecretKeySpec(factory.generateSecret(spec).encoded, "AES")
+    }
+
+    private fun deriveSalt(secret: String): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        digest.update(secret.toByteArray())
+        digest.update("shelf-salt-derivation".toByteArray())
+        return digest.digest().copyOf(16)
     }
 }

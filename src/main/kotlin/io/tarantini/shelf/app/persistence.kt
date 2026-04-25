@@ -30,9 +30,10 @@ import io.tarantini.shelf.catalog.persistence.Series_authors
 import io.tarantini.shelf.catalog.persistence.Series_books
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
+import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import io.tarantini.shelf.catalog.podcast.persistence.Episode_guids
-import io.tarantini.shelf.catalog.podcast.persistence.Episode_ordering
+import io.tarantini.shelf.catalog.podcast.persistence.Podcast_episodes
 import io.tarantini.shelf.catalog.podcast.persistence.Podcasts
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.catalog.series.persistence.Series
@@ -117,6 +118,11 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
 
     // Series model migration: title is no longer globally unique.
     driver.execute(null, "ALTER TABLE series DROP CONSTRAINT IF EXISTS series_title_key;", 0)
+    driver.execute(
+        null,
+        "ALTER TABLE libation_import_records ADD COLUMN IF NOT EXISTS episode_id UUID;",
+        0,
+    )
 
     return Database(
         driver,
@@ -148,8 +154,14 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
                 feed_tokenAdapter = FeedToken.adapter,
                 feed_token_previousAdapter = FeedToken.adapter,
             ),
-        episode_guidsAdapter = Episode_guids.Adapter(PodcastId.adapter, BookId.adapter),
-        episode_orderingAdapter = Episode_ordering.Adapter(PodcastId.adapter, BookId.adapter),
+        podcast_episodesAdapter =
+            Podcast_episodes.Adapter(
+                idAdapter = PodcastEpisodeId.adapter,
+                podcast_idAdapter = PodcastId.adapter,
+                cover_pathAdapter = StoragePath.adapter,
+                audio_pathAdapter = StoragePath.adapter,
+            ),
+        episode_guidsAdapter = Episode_guids.Adapter(PodcastId.adapter, PodcastEpisodeId.adapter),
         usersAdapter =
             Users.Adapter(
                 idAdapter = UserId.adapter,
@@ -180,6 +192,7 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
             Libation_import_records.Adapter(
                 series_idAdapter = SeriesId.adapter,
                 podcast_idAdapter = PodcastId.adapter,
+                episode_idAdapter = PodcastEpisodeId.adapter,
                 book_idAdapter = BookId.adapter,
             ),
         user_settingsAdapter = User_settings.Adapter(UserId.adapter),

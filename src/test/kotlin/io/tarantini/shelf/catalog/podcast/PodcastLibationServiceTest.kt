@@ -48,8 +48,6 @@ class PodcastLibationServiceTest :
                         libationImportQueries = deps.database.libationImportQueries,
                         seriesQueries = deps.database.seriesQueries,
                         podcastQueries = deps.database.podcastQueries,
-                        bookQueries = deps.database.bookQueries,
-                        metadataQueries = deps.database.metadataQueries,
                         storageService = deps.storageService,
                     )
 

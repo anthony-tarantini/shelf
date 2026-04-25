@@ -13,7 +13,6 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.tarantini.shelf.IntegrationSpec
-import io.tarantini.shelf.catalog.metadata.domain.BookFormat
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
 import io.tarantini.shelf.processing.storage.FileBytes
@@ -28,7 +27,7 @@ class PodcastRssApiTest :
             testApp { client ->
                 val token = FeedToken.generate()
                 val audioPath = StoragePath.fromRaw("podcasts/rss-test/episode-1.mp3")
-                var bookId = ""
+                var episodeId = ""
 
                 testWithDeps { deps ->
                     recover({
@@ -46,43 +45,28 @@ class PodcastRssApiTest :
                                 )
                                 .executeAsOne()
 
-                        val b =
-                            deps.database.bookQueries.insert("RSS Episode 1", null).executeAsOne()
-                        bookId = b.value.toString()
-
-                        deps.database.metadataQueries
-                            .insertMetadata(
-                                bookId = b,
-                                title = "RSS Episode 1",
-                                description = "Episode description",
-                                publisher = null,
-                                published = 2026,
-                                language = null,
+                        val insertedEpisodeId =
+                            deps.database.podcastQueries
+                                .insertEpisode(
+                                    podcastId = podcastId,
+                                    title = "RSS Episode 1",
+                                    coverPath = null,
+                                    audioPath = audioPath,
+                                    audioSize = 4,
+                                    totalTime = 60.0,
+                                    season = 1,
+                                    episode = 1,
+                                    publishedAt = java.time.OffsetDateTime.now(),
+                                )
+                                .executeAsOne()
+                        episodeId = insertedEpisodeId.value.toString()
+                        deps.database.podcastQueries
+                            .claimEpisodeGuid(
+                                podcastId = podcastId,
+                                guid = "rss-guid-1",
+                                episodeId = insertedEpisodeId,
                             )
                             .executeAsOne()
-                        deps.database.metadataQueries
-                            .insertEdition(
-                                bookId = b,
-                                format = BookFormat.AUDIOBOOK,
-                                path = audioPath,
-                                fileHash = null,
-                                narrator = null,
-                                translator = null,
-                                isbn10 = null,
-                                isbn13 = null,
-                                asin = null,
-                                pages = null,
-                                totalTime = 60.0,
-                                size = 4,
-                            )
-                            .executeAsOne()
-                        deps.database.podcastQueries.insertEpisodeOrdering(
-                            podcastId = podcastId,
-                            bookId = b,
-                            season = 1,
-                            episode = 1,
-                            publishedAt = java.time.OffsetDateTime.now(),
-                        )
                         deps.database.podcastQueries
                             .selectRssEpisodesByPodcastId(podcastId)
                             .executeAsList()
@@ -101,16 +85,16 @@ class PodcastRssApiTest :
                 val feedBody = feedResponse.bodyAsText()
                 feedBody.contains("<rss version=\"2.0\"") shouldBe true
                 feedBody.contains("<item>") shouldBe true
-                feedBody.contains("/rss/podcasts/${token.value}/episodes/$bookId/audio") shouldBe
+                feedBody.contains("/rss/podcasts/${token.value}/episodes/$episodeId/audio") shouldBe
                     true
 
                 val audioResponse =
-                    client.get("/rss/podcasts/${token.value}/episodes/$bookId/audio")
+                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio")
                 audioResponse.status shouldBe HttpStatusCode.OK
                 audioResponse.headers[HttpHeaders.ContentType] shouldBe "audio/mpeg"
 
                 val rangedResponse =
-                    client.get("/rss/podcasts/${token.value}/episodes/$bookId/audio") {
+                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
                         header(HttpHeaders.Range, "bytes=1-2")
                     }
                 rangedResponse.status shouldBe HttpStatusCode.PartialContent
@@ -119,7 +103,7 @@ class PodcastRssApiTest :
                 rangedResponse.body<ByteArray>().toList() shouldContainExactly listOf(2, 3)
 
                 val invalidRangeResponse =
-                    client.get("/rss/podcasts/${token.value}/episodes/$bookId/audio") {
+                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
                         header(HttpHeaders.Range, "bytes=99-100")
                     }
                 invalidRangeResponse.status shouldBe HttpStatusCode.RequestedRangeNotSatisfiable

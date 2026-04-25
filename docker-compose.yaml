@@ -119,10 +119,26 @@ services:
       - ./data/minuspod:/app/data
 
   libation:
-    image: ${LIBATION_IMAGE:-rmcrackan/libation:latest}
+    build:
+      context: ./libation
+      dockerfile: Dockerfile
+    image: ${LIBATION_IMAGE:-tarantini-io/shelf/libation:local}
     restart: always
+    security_opt:
+      - seccomp:unconfined
+    privileged: true
+    shm_size: "1gb"
     ports:
-      - "5299:5299"
+      - "5299:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    environment:
+      PUID: ${LIBATION_PUID:-1000}
+      PGID: ${LIBATION_PGID:-1000}
+      TZ: ${LIBATION_TZ:-America/Chicago}
     volumes:
       - ./data/libation:/config
       - ./data/libation-export:/exports

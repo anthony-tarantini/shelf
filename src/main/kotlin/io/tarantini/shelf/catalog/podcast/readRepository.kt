@@ -63,7 +63,6 @@ private class SqlDelightPodcastReadRepository(
 
             PodcastAggregate(
                 podcast = root,
-                seriesId = root.seriesId,
                 seriesTitle = summary.seriesTitle,
                 episodes = episodes,
                 credential =

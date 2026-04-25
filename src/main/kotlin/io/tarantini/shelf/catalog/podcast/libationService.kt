@@ -6,8 +6,6 @@ import arrow.core.raise.context.raise
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.toKotlinInstant
-import io.tarantini.shelf.catalog.book.persistence.BookQueries
-import io.tarantini.shelf.catalog.metadata.persistence.MetadataQueries
 import io.tarantini.shelf.catalog.podcast.domain.LibationScanFailed
 import io.tarantini.shelf.catalog.podcast.domain.LibationScanStatus
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
@@ -17,10 +15,7 @@ import io.tarantini.shelf.integration.persistence.LibationImportQueries
 import io.tarantini.shelf.integration.podcast.libation.LibationScanner
 import io.tarantini.shelf.processing.storage.StorageService
 import java.nio.file.Path
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import kotlin.time.Clock
-import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -46,8 +41,6 @@ fun podcastLibationService(
     libationImportQueries: LibationImportQueries,
     seriesQueries: SeriesQueries,
     podcastQueries: PodcastQueries,
-    bookQueries: BookQueries,
-    metadataQueries: MetadataQueries,
     storageService: StorageService,
 ): PodcastLibationService =
     DefaultPodcastLibationService(
@@ -60,8 +53,6 @@ fun podcastLibationService(
                 libationImportQueries = libationImportQueries,
                 seriesQueries = seriesQueries,
                 podcastQueries = podcastQueries,
-                bookQueries = bookQueries,
-                metadataQueries = metadataQueries,
                 storageService = storageService,
             ),
     )
@@ -245,6 +236,3 @@ private class DefaultPodcastLibationService(
             lastError = run.error_message,
         )
 }
-
-private fun Instant.toOffsetDateTimeUtc(): OffsetDateTime =
-    OffsetDateTime.ofInstant(java.time.Instant.ofEpochMilli(toEpochMilliseconds()), ZoneOffset.UTC)

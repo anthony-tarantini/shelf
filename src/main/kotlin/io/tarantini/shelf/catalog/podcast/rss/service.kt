@@ -6,10 +6,11 @@ import arrow.core.raise.context.ensure
 import arrow.core.raise.context.ensureNotNull
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.id
-import io.tarantini.shelf.catalog.book.domain.BookId
 import io.tarantini.shelf.catalog.podcast.PodcastReadRepository
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
+import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId
 import io.tarantini.shelf.catalog.podcast.domain.PodcastNotFound
+import io.tarantini.shelf.catalog.podcast.domain.audioMimeType
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
 import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.processing.storage.StorageService
@@ -31,7 +32,7 @@ interface PodcastRssService {
     suspend fun generateFeed(token: FeedToken): PodcastRssFeed
 
     context(_: RaiseContext)
-    suspend fun resolveAudio(token: FeedToken, bookId: BookId): PodcastRssAudio
+    suspend fun resolveAudio(token: FeedToken, episodeId: PodcastEpisodeId): PodcastRssAudio
 
     fun feedContentType(): String = RSS_MIME
 }
@@ -71,13 +72,13 @@ private class DefaultPodcastRssService(
             val items =
                 episodes.joinToString("\n") { row ->
                     val enclosureUrl =
-                        "$publicRootUrl/rss/podcasts/${token.value}/episodes/${row.book_id.value}/audio"
+                        "$publicRootUrl/rss/podcasts/${token.value}/episodes/${row.episode_id.value}/audio"
                     val pubDate =
                         row.published_at
                             ?.toInstant()
                             ?.atZone(ZoneOffset.UTC)
                             ?.format(DateTimeFormatter.RFC_1123_DATE_TIME)
-                    val guid = "${podcast.id.id.value}:${row.book_id.value}"
+                    val guid = "${podcast.id.id.value}:${row.episode_id.value}"
                     buildString {
                         append("    <item>\n")
                         append("      <title>${escapeXml(row.title)}</title>\n")
@@ -113,14 +114,17 @@ private class DefaultPodcastRssService(
         }
 
     context(_: RaiseContext)
-    override suspend fun resolveAudio(token: FeedToken, bookId: BookId): PodcastRssAudio =
+    override suspend fun resolveAudio(
+        token: FeedToken,
+        episodeId: PodcastEpisodeId,
+    ): PodcastRssAudio =
         withContext(Dispatchers.IO) {
             val podcast = ensureNotNull(readRepository.findByFeedToken(token)) { PodcastNotFound }
             ensure(podcast.isTokenValid(token, Clock.System.now())) { PodcastNotFound }
             val row =
                 ensureNotNull(
                     podcastQueries
-                        .selectPodcastEpisodeAudioByBookId(podcast.id.id, bookId)
+                        .selectPodcastEpisodeAudioByEpisodeId(podcast.id.id, episodeId)
                         .executeAsOneOrNull()
                 ) {
                     PodcastNotFound
@@ -135,18 +139,6 @@ private class DefaultPodcastRssService(
             )
         }
 }
-
-private fun audioMimeType(path: String): String =
-    when (path.substringAfterLast('.', "").lowercase()) {
-        "mp3" -> "audio/mpeg"
-        "m4a" -> "audio/mp4"
-        "m4b" -> "audio/x-m4b"
-        "aac" -> "audio/aac"
-        "ogg" -> "audio/ogg"
-        "flac" -> "audio/flac"
-        "wav" -> "audio/wav"
-        else -> "application/octet-stream"
-    }
 
 private fun escapeXml(value: String): String =
     value

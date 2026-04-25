@@ -55,8 +55,6 @@ class PodcastFeedFetchServiceTest :
                                 readRepository = readRepo,
                                 mutationRepository = mutationRepo,
                                 podcastQueries = deps.database.podcastQueries,
-                                bookQueries = deps.database.bookQueries,
-                                metadataQueries = deps.database.metadataQueries,
                                 storageService = deps.storageService,
                                 credentialService =
                                     podcastCredentialService(
@@ -169,8 +167,6 @@ class PodcastFeedFetchServiceTest :
                                 readRepository = readRepo,
                                 mutationRepository = mutationRepo,
                                 podcastQueries = deps.database.podcastQueries,
-                                bookQueries = deps.database.bookQueries,
-                                metadataQueries = deps.database.metadataQueries,
                                 storageService = deps.storageService,
                                 credentialService = credentialService,
                                 feedFetchAdapter = feedFetchAdapter(),

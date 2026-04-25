@@ -1,8 +1,9 @@
-import io.tarantini.shelf.catalog.book.domain.BookId;
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId;
+import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId;
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken;
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl;
 import io.tarantini.shelf.catalog.series.domain.SeriesId;
+import io.tarantini.shelf.processing.storage.StoragePath;
 
 CREATE TABLE IF NOT EXISTS podcasts (
     id UUID AS PodcastId PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -23,25 +24,33 @@ CREATE TABLE IF NOT EXISTS podcasts (
 CREATE INDEX IF NOT EXISTS idx_podcasts_series ON podcasts(series_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_podcasts_feed_token ON podcasts(feed_token);
 
-CREATE TABLE IF NOT EXISTS episode_guids (
+CREATE TABLE IF NOT EXISTS podcast_episodes (
+    id UUID AS PodcastEpisodeId PRIMARY KEY DEFAULT gen_random_uuid(),
     podcast_id UUID AS PodcastId NOT NULL REFERENCES podcasts(id) ON DELETE CASCADE,
-    guid TEXT NOT NULL,
-    book_id UUID AS BookId NOT NULL REFERENCES books(id) ON DELETE CASCADE,
-    PRIMARY KEY (podcast_id, guid)
-);
-
-CREATE TABLE IF NOT EXISTS episode_ordering (
-    podcast_id UUID AS PodcastId NOT NULL REFERENCES podcasts(id) ON DELETE CASCADE,
-    book_id UUID AS BookId NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    cover_path VARCHAR(255) AS StoragePath,
+    audio_path VARCHAR(255) AS StoragePath NOT NULL,
+    audio_size BIGINT NOT NULL,
+    total_time DOUBLE PRECISION,
     season INTEGER NOT NULL DEFAULT 0,
     episode INTEGER NOT NULL,
     published_at TIMESTAMP WITH TIME ZONE,
-    PRIMARY KEY (podcast_id, book_id),
+    sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL),
     UNIQUE (podcast_id, season, episode)
 );
 
-CREATE INDEX IF NOT EXISTS idx_episode_ordering_podcast
-ON episode_ordering(podcast_id, season ASC, episode ASC);
+CREATE INDEX IF NOT EXISTS idx_podcast_episodes_podcast
+ON podcast_episodes(podcast_id, season ASC, episode ASC);
+
+CREATE TABLE IF NOT EXISTS episode_guids (
+    podcast_id UUID AS PodcastId NOT NULL REFERENCES podcasts(id) ON DELETE CASCADE,
+    guid TEXT NOT NULL,
+    episode_id UUID AS PodcastEpisodeId NOT NULL REFERENCES podcast_episodes(id) ON DELETE CASCADE,
+    PRIMARY KEY (podcast_id, guid)
+);
+
+CREATE INDEX IF NOT EXISTS idx_episode_guids_episode
+ON episode_guids(episode_id);
 
 CREATE OR REPLACE VIEW podcastSummaries AS
 SELECT
@@ -53,18 +62,17 @@ SELECT
     p.auto_fetch,
     p.last_fetched_at,
     p.version,
-    count(DISTINCT eo.book_id) AS episode_count,
+    count(DISTINCT pe.id) AS episode_count,
     (
-        SELECT b.cover_path
-        FROM books b
-        JOIN episode_ordering eo2 ON eo2.book_id = b.id
-        WHERE eo2.podcast_id = p.id AND b.cover_path IS NOT NULL
-        ORDER BY eo2.season ASC, eo2.episode ASC
+        SELECT pe.cover_path
+        FROM podcast_episodes pe
+        WHERE pe.podcast_id = p.id AND pe.cover_path IS NOT NULL
+        ORDER BY pe.season ASC, pe.episode ASC
         LIMIT 1
     ) AS cover_path
 FROM podcasts p
 JOIN series s ON p.series_id = s.id
-LEFT JOIN episode_ordering eo ON eo.podcast_id = p.id
+LEFT JOIN podcast_episodes pe ON pe.podcast_id = p.id
 GROUP BY p.id, s.id;
 
 selectAll:
@@ -96,53 +104,89 @@ WHERE auto_fetch = TRUE
   );
 
 selectMaxEpisodeForSeason:
-SELECT COALESCE(MAX(episode), 0) FROM episode_ordering
+SELECT COALESCE(MAX(episode), 0) FROM podcast_episodes
 WHERE podcast_id = :podcastId AND season = :season;
 
 selectGuidByPodcastAndGuid:
 SELECT guid FROM episode_guids
 WHERE podcast_id = :podcastId AND guid = :guid;
 
+selectEpisodeIdByPodcastAndGuid:
+SELECT episode_id FROM episode_guids
+WHERE podcast_id = :podcastId AND guid = :guid;
+
 selectRssEpisodesByPodcastId:
 SELECT
-    eo.book_id,
-    b.title,
-    eo.season,
-    eo.episode,
-    eo.published_at,
-    e.path AS audio_path,
-    e.size AS audio_size
-FROM episode_ordering eo
-JOIN books b ON b.id = eo.book_id
-JOIN editions e ON e.book_id = eo.book_id
-WHERE eo.podcast_id = :podcastId
-ORDER BY eo.season ASC, eo.episode ASC;
+    pe.id AS episode_id,
+    pe.title,
+    pe.season,
+    pe.episode,
+    pe.published_at,
+    pe.audio_path,
+    pe.audio_size
+FROM podcast_episodes pe
+WHERE pe.podcast_id = :podcastId
+ORDER BY pe.season ASC, pe.episode ASC;
 
-selectPodcastEpisodeAudioByBookId:
+selectPodcastEpisodeAudioByEpisodeId:
 SELECT
-    e.path AS audio_path,
-    e.size AS audio_size
-FROM episode_ordering eo
-JOIN editions e ON e.book_id = eo.book_id
-WHERE eo.podcast_id = :podcastId
-  AND eo.book_id = :bookId
-ORDER BY CASE WHEN e.format = 'AUDIOBOOK' THEN 0 ELSE 1 END ASC, lower(e.sys_period) DESC
+    pe.audio_path,
+    pe.audio_size
+FROM podcast_episodes pe
+WHERE pe.podcast_id = :podcastId
+  AND pe.id = :episodeId
 LIMIT 1;
 
 selectEpisodesByPodcastId:
 SELECT
-    eo.book_id,
-    b.title,
-    eo.season,
-    eo.episode,
-    eo.published_at,
-    b.cover_path,
-    e.total_time
-FROM episode_ordering eo
-JOIN books b ON b.id = eo.book_id
-LEFT JOIN editions e ON e.book_id = eo.book_id
-WHERE eo.podcast_id = :podcastId
-ORDER BY eo.season ASC, eo.episode ASC;
+    pe.id,
+    pe.title,
+    pe.season,
+    pe.episode,
+    pe.published_at,
+    pe.cover_path,
+    pe.total_time
+FROM podcast_episodes pe
+WHERE pe.podcast_id = :podcastId
+ORDER BY pe.season ASC, pe.episode ASC;
+
+selectEpisodeById:
+SELECT * FROM podcast_episodes
+WHERE id = :episodeId;
+
+updateEpisodeCoverPath:
+UPDATE podcast_episodes
+SET cover_path = :coverPath
+WHERE id = :episodeId;
+
+deleteEpisodeById:
+DELETE FROM podcast_episodes
+WHERE id = :episodeId;
+
+insertEpisode:
+INSERT INTO podcast_episodes (
+    podcast_id,
+    title,
+    cover_path,
+    audio_path,
+    audio_size,
+    total_time,
+    season,
+    episode,
+    published_at
+)
+VALUES (
+    :podcastId,
+    :title,
+    :coverPath,
+    :audioPath,
+    :audioSize,
+    :totalTime,
+    :season,
+    :episode,
+    :publishedAt
+)
+RETURNING id;
 
 insert:
 INSERT INTO podcasts (series_id, feed_url, feed_token, auto_sanitize, auto_fetch, fetch_interval_minutes)
@@ -181,14 +225,10 @@ SET version = version + 1
 WHERE id = :id;
 
 claimEpisodeGuid:
-INSERT INTO episode_guids (podcast_id, guid, book_id)
-VALUES (:podcastId, :guid, :bookId)
+INSERT INTO episode_guids (podcast_id, guid, episode_id)
+VALUES (:podcastId, :guid, :episodeId)
 ON CONFLICT (podcast_id, guid) DO NOTHING
 RETURNING guid;
-
-insertEpisodeOrdering:
-INSERT INTO episode_ordering (podcast_id, book_id, season, episode, published_at)
-VALUES (:podcastId, :bookId, :season, :episode, :publishedAt);
 
 deleteById:
 DELETE FROM podcasts WHERE id = :id;
