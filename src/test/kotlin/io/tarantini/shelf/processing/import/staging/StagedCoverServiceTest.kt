@@ -11,10 +11,11 @@ import io.tarantini.shelf.IntegrationSpec
 import io.tarantini.shelf.app.AccessDenied
 import io.tarantini.shelf.processing.storage.FileBytes
 import io.tarantini.shelf.processing.storage.StoragePath
+import io.tarantini.shelf.testing.MediaFixtureFactory
 import io.tarantini.shelf.user.auth.JwtContext
 import io.tarantini.shelf.user.auth.JwtToken
 import io.tarantini.shelf.user.identity.domain.UserId
-import java.nio.file.Paths
+import java.nio.file.Files
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -23,7 +24,16 @@ class StagedCoverServiceTest :
         "preferred staged cover path returns thumbnail when available" {
             testWithDeps { deps ->
                 val owner = JwtContext(JwtToken("owner"), UserId.fromRaw(Uuid.random()))
-                val epubPath = Paths.get("src/test/resources/book.epub")
+                val epubPath = Files.createTempFile("shelf-cover-path", ".epub")
+                MediaFixtureFactory.createMinimalEpub(
+                    epubPath,
+                    MediaFixtureFactory.EpubSpec(
+                        title = "Cover Fixture",
+                        author = "Fixture Author",
+                        seriesName = "Fixture Series",
+                        seriesIndex = 1.0,
+                    ),
+                )
 
                 recover({
                     val staged =
@@ -58,7 +68,16 @@ class StagedCoverServiceTest :
             testWithDeps { deps ->
                 val owner = JwtContext(JwtToken("owner"), UserId.fromRaw(Uuid.random()))
                 val attacker = JwtContext(JwtToken("attacker"), UserId.fromRaw(Uuid.random()))
-                val epubPath = Paths.get("src/test/resources/book.epub")
+                val epubPath = Files.createTempFile("shelf-cover-owner", ".epub")
+                MediaFixtureFactory.createMinimalEpub(
+                    epubPath,
+                    MediaFixtureFactory.EpubSpec(
+                        title = "Ownership Fixture",
+                        author = "Fixture Author",
+                        seriesName = "Fixture Series",
+                        seriesIndex = 1.0,
+                    ),
+                )
 
                 recover({
                     val staged =

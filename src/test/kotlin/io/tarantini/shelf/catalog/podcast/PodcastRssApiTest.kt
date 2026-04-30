@@ -141,4 +141,83 @@ class PodcastRssApiTest :
                 second.status shouldBe HttpStatusCode.NotModified
             }
         }
+
+        "rss audio endpoint should support suffix ranges and cap oversized ranges" {
+            testApp { client ->
+                val token = FeedToken.generate()
+                val audioPath = StoragePath.fromRaw("podcasts/rss-test/episode-range-large.mp3")
+                var episodeId = ""
+
+                testWithDeps { deps ->
+                    recover({
+                        val seriesId =
+                            deps.database.seriesQueries
+                                .insert(unique("rss-range-series"))
+                                .executeAsOne()
+                        val podcastId =
+                            deps.database.podcastQueries
+                                .insert(
+                                    seriesId = seriesId,
+                                    feedUrl = FeedUrl.fromRaw("https://example.com/rss.xml"),
+                                    feedToken = token,
+                                    autoSanitize = false,
+                                    autoFetch = false,
+                                    fetchIntervalMinutes = 60,
+                                )
+                                .executeAsOne()
+
+                        val insertedEpisodeId =
+                            deps.database.podcastQueries
+                                .insertEpisode(
+                                    podcastId = podcastId,
+                                    title = "RSS Range Episode",
+                                    coverPath = null,
+                                    audioPath = audioPath,
+                                    audioSize = 11L * 1024 * 1024,
+                                    totalTime = 120.0,
+                                    season = 1,
+                                    episode = 1,
+                                    publishedAt = java.time.OffsetDateTime.now(),
+                                )
+                                .executeAsOne()
+                        episodeId = insertedEpisodeId.value.toString()
+                        deps.database.podcastQueries
+                            .claimEpisodeGuid(
+                                podcastId = podcastId,
+                                guid = "rss-guid-range",
+                                episodeId = insertedEpisodeId,
+                            )
+                            .executeAsOne()
+
+                        val bytes = ByteArray(11 * 1024 * 1024) { (it % 251).toByte() }
+                        deps.storageService.save(audioPath, FileBytes(bytes))
+                    }) {
+                        fail("Seeding failed: $it")
+                    }
+                }
+
+                val suffix =
+                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
+                        header(HttpHeaders.Range, "bytes=-3")
+                    }
+                suffix.status shouldBe HttpStatusCode.PartialContent
+                suffix.headers[HttpHeaders.ContentRange] shouldBe "bytes 11534333-11534335/11534336"
+                suffix.body<ByteArray>().size shouldBe 3
+
+                val openEnded =
+                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
+                        header(HttpHeaders.Range, "bytes=1024-")
+                    }
+                openEnded.status shouldBe HttpStatusCode.PartialContent
+                openEnded.headers[HttpHeaders.ContentRange] shouldBe "bytes 1024-10486783/11534336"
+                openEnded.body<ByteArray>().size shouldBe 10 * 1024 * 1024
+
+                val invalidSyntax =
+                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
+                        header(HttpHeaders.Range, "bytes=0-1,3-4")
+                    }
+                invalidSyntax.status shouldBe HttpStatusCode.RequestedRangeNotSatisfiable
+                invalidSyntax.headers[HttpHeaders.ContentRange] shouldBe "bytes */11534336"
+            }
+        }
     })

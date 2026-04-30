@@ -3,6 +3,7 @@ package io.tarantini.shelf.integration.podcast.libation
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.tarantini.shelf.testing.MediaFixtureFactory
 import java.nio.file.Files
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
@@ -12,24 +13,22 @@ class LibationScannerTest :
         "scan resolves valid manifests with parsed metadata" {
             val root = Files.createTempDirectory("libation-scan-valid")
             val audioDir = root.resolve("audio").createDirectories()
-            val audioPath = audioDir.resolve("book.m4b")
-            Files.write(audioPath, byteArrayOf(1, 2, 3))
-            root
-                .resolve("manifest.json")
-                .writeText(
-                    """
-                    {
-                      "asin": "B012345678",
-                      "title": "My Title",
-                      "seriesTitle": "My Series",
-                      "description": "desc",
-                      "publishedAt": "2022-11-08T00:00:00Z",
-                      "durationSeconds": 3600.5,
-                      "audioFile": "audio/book.m4b"
-                    }
-                    """
-                        .trimIndent()
-                )
+            val audioPath = audioDir.resolve("book-one.m4b")
+            MediaFixtureFactory.createBinaryFile(audioPath, byteArrayOf(1, 2, 3))
+            MediaFixtureFactory.createLibationManifest(
+                root.resolve("manifest.json"),
+                """
+                {
+                  "asin": "B012345678",
+                  "title": "Imported From Libation",
+                  "seriesTitle": "Libation Series",
+                  "description": "desc",
+                  "publishedAt": "2023-01-15T12:00:00Z",
+                  "durationSeconds": 1234.5,
+                  "audioFile": "audio/book-one.m4b"
+                }
+                """,
+            )
 
             val result = LibationScanner(LibationManifestParser()).scan(root)
             result.discoveredCount shouldBe 1
@@ -38,11 +37,11 @@ class LibationScannerTest :
             result.manifests.shouldHaveSize(1)
             val manifest = result.manifests.first()
             manifest.asin shouldBe "B012345678"
-            manifest.title shouldBe "My Title"
-            manifest.seriesTitle shouldBe "My Series"
+            manifest.title shouldBe "Imported From Libation"
+            manifest.seriesTitle shouldBe "Libation Series"
             manifest.description shouldBe "desc"
-            manifest.publishedYear shouldBe 2022
-            manifest.durationSeconds shouldBe 3600.5
+            manifest.publishedYear shouldBe 2023
+            manifest.durationSeconds shouldBe 1234.5
         }
 
         "scan rejects symlink audio paths" {
@@ -78,7 +77,7 @@ class LibationScannerTest :
                 seriesDir.resolve(
                     "Once We Were Spacemen with Nathan Fillion & Alan Tudyk | Episode 1 [B0FZV3RCXV].mp3"
                 )
-            Files.write(audioPath, byteArrayOf(4, 5, 6))
+            MediaFixtureFactory.createBinaryFile(audioPath, byteArrayOf(4, 5, 6))
 
             val result = LibationScanner(LibationManifestParser()).scan(root)
             result.discoveredCount shouldBe 1
@@ -99,7 +98,7 @@ class LibationScannerTest :
         "scan marks audio-only exports invalid when ASIN cannot be inferred" {
             val root = Files.createTempDirectory("libation-audio-invalid")
             val audioPath = root.resolve("episode-without-asin.mp3")
-            Files.write(audioPath, byteArrayOf(1, 2, 3))
+            MediaFixtureFactory.createBinaryFile(audioPath, byteArrayOf(1, 2, 3))
 
             val result = LibationScanner(LibationManifestParser()).scan(root)
             result.discoveredCount shouldBe 1

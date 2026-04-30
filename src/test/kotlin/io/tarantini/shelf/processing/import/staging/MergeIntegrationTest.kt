@@ -12,10 +12,11 @@ import io.tarantini.shelf.processing.import.domain.StagedEditionMetadata
 import io.tarantini.shelf.processing.import.domain.UpdateStagedBookRequest
 import io.tarantini.shelf.processing.import.domain.promoteStagedBook
 import io.tarantini.shelf.processing.import.domain.toCommand
+import io.tarantini.shelf.testing.MediaFixtureFactory
 import io.tarantini.shelf.user.auth.JwtContext
 import io.tarantini.shelf.user.auth.JwtToken
 import io.tarantini.shelf.user.identity.domain.UserId
-import java.nio.file.Paths
+import java.nio.file.Files
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -25,7 +26,16 @@ class MergeIntegrationTest :
             testWithDeps { deps ->
                 val userId = UserId.fromRaw(Uuid.random())
                 val auth = JwtContext(JwtToken("fake"), userId)
-                val epubPath = Paths.get("src/test/resources/book.epub")
+                val epubPath = Files.createTempFile("shelf-merge", ".epub")
+                MediaFixtureFactory.createMinimalEpub(
+                    epubPath,
+                    MediaFixtureFactory.EpubSpec(
+                        title = "The Primal Hunter 14: A LitRPG Adventure",
+                        author = "Zogarth",
+                        seriesName = "The Primal Hunter",
+                        seriesIndex = 14.0,
+                    ),
+                )
 
                 recover({
                     // 1. Import and promote Book A (EBOOK)

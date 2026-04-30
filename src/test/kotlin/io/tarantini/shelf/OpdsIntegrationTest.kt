@@ -21,8 +21,9 @@ import io.tarantini.shelf.catalog.metadata.domain.MetadataAggregate
 import io.tarantini.shelf.catalog.metadata.domain.MetadataRoot
 import io.tarantini.shelf.catalog.metadata.saveAggregate
 import io.tarantini.shelf.processing.storage.StoragePath
+import io.tarantini.shelf.testing.MediaFixtureFactory
 import io.tarantini.shelf.user.identity.domain.UserRequest
-import java.nio.file.Paths
+import java.nio.file.Files
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -280,10 +281,15 @@ class OpdsIntegrationTest :
                                 deps.database.bookQueries.createBook("OPDS Download Book", null)
                             bookIdString = bookId.value.toString()
                             val storagePath = StoragePath.fromRaw("opds/opds-download-book.epub")
-                            deps.storageService.save(
-                                storagePath,
-                                Paths.get("src/test/resources/book.epub"),
+                            val epubPath = Files.createTempFile("shelf-opds-download", ".epub")
+                            MediaFixtureFactory.createMinimalEpub(
+                                epubPath,
+                                MediaFixtureFactory.EpubSpec(
+                                    title = "OPDS Download Book",
+                                    author = "Fixture Author",
+                                ),
                             )
+                            deps.storageService.save(storagePath, epubPath)
                             deps.database.metadataQueries.saveAggregate(
                                 MetadataAggregate(
                                     metadata =

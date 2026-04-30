@@ -19,13 +19,14 @@ import io.tarantini.shelf.app.Request
 import io.tarantini.shelf.app.Response
 import io.tarantini.shelf.app.id
 import io.tarantini.shelf.processing.import.domain.ScanDirectoryRequest
+import io.tarantini.shelf.testing.MediaFixtureFactory
 import io.tarantini.shelf.user.auth.JwtContext
 import io.tarantini.shelf.user.auth.JwtToken
 import io.tarantini.shelf.user.identity.domain.UserId
 import io.tarantini.shelf.user.identity.domain.UserRequest
 import io.tarantini.shelf.user.identity.domain.UserRole
 import io.tarantini.shelf.user.identity.domain.UserWithToken
-import java.nio.file.Paths
+import java.nio.file.Files
 import kotlin.uuid.ExperimentalUuidApi
 
 class ImportApiTest :
@@ -158,8 +159,18 @@ class ImportApiTest :
                         val stagedBook =
                             with(this) {
                                 with(auth) {
+                                    val epubPath = Files.createTempFile("shelf-import-api", ".epub")
+                                    MediaFixtureFactory.createMinimalEpub(
+                                        epubPath,
+                                        MediaFixtureFactory.EpubSpec(
+                                            title = "The Primal Hunter 14: A LitRPG Adventure",
+                                            author = "Zogarth",
+                                            seriesName = "The Primal Hunter",
+                                            seriesIndex = 14.0,
+                                        ),
+                                    )
                                     deps.importService.importToStaging(
-                                        Paths.get("src/test/resources/book.epub"),
+                                        epubPath,
                                         "staged-cover-hit.epub",
                                     )
                                 }

@@ -1,6 +1,7 @@
 package io.tarantini.shelf
 
 import arrow.fx.coroutines.resourceScope
+import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.StringSpec
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -19,10 +20,13 @@ import io.tarantini.shelf.app.Response
 import io.tarantini.shelf.app.dependencies
 import io.tarantini.shelf.user.identity.domain.UserRequest
 import io.tarantini.shelf.user.identity.domain.UserWithToken
+import java.nio.file.Files
+import kotlin.io.path.absolutePathString
 import kotlin.time.Duration.Companion.days
 import kotlinx.serialization.json.Json
 
 abstract class IntegrationSpec(body: IntegrationSpec.() -> Unit = {}) : StringSpec() {
+    private val tempStorageRoot = Files.createTempDirectory("shelf-test-storage-")
     private val testEnv =
         Env(
             dataSource =
@@ -35,7 +39,11 @@ abstract class IntegrationSpec(body: IntegrationSpec.() -> Unit = {}) : StringSp
             http = Env.Http("localhost", 8080, listOf("localhost:5173"), "http://localhost:8080"),
             auth = Env.Auth("test-secret", "Test", 30.days),
             hardcover = Env.Hardcover("http://localhost:8080/graphql", "test-key"),
-            storage = Env.Storage("./storage", listOf("./storage")),
+            storage =
+                Env.Storage(
+                    tempStorageRoot.absolutePathString(),
+                    listOf(tempStorageRoot.absolutePathString(), "./storage"),
+                ),
             valkey = Env.Valkey(null),
             observability =
                 Env.Observability(
@@ -99,6 +107,11 @@ abstract class IntegrationSpec(body: IntegrationSpec.() -> Unit = {}) : StringSp
                 block(client)
             }
         }
+    }
+
+    override suspend fun afterSpec(spec: Spec) {
+        super.afterSpec(spec)
+        tempStorageRoot.toFile().deleteRecursively()
     }
 
     suspend fun registerUser(

@@ -10,16 +10,26 @@ import io.kotest.matchers.shouldBe
 import io.tarantini.shelf.catalog.book.domain.BookId
 import io.tarantini.shelf.catalog.metadata.domain.BookFormat
 import io.tarantini.shelf.catalog.metadata.domain.ParsedSeries
-import java.nio.file.Paths
+import io.tarantini.shelf.testing.MediaFixtureFactory
+import java.nio.file.Files
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class EpubParserTest :
     StringSpec({
         val parser = epubParser()
-        val epubPath = Paths.get("src/test/resources/book.epub")
 
         "parse should extract metadata from epub" {
+            val epubPath = Files.createTempFile("shelf-test-book", ".epub")
+            MediaFixtureFactory.createMinimalEpub(
+                epubPath,
+                MediaFixtureFactory.EpubSpec(
+                    title = "The Primal Hunter 14: A LitRPG Adventure",
+                    author = "Zogarth",
+                    seriesName = "The Primal Hunter",
+                    seriesIndex = 14.0,
+                ),
+            )
             resourceScope {
                 recover({
                     val bookId = BookId.fromRaw(Uuid.random())
@@ -30,6 +40,53 @@ class EpubParserTest :
                     metadata.edition.format shouldBe BookFormat.EBOOK
                     metadata.series shouldBe
                         listOf(ParsedSeries(name = "The Primal Hunter", index = 14.0))
+                }) {
+                    fail("Should not have failed: $it")
+                }
+            }
+        }
+
+        "parse should return empty series when epub has no series metadata" {
+            val epubPath = Files.createTempFile("shelf-test-book-no-series", ".epub")
+            MediaFixtureFactory.createMinimalEpub(
+                epubPath,
+                MediaFixtureFactory.EpubSpec(
+                    title = "Standalone Book",
+                    author = "Single Author",
+                    seriesName = null,
+                    seriesIndex = null,
+                ),
+            )
+            resourceScope {
+                recover({
+                    val bookId = BookId.fromRaw(Uuid.random())
+                    val (metadata, _) = parser.parse(this@resourceScope, epubPath, bookId)
+                    metadata.series shouldBe emptyList()
+                }) {
+                    fail("Should not have failed: $it")
+                }
+            }
+        }
+
+        "parse should read calibre fallback series metadata" {
+            val epubPath = Files.createTempFile("shelf-test-book-calibre-series", ".epub")
+            MediaFixtureFactory.createMinimalEpub(
+                epubPath,
+                MediaFixtureFactory.EpubSpec(
+                    title = "Calibre Book",
+                    author = "Calibre Author",
+                    seriesName = null,
+                    seriesIndex = null,
+                    calibreSeriesName = "Calibre Series",
+                    calibreSeriesIndex = 3.5,
+                ),
+            )
+            resourceScope {
+                recover({
+                    val bookId = BookId.fromRaw(Uuid.random())
+                    val (metadata, _) = parser.parse(this@resourceScope, epubPath, bookId)
+                    metadata.series shouldBe
+                        listOf(ParsedSeries(name = "Calibre Series", index = 3.5))
                 }) {
                     fail("Should not have failed: $it")
                 }
