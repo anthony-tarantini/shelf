@@ -99,3 +99,5 @@ Use Arrow Either/AppError + Raise DSL (`either { }`, `.bind()`); no exceptions i
 21. **Route thinness:** Routes should avoid business projections (`Aggregate -> Summary`) and ad hoc error folds. Put these in Service/provider interfaces so routes stay boundary-only.
 22. **Logging format rollout:** Keep backend JSON logging env-gated through `OBSERVABILITY_JSON_LOGS_ENABLED`; line format remains the safe default for local readability.
 23. **Podcast data ownership:** Podcast episodes are podcast-domain records. Do not persist podcast episode ingestion data in `books`/`editions`; keep podcast storage/query models isolated.
+24. **Libation cross-run identity:** For Libation imports, resolve existing podcast/series via persisted canonical title keys before creating new roots; do not rely on per-run memory only.
+25. **Encryption secret policy:** `ENCRYPTION_SECRET` may fall back only in local/development environments; non-dev startup must fail if it is missing.

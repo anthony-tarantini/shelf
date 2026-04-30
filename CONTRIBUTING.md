@@ -12,7 +12,7 @@ This project follows a strict **Domain-Driven Design (DDD)** approach. Before ma
 -   Ensure you have JDK 21+ and Docker installed.
 -   Clone the repository.
 -   Start the local database using `docker-compose up -d`.
--   Set an `ENCRYPTION_SECRET` for integration credential encryption. In local development you can copy it from `example.env`, but production must use a unique secret distinct from `JWT_SECRET`.
+-   Set an `ENCRYPTION_SECRET` for integration credential encryption. In local/development environments Shelf may use the local fallback, but non-dev startup fails if `ENCRYPTION_SECRET` is missing. Production must use a unique secret distinct from `JWT_SECRET`.
 -   When running the full compose stack, use the dedicated `COMPOSE_*` env vars from `example.env` for container-to-container addresses. Do not point compose services at `localhost` for Postgres, Valkey, backend, or LGTM.
 -   Use `dev.docker-compose.yaml` for bind-mounted hot reload and keep `docker-compose.yaml` for the image-based stack.
 -   Do not run both compose modes simultaneously unless you also remap their ports.
@@ -27,6 +27,7 @@ This project follows a strict **Domain-Driven Design (DDD)** approach. Before ma
 -   **Boundary Mapping:** For complex mutations, keep request DTOs at the route boundary and map them into validated domain commands before service calls.
 -   **Thin Routes:** Keep read projections and asset/path selection logic in service/provider interfaces; route files should remain boundary adapters.
 -   **Podcast Separation:** Keep podcast episode ingestion data in podcast-domain persistence (`podcast_episodes`, `episode_guids`) rather than `books`/`editions`.
+-   **Libation Identity:** Keep Libation imports cross-run idempotent by resolving existing roots through canonical series-title keys plus source keys; do not add per-run-only linking logic.
 -   **Orchestration Pattern:** For complex write paths, prefer `load -> domain decider/aggregate decisions -> repository persist -> domain event handling` over monolithic service scripts.
 -   **Typed Error Flows:** Do not throw ad hoc exceptions from domain/service logic for expected behavior; use typed `AppError` + `RaiseContext`.
 

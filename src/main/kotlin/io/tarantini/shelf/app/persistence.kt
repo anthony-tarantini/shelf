@@ -123,6 +123,29 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
         "ALTER TABLE libation_import_records ADD COLUMN IF NOT EXISTS episode_id UUID;",
         0,
     )
+    driver.execute(
+        null,
+        "ALTER TABLE libation_import_records ADD COLUMN IF NOT EXISTS canonical_series_key TEXT;",
+        0,
+    )
+    driver.execute(
+        null,
+        "UPDATE libation_import_records " +
+            "SET canonical_series_key = LOWER(REGEXP_REPLACE(TRIM(COALESCE(asin, '')), '\\\\s+', ' ', 'g')) " +
+            "WHERE canonical_series_key IS NULL;",
+        0,
+    )
+    driver.execute(
+        null,
+        "ALTER TABLE libation_import_records ALTER COLUMN canonical_series_key SET NOT NULL;",
+        0,
+    )
+    driver.execute(
+        null,
+        "CREATE INDEX IF NOT EXISTS idx_libation_import_records_canonical_series_key " +
+            "ON libation_import_records(canonical_series_key);",
+        0,
+    )
 
     return Database(
         driver,

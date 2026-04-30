@@ -49,20 +49,29 @@ data class Env(
         companion object {
             private const val INSECURE_DEFAULT_SECRET = "insecure-local-default-change-me"
 
-            fun fromEnv(): Integration {
-                val encryptionSecret = getenv("ENCRYPTION_SECRET") ?: INSECURE_DEFAULT_SECRET
-                val minuspodPassword = getenv("MINUSPOD_ADMIN_PASSWORD")
+            fun fromEnv(getEnv: (String) -> String? = ::getenv): Integration {
+                val runtimeEnvironment = getEnv("OBSERVABILITY_ENVIRONMENT") ?: "development"
+                val encryptionSecret =
+                    getEnv("ENCRYPTION_SECRET")
+                        ?: if (runtimeEnvironment.isLocalOrDevelopment()) {
+                            INSECURE_DEFAULT_SECRET
+                        } else {
+                            throw IllegalStateException(
+                                "ENCRYPTION_SECRET is required when OBSERVABILITY_ENVIRONMENT is '$runtimeEnvironment'."
+                            )
+                        }
+                val minuspodPassword = getEnv("MINUSPOD_ADMIN_PASSWORD")
 
                 return Integration(
                     encryptionSecret = encryptionSecret,
                     libationImportEnabled =
-                        getenv("LIBATION_IMPORT_ENABLED")?.toBooleanStrictOrNull() ?: true,
-                    libationDropDir = getenv("LIBATION_DROP_DIR") ?: "./data/libation-export",
+                        getEnv("LIBATION_IMPORT_ENABLED")?.toBooleanStrictOrNull() ?: true,
+                    libationDropDir = getEnv("LIBATION_DROP_DIR") ?: "./data/libation-export",
                     libationScanIntervalSeconds =
-                        getenv("LIBATION_SCAN_INTERVAL_SECONDS")?.toLongOrNull() ?: 300,
+                        getEnv("LIBATION_SCAN_INTERVAL_SECONDS")?.toLongOrNull() ?: 300,
                     podcastScheduleIntervalSeconds =
-                        getenv("PODCAST_SCHEDULE_INTERVAL_SECONDS")?.toLongOrNull() ?: 60,
-                    minuspodUrl = getenv("MINUSPOD_URL") ?: "http://minuspod:8080",
+                        getEnv("PODCAST_SCHEDULE_INTERVAL_SECONDS")?.toLongOrNull() ?: 60,
+                    minuspodUrl = getEnv("MINUSPOD_URL") ?: "http://minuspod:8080",
                     minuspodAdminPassword = minuspodPassword,
                 )
             }
@@ -189,4 +198,9 @@ data class Env(
                 )
         }
     }
+}
+
+private fun String.isLocalOrDevelopment(): Boolean {
+    val normalized = trim().lowercase()
+    return normalized == "dev" || normalized == "local" || normalized == "development"
 }

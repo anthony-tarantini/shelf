@@ -100,6 +100,7 @@ In dev compose:
 - Media files are private by default and are served through API endpoints, not direct storage mounts.
 - Directory scanning is an administrative operation and is limited to configured import roots.
 - Set `IMPORT_SCAN_ROOTS` to a comma-separated list of allowed scan directories for production deployments.
+- `ENCRYPTION_SECRET` is required for non-development environments; startup fails fast when it is missing.
 
 ## 📖 Documentation
 
@@ -252,7 +253,7 @@ Manual and status endpoints:
 
 Shelf persists Libation scan/import history in database tables:
 - `libation_import_runs` (run-level summaries)
-- `libation_import_records` (source idempotency and per-item status)
+- `libation_import_records` (source idempotency, canonical series-key linking, and per-item status)
 
 ## Releases
 

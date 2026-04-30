@@ -14,6 +14,7 @@ import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.catalog.series.persistence.SeriesQueries
 import io.tarantini.shelf.integration.persistence.LibationImportQueries
 import io.tarantini.shelf.integration.podcast.libation.LibationResolvedManifest
+import io.tarantini.shelf.integration.podcast.libation.canonicalSeriesKey
 import io.tarantini.shelf.processing.audiobook.ffmpeg
 import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.processing.storage.StorageService
@@ -43,14 +44,27 @@ class LibationManifestImporter(
     ): LibationImportOutcome =
         withContext(Dispatchers.IO) {
             val sourceKey = sourceKey(manifest.asin)
+            val canonicalSeriesKey = canonicalSeriesKey(manifest.seriesTitle)
             val guid = sourceKey
             val record =
                 libationImportQueries.selectRecordBySourceKey(sourceKey).executeAsOneOrNull()
+            val canonicalRecord =
+                if (record == null) {
+                    libationImportQueries
+                        .selectLatestRecordByCanonicalSeriesKey(canonicalSeriesKey)
+                        .executeAsOneOrNull()
+                } else {
+                    null
+                }
 
             val seriesId =
                 record?.series_id
+                    ?: canonicalRecord?.series_id
                     ?: findOrCreateSeriesIdForRun(manifest.seriesTitle, runSeriesByTitle)
-            val podcastId = record?.podcast_id ?: findOrCreatePodcastForSeries(seriesId)
+            val podcastId =
+                record?.podcast_id
+                    ?: canonicalRecord?.podcast_id
+                    ?: findOrCreatePodcastForSeries(seriesId)
 
             // Idempotency: if guid is already claimed, update record and optionally backfill cover.
             val existingEpisodeId =
@@ -67,6 +81,7 @@ class LibationManifestImporter(
                 )
                 upsertImportRecord(
                     sourceKey = sourceKey,
+                    canonicalSeriesKey = canonicalSeriesKey,
                     manifest = manifest,
                     seriesId = seriesId,
                     podcastId = podcastId,
@@ -86,6 +101,7 @@ class LibationManifestImporter(
             if (!copied) {
                 upsertImportRecord(
                     sourceKey = sourceKey,
+                    canonicalSeriesKey = canonicalSeriesKey,
                     manifest = manifest,
                     seriesId = seriesId,
                     podcastId = podcastId,
@@ -151,6 +167,7 @@ class LibationManifestImporter(
 
                     upsertImportRecord(
                         sourceKey = sourceKey,
+                        canonicalSeriesKey = canonicalSeriesKey,
                         manifest = manifest,
                         seriesId = seriesId,
                         podcastId = podcastId,
@@ -168,6 +185,7 @@ class LibationManifestImporter(
                 logger.warn(error) { "Libation manifest import failed." }
                 upsertImportRecord(
                     sourceKey = sourceKey,
+                    canonicalSeriesKey = canonicalSeriesKey,
                     manifest = manifest,
                     seriesId = seriesId,
                     podcastId = podcastId,
@@ -182,6 +200,7 @@ class LibationManifestImporter(
 
     private fun upsertImportRecord(
         sourceKey: String,
+        canonicalSeriesKey: String,
         manifest: LibationResolvedManifest,
         seriesId: SeriesId?,
         podcastId: PodcastId?,
@@ -193,6 +212,7 @@ class LibationManifestImporter(
         libationImportQueries.upsertRecord(
             sourceKey = sourceKey,
             asin = manifest.asin,
+            canonicalSeriesKey = canonicalSeriesKey,
             seriesId = seriesId,
             podcastId = podcastId,
             episodeId = episodeId,

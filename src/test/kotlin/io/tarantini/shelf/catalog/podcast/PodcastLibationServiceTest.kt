@@ -92,4 +92,67 @@ class PodcastLibationServiceTest :
                 dashboard.importedFailedCount shouldBe 0
             }
         }
+
+        "libation importer reuses podcast across runs when ASIN changes but series title matches" {
+            testWithDeps { deps ->
+                val dropDir = Files.createTempDirectory("libation-import-series-key")
+                dropDir.resolve("audio").createDirectories()
+                val firstAudioPath = dropDir.resolve("audio/episode-one.m4b")
+                Files.write(firstAudioPath, byteArrayOf(1, 2, 3, 4))
+                val secondAudioPath = dropDir.resolve("audio/episode-two.m4b")
+                Files.write(secondAudioPath, byteArrayOf(5, 6, 7, 8))
+
+                val manifestPath = dropDir.resolve("episode.json")
+                manifestPath.writeText(
+                    """
+                    {
+                      "asin": "B111111111",
+                      "title": "Episode One",
+                      "seriesTitle": "Libation: The Show!",
+                      "audioFile": "audio/episode-one.m4b"
+                    }
+                    """
+                        .trimIndent()
+                )
+
+                val service =
+                    podcastLibationService(
+                        enabled = true,
+                        dropDirectory = dropDir.toString(),
+                        scanner = LibationScanner(LibationManifestParser()),
+                        libationImportQueries = deps.database.libationImportQueries,
+                        seriesQueries = deps.database.seriesQueries,
+                        podcastQueries = deps.database.podcastQueries,
+                        storageService = deps.storageService,
+                    )
+
+                val first =
+                    recover({ service.scanNow() }) { fail("First scan should succeed: $it") }
+                first.importedCreatedCount shouldBe 1
+
+                manifestPath.writeText(
+                    """
+                    {
+                      "asin": "B222222222",
+                      "title": "Episode Two",
+                      "seriesTitle": "libation the show",
+                      "audioFile": "audio/episode-two.m4b"
+                    }
+                    """
+                        .trimIndent()
+                )
+
+                val second =
+                    recover({ service.scanNow() }) { fail("Second scan should succeed: $it") }
+                second.importedCreatedCount shouldBe 1
+
+                val targetPodcasts =
+                    deps.database.podcastQueries
+                        .selectAll()
+                        .executeAsList()
+                        .filter { it.series_title == "Libation: The Show!" }
+                targetPodcasts.size shouldBe 1
+                targetPodcasts.first().episode_count shouldBe 2
+            }
+        }
     })
