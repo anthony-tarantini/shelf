@@ -12,7 +12,6 @@ import io.tarantini.shelf.user.auth.JwtContext
 import io.tarantini.shelf.user.auth.JwtToken
 import io.tarantini.shelf.user.identity.domain.UserId
 import java.nio.file.Files
-import java.nio.file.Path
 import kotlin.io.path.deleteRecursively
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.ExperimentalUuidApi
@@ -24,8 +23,7 @@ class ImportServiceProgressTest :
             testWithDeps { deps ->
                 val userId = UserId.fromRaw(Uuid.random())
                 val auth = JwtContext(JwtToken("fake"), userId)
-                val scanRoot =
-                    Files.createTempDirectory(Path.of("./storage"), "scan-progress-empty-")
+                val scanRoot = Files.createTempDirectory(tempStorageRoot, "scan-progress-empty-")
 
                 try {
                     recover({

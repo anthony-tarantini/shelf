@@ -62,7 +62,14 @@ class ImportApiTest :
                     client.post("/api/books/import/scan") {
                         header(HttpHeaders.Authorization, "Bearer ${userWithToken.token.value}")
                         contentType(ContentType.Application.Json)
-                        setBody(Request(ScanDirectoryRequest(path = "./storage", staged = true)))
+                        setBody(
+                            Request(
+                                ScanDirectoryRequest(
+                                    path = tempStorageRoot.toString(),
+                                    staged = true,
+                                )
+                            )
+                        )
                     }
 
                 scanResponse.status shouldBe HttpStatusCode.Accepted
@@ -90,7 +97,14 @@ class ImportApiTest :
                     client.post("/api/books/import/scan") {
                         header(HttpHeaders.Authorization, "Bearer $token")
                         contentType(ContentType.Application.Json)
-                        setBody(Request(ScanDirectoryRequest(path = "./storage", staged = true)))
+                        setBody(
+                            Request(
+                                ScanDirectoryRequest(
+                                    path = tempStorageRoot.toString(),
+                                    staged = true,
+                                )
+                            )
+                        )
                     }
 
                 scanResponse.status shouldBe HttpStatusCode.Forbidden

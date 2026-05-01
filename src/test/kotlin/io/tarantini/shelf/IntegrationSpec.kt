@@ -26,7 +26,7 @@ import kotlin.time.Duration.Companion.days
 import kotlinx.serialization.json.Json
 
 abstract class IntegrationSpec(body: IntegrationSpec.() -> Unit = {}) : StringSpec() {
-    private val tempStorageRoot = Files.createTempDirectory("shelf-test-storage-")
+    val tempStorageRoot = Files.createTempDirectory("shelf-test-storage-")
     private val testEnv =
         Env(
             dataSource =
@@ -42,7 +42,7 @@ abstract class IntegrationSpec(body: IntegrationSpec.() -> Unit = {}) : StringSp
             storage =
                 Env.Storage(
                     tempStorageRoot.absolutePathString(),
-                    listOf(tempStorageRoot.absolutePathString(), "./storage"),
+                    listOf(tempStorageRoot.absolutePathString()),
                 ),
             valkey = Env.Valkey(null),
             observability =
