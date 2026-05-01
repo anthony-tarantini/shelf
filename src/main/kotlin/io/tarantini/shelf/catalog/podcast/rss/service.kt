@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val RSS_MIME = "application/rss+xml"
+private const val RSS_SCHEMA_VERSION = 1
 
 data class PodcastRssFeed(val xml: String, val etag: String)
 
@@ -110,7 +111,10 @@ private class DefaultPodcastRssService(
                 """
                     .trimIndent()
 
-            PodcastRssFeed(xml = xml, etag = "${podcast.id.id.value}-${podcast.version}")
+            PodcastRssFeed(
+                xml = xml,
+                etag = "${podcast.id.id.value}-${podcast.version}-v$RSS_SCHEMA_VERSION",
+            )
         }
 
     context(_: RaiseContext)

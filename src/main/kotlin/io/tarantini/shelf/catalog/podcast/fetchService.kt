@@ -99,9 +99,11 @@ private class DefaultPodcastFeedFetchService(
         }
 
         val downloaded = audioFetchAdapter.fetch(episode.audioUrl)
+        var savedPath: StoragePath? = null
         try {
             val path = episodeAudioStoragePath(podcast, episode, downloaded.extension)
             storageService.save(path, downloaded.path)
+            savedPath = path
 
             val inserted =
                 withContext(Dispatchers.IO) {
@@ -156,9 +158,13 @@ private class DefaultPodcastFeedFetchService(
 
             if (!inserted) {
                 storageService.delete(path)
+                savedPath = null
             }
 
             return inserted
+        } catch (e: Exception) {
+            savedPath?.let { runCatching { storageService.delete(it) } }
+            throw e
         } finally {
             runCatching { Files.deleteIfExists(downloaded.path) }
         }
