@@ -2,8 +2,10 @@
 
 package io.tarantini.shelf.integration.koreader.stats
 
+import arrow.core.raise.catch
 import arrow.core.raise.context.either
 import arrow.core.raise.context.ensureNotNull
+import arrow.core.raise.context.raise
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.metadata.FileHashRelinkPort
@@ -12,6 +14,7 @@ import io.tarantini.shelf.catalog.metadata.domain.EditionId
 import io.tarantini.shelf.integration.koreader.stats.domain.EditionMatch
 import io.tarantini.shelf.integration.koreader.stats.domain.EditionMatcher
 import io.tarantini.shelf.integration.koreader.stats.domain.IngestKoreaderStatsCommand
+import io.tarantini.shelf.integration.koreader.stats.domain.InvalidStatsSqliteFile
 import io.tarantini.shelf.integration.koreader.stats.domain.KoreaderBookId
 import io.tarantini.shelf.integration.koreader.stats.domain.KoreaderBookTotals
 import io.tarantini.shelf.integration.koreader.stats.domain.KoreaderDailyAggregate
@@ -82,8 +85,22 @@ private class DefaultKoreaderStatsService(
     context(_: RaiseContext)
     override suspend fun ingest(command: IngestKoreaderStatsCommand): KoreaderStatsIngestSummary =
         withContext(Dispatchers.IO) {
-            sqliteOpener(command.sourcePath).use { reader ->
-                ingestWithReader(command.userId, reader)
+            val reader =
+                catch({ sqliteOpener(command.sourcePath) }) { error ->
+                    logger.warn(
+                        "KOReader stats sqlite open failed error={}",
+                        error::class.simpleName,
+                    )
+                    raise(InvalidStatsSqliteFile)
+                }
+            reader.use {
+                catch({ ingestWithReader(command.userId, it) }) { error ->
+                    logger.warn(
+                        "KOReader stats sqlite read failed error={}",
+                        error::class.simpleName,
+                    )
+                    raise(InvalidStatsSqliteFile)
+                }
             }
         }
 
@@ -122,7 +139,7 @@ private class DefaultKoreaderStatsService(
             val rescaled =
                 rawRows.flatMap { row -> PageRescaler.rescale(row, sourceBook.pages).toList() }
             rescaled.forEach { repository.upsertPage(userId, surrogateId, it) }
-            pagesUpserted += rawRows.size
+            pagesUpserted += rescaled.size
 
             val sessions = SessionAggregator.aggregate(rescaled, surrogateId)
             repository.replaceSessionsForBook(userId, surrogateId, sessions)

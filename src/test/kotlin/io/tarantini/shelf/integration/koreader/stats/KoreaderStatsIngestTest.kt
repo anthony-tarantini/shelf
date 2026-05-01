@@ -2,12 +2,14 @@
 
 package io.tarantini.shelf.integration.koreader.stats
 
+import arrow.core.raise.either
 import arrow.core.raise.recover
 import io.kotest.assertions.fail
 import io.kotest.matchers.shouldBe
 import io.tarantini.shelf.IntegrationSpec
 import io.tarantini.shelf.app.id
 import io.tarantini.shelf.integration.koreader.stats.domain.IngestKoreaderStatsCommand
+import io.tarantini.shelf.integration.koreader.stats.domain.InvalidStatsSqliteFile
 import io.tarantini.shelf.user.identity.createUser
 import io.tarantini.shelf.user.identity.domain.HashedPassword
 import io.tarantini.shelf.user.identity.domain.NewUser
@@ -173,6 +175,40 @@ class KoreaderStatsIngestTest :
                 }) {
                     fail("Should not have failed: $it")
                 }
+
+                tmp.toFile().deleteRecursively()
+            }
+        }
+
+        "ingest of a non-sqlite file raises InvalidStatsSqliteFile" {
+            testWithDeps { deps ->
+                val tmp = Files.createTempDirectory("koreader-stats-bad-")
+                val bogusFile = tmp.resolve("not-a-db.sqlite")
+                Files.writeString(bogusFile, "this is not a sqlite database")
+
+                val user =
+                    recover({
+                        deps.database.userQueries.createUser(
+                            NewUser(
+                                email = UserEmail.fromRaw("kostats-bad@example.com"),
+                                username = UserName.fromRaw("kostatsBad"),
+                                role = UserRole.USER,
+                                salt = Salt.generate(),
+                                hashedPassword = HashedPassword(byteArrayOf(1)),
+                            )
+                        )
+                    }) {
+                        fail("user creation should not fail: $it")
+                    }
+
+                val result =
+                    either<Any, Any> {
+                        deps.koreaderStatsService.ingest(
+                            IngestKoreaderStatsCommand(user.id.id, bogusFile)
+                        )
+                    }
+                result.isLeft() shouldBe true
+                result.leftOrNull() shouldBe InvalidStatsSqliteFile
 
                 tmp.toFile().deleteRecursively()
             }
