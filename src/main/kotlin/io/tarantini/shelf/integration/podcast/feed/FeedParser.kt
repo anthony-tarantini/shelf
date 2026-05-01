@@ -144,6 +144,9 @@ private fun secureDocumentBuilderFactory(): DocumentBuilderFactory =
         setFeature("http://xml.org/sax/features/external-general-entities", false)
         setFeature("http://xml.org/sax/features/external-parameter-entities", false)
         setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+        setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true)
+        setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD, "")
+        setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
         isXIncludeAware = false
         isExpandEntityReferences = false
     }
