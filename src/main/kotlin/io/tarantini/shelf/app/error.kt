@@ -77,6 +77,12 @@ import io.tarantini.shelf.catalog.series.domain.SeriesCoverNotFound
 import io.tarantini.shelf.catalog.series.domain.SeriesError
 import io.tarantini.shelf.catalog.series.domain.SeriesFuzzySearchDisabled
 import io.tarantini.shelf.catalog.series.domain.SeriesNotFound
+import io.tarantini.shelf.integration.koreader.stats.domain.EmptyKoreaderBookId
+import io.tarantini.shelf.integration.koreader.stats.domain.InvalidKoreaderBookId
+import io.tarantini.shelf.integration.koreader.stats.domain.InvalidStatsDateRange
+import io.tarantini.shelf.integration.koreader.stats.domain.InvalidStatsSqliteFile
+import io.tarantini.shelf.integration.koreader.stats.domain.KoreaderStatsBookNotFound
+import io.tarantini.shelf.integration.koreader.stats.domain.KoreaderStatsError
 import io.tarantini.shelf.integration.podcast.sanitization.MinusPodError
 import io.tarantini.shelf.organization.library.domain.EmptyLibraryId
 import io.tarantini.shelf.organization.library.domain.EmptyLibrarySlug
@@ -190,6 +196,7 @@ fun AppError.toHttpResponse(): Pair<HttpStatusCode, String> =
         is MetadataError -> toHttpResponse()
         is PodcastError -> toHttpResponse()
         is SanitizationError -> toHttpResponse()
+        is KoreaderStatsError -> toHttpResponse()
         is DataError -> HttpStatusCode.InternalServerError to "Database error"
         is AccessDenied -> HttpStatusCode.Forbidden to "Access denied"
         is MinusPodError -> HttpStatusCode.BadGateway to msg
@@ -232,6 +239,15 @@ private fun SanitizationError.toHttpResponse(): Pair<HttpStatusCode, String> =
         FfmpegExecutionFailed -> HttpStatusCode.BadGateway to "FFmpeg execution failed"
         TranscriptionFailed -> HttpStatusCode.BadGateway to "Transcription failed"
         OriginalFileNotFound -> HttpStatusCode.NotFound to "Original audio file not found"
+    }
+
+private fun KoreaderStatsError.toHttpResponse(): Pair<HttpStatusCode, String> =
+    when (this) {
+        EmptyKoreaderBookId -> HttpStatusCode.BadRequest to "Koreader book id is required"
+        InvalidKoreaderBookId -> HttpStatusCode.BadRequest to "Invalid koreader book id"
+        InvalidStatsSqliteFile -> HttpStatusCode.UnprocessableEntity to "Invalid statistics file"
+        KoreaderStatsBookNotFound -> HttpStatusCode.NotFound to "Koreader stats book not found"
+        InvalidStatsDateRange -> HttpStatusCode.BadRequest to "Invalid stats date range"
     }
 
 private fun ImportError.toHttpResponse(): Pair<HttpStatusCode, String> =

@@ -4,6 +4,7 @@ package io.tarantini.shelf.integration.koreader
 
 import arrow.core.raise.either
 import io.ktor.http.*
+import io.ktor.server.application.application
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -13,12 +14,17 @@ import io.tarantini.shelf.integration.koreader.domain.ProgressPayload
 import io.tarantini.shelf.integration.koreader.domain.toCommand
 import io.tarantini.shelf.integration.koreader.domain.toKoreaderCreateUserCommand
 import io.tarantini.shelf.integration.koreader.domain.toKoreaderProgressReadCommand
+import io.tarantini.shelf.integration.koreader.stats.domain.IngestKoreaderStatsCommand
 import io.tarantini.shelf.user.auth.koreaderTokenAuth
 import io.tarantini.shelf.user.auth.stripKoreaderDomain
+import io.tarantini.shelf.user.identity.domain.UserId
+import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.uuid.ExperimentalUuidApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 
@@ -208,7 +214,10 @@ private fun Route.configureKoreaderWebdavRoutes(deps: Dependencies) {
                 when (call.request.local.method) {
                     HttpMethod.parse("PROPFIND") -> respondWebdavPropfind(statsFile)
                     HttpMethod.Get -> respondWebdavGet(statsFile)
-                    HttpMethod.Put -> respondWebdavPut(statsFile)
+                    HttpMethod.Put -> {
+                        respondWebdavPut(statsFile)
+                        triggerStatsIngest(deps, auth.userId, statsFile)
+                    }
                     HttpMethod.Options -> respondWebdavOptions()
                     else -> {
                         logger.warn(
@@ -220,5 +229,33 @@ private fun Route.configureKoreaderWebdavRoutes(deps: Dependencies) {
                 }
             }
         }
+    }
+}
+
+private fun RoutingContext.triggerStatsIngest(deps: Dependencies, userId: UserId, statsFile: Path) {
+    if (!statsFile.exists()) return
+    call.application.launch(Dispatchers.IO) {
+        either { deps.koreaderStatsService.ingest(IngestKoreaderStatsCommand(userId, statsFile)) }
+            .fold(
+                { error ->
+                    logger.warn("KOReader stats ingest failed error={}", error::class.simpleName)
+                    deps.observability
+                        .counter("shelf.koreader.stats_ingest", "result", "failure")
+                        .increment()
+                },
+                { summary ->
+                    logger.info(
+                        "KOReader stats ingest success books={} matched={} unmatched={} pages={} sessions={}",
+                        summary.booksSeen,
+                        summary.booksMatched,
+                        summary.booksUnmatched,
+                        summary.pagesUpserted,
+                        summary.sessionsInserted,
+                    )
+                    deps.observability
+                        .counter("shelf.koreader.stats_ingest", "result", "success")
+                        .increment()
+                },
+            )
     }
 }

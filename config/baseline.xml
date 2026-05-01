@@ -129,6 +129,10 @@
     <ID>MagicNumber:service.kt$&lt;no name provided>$3</ID>
     <ID>MagicNumber:service.kt$&lt;no name provided>$50</ID>
     <ID>MatchingDeclarationName:ManifestParser.kt$LibationManifestParser</ID>
+    <ID>MatchingDeclarationName:repository.kt$KoreaderStatsRepository</ID>
+    <ID>MatchingDeclarationName:service.kt$KoreaderStatsService : FileHashRelinkPort</ID>
+    <ID>TooManyFunctions:repository.kt$KoreaderStatsRepository</ID>
+    <ID>TooManyFunctions:repository.kt$SqlDelightKoreaderStatsRepository : KoreaderStatsRepository</ID>
     <ID>MatchingDeclarationName:api.kt$PodcastRequest</ID>
     <ID>MatchingDeclarationName:auth.kt$KoreaderAuthService</ID>
     <ID>MatchingDeclarationName:decider.kt$ActivityMutationDecider</ID>

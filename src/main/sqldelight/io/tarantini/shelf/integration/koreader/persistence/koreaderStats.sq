@@ -1,0 +1,173 @@
+import io.tarantini.shelf.catalog.metadata.domain.EditionId;
+import io.tarantini.shelf.integration.koreader.stats.domain.KoreaderBookId;
+import io.tarantini.shelf.integration.koreader.stats.domain.KoreaderSessionId;
+import io.tarantini.shelf.user.identity.domain.UserId;
+
+CREATE TABLE IF NOT EXISTS koreader_stat_books (
+    id UUID AS KoreaderBookId NOT NULL PRIMARY KEY,
+    user_id UUID AS UserId NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    edition_id UUID AS EditionId REFERENCES editions(id) ON DELETE SET NULL,
+    md5 VARCHAR(32),
+    title TEXT NOT NULL,
+    authors TEXT,
+    series TEXT,
+    language VARCHAR(16),
+    pages INTEGER,
+    source_total_read_time BIGINT,
+    source_total_read_pages INTEGER,
+    source_last_open BIGINT,
+    first_seen_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_ingested_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_koreader_stat_books_user_md5
+    ON koreader_stat_books(user_id, md5)
+    WHERE md5 IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_koreader_stat_books_user_edition
+    ON koreader_stat_books(user_id, edition_id);
+
+CREATE TABLE IF NOT EXISTS koreader_stat_pages (
+    user_id UUID AS UserId NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    book_surrogate_id UUID AS KoreaderBookId NOT NULL REFERENCES koreader_stat_books(id) ON DELETE CASCADE,
+    page INTEGER NOT NULL,
+    start_time BIGINT NOT NULL,
+    duration_seconds INTEGER NOT NULL,
+    total_pages INTEGER,
+    PRIMARY KEY (user_id, book_surrogate_id, page, start_time)
+);
+
+CREATE INDEX IF NOT EXISTS idx_koreader_stat_pages_user_time
+    ON koreader_stat_pages(user_id, start_time);
+
+CREATE TABLE IF NOT EXISTS koreader_stat_sessions (
+    id UUID AS KoreaderSessionId NOT NULL PRIMARY KEY,
+    user_id UUID AS UserId NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    book_surrogate_id UUID AS KoreaderBookId NOT NULL REFERENCES koreader_stat_books(id) ON DELETE CASCADE,
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    ended_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    duration_seconds INTEGER NOT NULL,
+    pages_read INTEGER NOT NULL,
+    first_page INTEGER NOT NULL,
+    last_page INTEGER NOT NULL,
+    UNIQUE (user_id, book_surrogate_id, started_at)
+);
+
+CREATE INDEX IF NOT EXISTS idx_koreader_stat_sessions_user_time
+    ON koreader_stat_sessions(user_id, started_at);
+
+CREATE INDEX IF NOT EXISTS idx_koreader_stat_sessions_book
+    ON koreader_stat_sessions(user_id, book_surrogate_id, started_at);
+
+upsertStatBook:
+INSERT INTO koreader_stat_books (
+    id, user_id, edition_id, md5, title, authors, series, language, pages,
+    source_total_read_time, source_total_read_pages, source_last_open,
+    first_seen_at, last_ingested_at
+)
+VALUES (
+    :id, :userId, :editionId, :md5, :title, :authors, :series, :language, :pages,
+    :sourceTotalReadTime, :sourceTotalReadPages, :sourceLastOpen,
+    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO UPDATE SET
+    edition_id = EXCLUDED.edition_id,
+    md5 = EXCLUDED.md5,
+    title = EXCLUDED.title,
+    authors = EXCLUDED.authors,
+    series = EXCLUDED.series,
+    language = EXCLUDED.language,
+    pages = EXCLUDED.pages,
+    source_total_read_time = EXCLUDED.source_total_read_time,
+    source_total_read_pages = EXCLUDED.source_total_read_pages,
+    source_last_open = EXCLUDED.source_last_open,
+    last_ingested_at = CURRENT_TIMESTAMP;
+
+selectStatBookByUserAndMd5:
+SELECT * FROM koreader_stat_books
+WHERE user_id = :userId AND md5 = :md5;
+
+selectStatBooksByUser:
+SELECT * FROM koreader_stat_books
+WHERE user_id = :userId
+ORDER BY last_ingested_at DESC, title ASC;
+
+selectUnmatchedStatBooksByUser:
+SELECT * FROM koreader_stat_books
+WHERE user_id = :userId AND edition_id IS NULL
+ORDER BY title ASC;
+
+selectStatBookByUserAndEdition:
+SELECT * FROM koreader_stat_books
+WHERE user_id = :userId AND edition_id = :editionId;
+
+relinkStatBooksByMd5:
+UPDATE koreader_stat_books
+SET edition_id = :editionId
+WHERE md5 = :md5 AND edition_id IS NULL;
+
+upsertStatPage:
+INSERT INTO koreader_stat_pages (
+    user_id, book_surrogate_id, page, start_time, duration_seconds, total_pages
+)
+VALUES (:userId, :bookSurrogateId, :page, :startTime, :durationSeconds, :totalPages)
+ON CONFLICT (user_id, book_surrogate_id, page, start_time) DO UPDATE SET
+    duration_seconds = EXCLUDED.duration_seconds,
+    total_pages = EXCLUDED.total_pages;
+
+selectStatPagesForBook:
+SELECT page, start_time, duration_seconds, total_pages
+FROM koreader_stat_pages
+WHERE user_id = :userId AND book_surrogate_id = :bookSurrogateId
+ORDER BY start_time ASC;
+
+deleteStatSessionsForBook:
+DELETE FROM koreader_stat_sessions
+WHERE user_id = :userId AND book_surrogate_id = :bookSurrogateId;
+
+insertStatSession:
+INSERT INTO koreader_stat_sessions (
+    id, user_id, book_surrogate_id, started_at, ended_at, duration_seconds,
+    pages_read, first_page, last_page
+)
+VALUES (
+    :id, :userId, :bookSurrogateId, :startedAt, :endedAt, :durationSeconds,
+    :pagesRead, :firstPage, :lastPage
+);
+
+selectStatSessionsForBookBetween:
+SELECT * FROM koreader_stat_sessions
+WHERE user_id = :userId
+  AND book_surrogate_id = :bookSurrogateId
+  AND started_at >= :fromTime
+  AND started_at < :toTime
+ORDER BY started_at ASC;
+
+selectStatSessionsForBook:
+SELECT * FROM koreader_stat_sessions
+WHERE user_id = :userId AND book_surrogate_id = :bookSurrogateId
+ORDER BY started_at ASC;
+
+selectStatTotalsForBook:
+SELECT
+    COUNT(*) AS session_count,
+    COALESCE(SUM(duration_seconds), 0)::BIGINT AS total_duration_seconds,
+    COALESCE(SUM(pages_read), 0)::BIGINT AS total_pages_read,
+    MIN(started_at) AS first_session_at,
+    MAX(ended_at) AS last_session_at
+FROM koreader_stat_sessions
+WHERE user_id = :userId AND book_surrogate_id = :bookSurrogateId;
+
+selectStatDailyAggregatesBetween:
+SELECT
+    DATE_TRUNC('day', started_at) AS day,
+    COUNT(*) AS session_count,
+    COUNT(DISTINCT book_surrogate_id) AS book_count,
+    COALESCE(SUM(duration_seconds), 0)::BIGINT AS total_duration_seconds,
+    COALESCE(SUM(pages_read), 0)::BIGINT AS total_pages_read
+FROM koreader_stat_sessions
+WHERE user_id = :userId
+  AND started_at >= :fromTime
+  AND started_at < :toTime
+GROUP BY DATE_TRUNC('day', started_at)
+ORDER BY DATE_TRUNC('day', started_at) ASC;

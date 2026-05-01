@@ -38,7 +38,12 @@ import io.tarantini.shelf.catalog.podcast.persistence.Podcasts
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.catalog.series.persistence.Series
 import io.tarantini.shelf.integration.koreader.persistence.Koreader_progress
+import io.tarantini.shelf.integration.koreader.persistence.Koreader_stat_books
+import io.tarantini.shelf.integration.koreader.persistence.Koreader_stat_pages
+import io.tarantini.shelf.integration.koreader.persistence.Koreader_stat_sessions
 import io.tarantini.shelf.integration.koreader.persistence.Koreader_users
+import io.tarantini.shelf.integration.koreader.stats.domain.KoreaderBookId
+import io.tarantini.shelf.integration.koreader.stats.domain.KoreaderSessionId
 import io.tarantini.shelf.integration.persistence.Integration_credentials
 import io.tarantini.shelf.integration.persistence.Libation_import_records
 import io.tarantini.shelf.organization.library.domain.LibraryId
@@ -201,6 +206,23 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
         api_tokensAdapter = Api_tokens.Adapter(TokenId.adapter, UserId.adapter, TokenHash.adapter),
         koreader_progressAdapter = Koreader_progress.Adapter(UserId.adapter, EditionId.adapter),
         koreader_usersAdapter = Koreader_users.Adapter(UserId.adapter),
+        koreader_stat_booksAdapter =
+            Koreader_stat_books.Adapter(
+                idAdapter = KoreaderBookId.adapter,
+                user_idAdapter = UserId.adapter,
+                edition_idAdapter = EditionId.adapter,
+            ),
+        koreader_stat_pagesAdapter =
+            Koreader_stat_pages.Adapter(
+                user_idAdapter = UserId.adapter,
+                book_surrogate_idAdapter = KoreaderBookId.adapter,
+            ),
+        koreader_stat_sessionsAdapter =
+            Koreader_stat_sessions.Adapter(
+                idAdapter = KoreaderSessionId.adapter,
+                user_idAdapter = UserId.adapter,
+                book_surrogate_idAdapter = KoreaderBookId.adapter,
+            ),
         sanitization_jobsAdapter =
             Sanitization_jobs.Adapter(
                 idAdapter = SanitizationJobId.adapter,

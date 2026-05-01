@@ -45,19 +45,37 @@ interface MetadataModifier {
 
 interface MetadataService : MetadataProvider, MetadataModifier
 
+interface FileHashRelinkPort {
+    context(_: RaiseContext)
+    suspend fun relinkByFileHash(fileHash: String)
+}
+
+private object NoOpFileHashRelinkPort : FileHashRelinkPort {
+    context(_: RaiseContext)
+    override suspend fun relinkByFileHash(fileHash: String) = Unit
+}
+
 fun metadataService(
     externalMetadataProvider: ExternalMetadataProvider,
     metadataProcessor: MetadataProcessor,
     repository: MetadataRepository,
     decider: MetadataDecider = DefaultMetadataDecider,
+    relinkPort: FileHashRelinkPort = NoOpFileHashRelinkPort,
 ): MetadataService =
-    MetadataAggregateService(externalMetadataProvider, metadataProcessor, repository, decider)
+    MetadataAggregateService(
+        externalMetadataProvider,
+        metadataProcessor,
+        repository,
+        decider,
+        relinkPort,
+    )
 
 private class MetadataAggregateService(
     private val externalMetadataProvider: ExternalMetadataProvider,
     private val metadataProcessor: MetadataProcessor,
     private val repository: MetadataRepository,
     private val decider: MetadataDecider,
+    private val relinkPort: FileHashRelinkPort,
 ) : MetadataService {
     context(_: RaiseContext)
     override suspend fun getMetadataForBook(bookId: BookId): SavedMetadataAggregate? =
@@ -93,8 +111,11 @@ private class MetadataAggregateService(
         externalMetadataProvider.searchBookMetadataByName(query)
 
     context(_: RaiseContext)
-    override suspend fun save(metadata: NewMetadataAggregate) =
-        withContext(Dispatchers.IO) { repository.saveAggregate(metadata) }
+    override suspend fun save(metadata: NewMetadataAggregate): MetadataId {
+        val id = withContext(Dispatchers.IO) { repository.saveAggregate(metadata) }
+        relinkFileHashes(metadata)
+        return id
+    }
 
     context(_: RaiseContext)
     override suspend fun processAndSave(
@@ -105,7 +126,18 @@ private class MetadataAggregateService(
     ): MetadataId {
         val processed = metadataProcessor.process(scope, sourcePath, fileName, bookId)
         val aggregate = decider.planAggregate(processed)
-        return withContext(Dispatchers.IO) { repository.saveAggregate(aggregate) }
+        val id = withContext(Dispatchers.IO) { repository.saveAggregate(aggregate) }
+        relinkFileHashes(aggregate)
+        return id
+    }
+
+    context(_: RaiseContext)
+    private suspend fun relinkFileHashes(aggregate: NewMetadataAggregate) {
+        aggregate.editions
+            .mapNotNull { it.edition.fileHash }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .forEach { hash -> relinkPort.relinkByFileHash(hash) }
     }
 
     context(_: RaiseContext)

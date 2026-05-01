@@ -113,6 +113,7 @@ dependencies {
     implementation(libs.opentelemetry.sdk.extension.autoconfigure)
     implementation(libs.postgresql)
     implementation(libs.slugify)
+    implementation(libs.sqlite.jdbc)
     implementation(libs.tasks)
     implementation(libs.bundles.images)
     implementation(libs.xmlutil.serialization)

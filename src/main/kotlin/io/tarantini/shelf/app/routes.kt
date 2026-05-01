@@ -15,6 +15,7 @@ import io.tarantini.shelf.catalog.podcast.rss.podcastRssRoutes
 import io.tarantini.shelf.catalog.search.searchRoutes
 import io.tarantini.shelf.catalog.series.seriesRoutes
 import io.tarantini.shelf.integration.koreader.koreaderRoutes
+import io.tarantini.shelf.integration.koreader.stats.koreaderStatsRoutes
 import io.tarantini.shelf.observability.appOwnsServerTraces
 import io.tarantini.shelf.observability.observabilityRoutes
 import io.tarantini.shelf.organization.library.libraryRoutes
@@ -79,4 +80,5 @@ fun Application.routes(deps: Dependencies) = routing {
     }
     settingsRoutes(deps.settingsService, deps.jwtService)
     koreaderRoutes(deps)
+    koreaderStatsRoutes(deps.koreaderStatsService, deps.jwtService)
 }

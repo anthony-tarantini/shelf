@@ -36,6 +36,9 @@ import io.tarantini.shelf.integration.koreader.KoreaderAuthService
 import io.tarantini.shelf.integration.koreader.KoreaderSyncService
 import io.tarantini.shelf.integration.koreader.koreaderAuthService
 import io.tarantini.shelf.integration.koreader.koreaderSyncService
+import io.tarantini.shelf.integration.koreader.stats.KoreaderStatsService
+import io.tarantini.shelf.integration.koreader.stats.koreaderStatsRepository
+import io.tarantini.shelf.integration.koreader.stats.koreaderStatsService
 import io.tarantini.shelf.integration.podcast.feed.episodeAudioFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.feedFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.feedParser
@@ -95,6 +98,7 @@ class Dependencies(
     val stagedBookService: StagedBookService,
     val koreaderSyncService: KoreaderSyncService,
     val koreaderAuthService: KoreaderAuthService,
+    val koreaderStatsService: KoreaderStatsService,
     val opdsService: OpdsService,
     val podcastLibationService: io.tarantini.shelf.catalog.podcast.PodcastLibationService,
     val minusPodAdapter: io.tarantini.shelf.integration.podcast.sanitization.MinusPodAdapter,
@@ -158,8 +162,15 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         }
         val externalMetadataProvider = hardcover(hardcoverApolloClient)
         val metadataRepository = metadataRepository(metadataQueries)
+        val koreaderStatsRepository = koreaderStatsRepository(koreaderStatsQueries)
+        val koreaderStatsService = koreaderStatsService(koreaderStatsRepository, metadataRepository)
         val metadataService =
-            metadataService(externalMetadataProvider, metadataProcessor, metadataRepository)
+            metadataService(
+                externalMetadataProvider,
+                metadataProcessor,
+                metadataRepository,
+                relinkPort = koreaderStatsService,
+            )
 
         val valkeyUrl = env.valkey.url
         var workerValkeyConnection: StatefulRedisConnection<String, String>? = null
@@ -374,6 +385,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             stagedBookService,
             koreaderSyncService,
             koreaderAuthService,
+            koreaderStatsService,
             opdsService,
             podcastLibationService,
             minusPodAdapter,
