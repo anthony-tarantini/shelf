@@ -54,7 +54,7 @@
 		error = null;
 
 		if (!feedUrl.trim()) {
-			error = 'Feed URL is required.';
+			error = $t('podcasts.subscribe.feed_url_required');
 			return;
 		}
 
@@ -73,7 +73,7 @@
 		}
 
 		if (!seriesId) {
-			error = 'Select an existing series or enter a title for a new one.';
+			error = $t('podcasts.subscribe.series_required');
 			submitting = false;
 			return;
 		}

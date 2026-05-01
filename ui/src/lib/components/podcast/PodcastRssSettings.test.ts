@@ -39,7 +39,7 @@ describe('PodcastRssSettings', () => {
 		expect(screen.getByText(/RSS URL copied/)).toBeInTheDocument();
 	});
 
-	it('should call rotate token API', async () => {
+	it('should call rotate token API after confirmation', async () => {
 		const onUpdate = vi.fn();
 		const updatedPodcast = { ...mockPodcast, feedToken: 'new-token' };
 		vi.mocked(api.post).mockResolvedValueOnce({ right: updatedPodcast });
@@ -47,6 +47,10 @@ describe('PodcastRssSettings', () => {
 		render(PodcastRssSettings, { props: { podcast: mockPodcast, onUpdate } });
 		const rotateBtn = screen.getByRole('button', { name: 'Rotate Token' });
 		await fireEvent.click(rotateBtn);
+
+		// Confirmation dialog opens — click the confirm button in the dialog
+		const allRotateButtons = await screen.findAllByRole('button', { name: 'Rotate Token' });
+		await fireEvent.click(allRotateButtons[allRotateButtons.length - 1]);
 
 		await waitFor(() => {
 			expect(api.post).toHaveBeenCalledWith('/podcasts/pod-1/rotate-token', {});

@@ -4,6 +4,7 @@
 	import { api } from '$lib/api/client';
 	import type { SavedPodcastRoot } from '$lib/types/models';
 	import StatusBanner from '$lib/components/ui/StatusBanner.svelte';
+	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 
 	interface Props {
 		podcast: SavedPodcastRoot;
@@ -14,6 +15,8 @@
 
 	let isRotating = $state(false);
 	let isRevoking = $state(false);
+	let showRotateConfirm = $state(false);
+	let showRevokeConfirm = $state(false);
 	let error = $state<string | null>(null);
 	let successMessage = $state<string | null>(null);
 
@@ -33,6 +36,7 @@
 		error = null;
 		const result = await api.post<SavedPodcastRoot>(`/podcasts/${podcast.id}/rotate-token`, {});
 		isRotating = false;
+		showRotateConfirm = false;
 		if (result.right) {
 			onUpdate(result.right);
 		} else if (result.left) {
@@ -45,6 +49,7 @@
 		error = null;
 		const result = await api.post<SavedPodcastRoot>(`/podcasts/${podcast.id}/revoke-token`, {});
 		isRevoking = false;
+		showRevokeConfirm = false;
 		if (result.right) {
 			onUpdate(result.right);
 		} else if (result.left) {
@@ -90,7 +95,7 @@
 				<button
 					type="button"
 					disabled={isRotating}
-					onclick={rotateToken}
+					onclick={() => (showRotateConfirm = true)}
 					class="mt-2 rounded-lg border border-border bg-background px-4 py-2 text-xs font-bold text-foreground transition-all hover:bg-accent disabled:opacity-50"
 				>
 					{isRotating ? '...' : $t('podcasts.settings.rotate_token')}
@@ -103,7 +108,7 @@
 				<button
 					type="button"
 					disabled={isRevoking}
-					onclick={revokeToken}
+					onclick={() => (showRevokeConfirm = true)}
 					class="mt-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2 text-xs font-bold text-destructive transition-all hover:bg-destructive/10 disabled:opacity-50"
 				>
 					{isRevoking ? '...' : $t('podcasts.settings.revoke_token')}
@@ -112,3 +117,24 @@
 		</div>
 	</div>
 </section>
+
+<ConfirmDialog
+	bind:open={showRotateConfirm}
+	title={$t('podcasts.settings.rotate_token_confirm_title')}
+	message={$t('podcasts.settings.rotate_token_confirm_message')}
+	confirmLabel={$t('podcasts.settings.rotate_token')}
+	processing={isRotating}
+	onConfirm={rotateToken}
+	onCancel={() => (showRotateConfirm = false)}
+/>
+
+<ConfirmDialog
+	bind:open={showRevokeConfirm}
+	title={$t('podcasts.settings.revoke_token_confirm_title')}
+	message={$t('podcasts.settings.revoke_token_confirm_message')}
+	confirmLabel={$t('podcasts.settings.revoke_token')}
+	variant="destructive"
+	processing={isRevoking}
+	onConfirm={revokeToken}
+	onCancel={() => (showRevokeConfirm = false)}
+/>
