@@ -23,7 +23,10 @@ interface EpisodeAudioFetchAdapter {
 
 fun episodeAudioFetchAdapter(
     httpClient: HttpClient =
-        HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()
+        HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(java.time.Duration.ofSeconds(10))
+            .build()
 ): EpisodeAudioFetchAdapter = JavaNetEpisodeAudioFetchAdapter(httpClient)
 
 private class JavaNetEpisodeAudioFetchAdapter(private val httpClient: HttpClient) :
@@ -34,6 +37,7 @@ private class JavaNetEpisodeAudioFetchAdapter(private val httpClient: HttpClient
             val request =
                 HttpRequest.newBuilder(URI(audioUrl))
                     .GET()
+                    .timeout(java.time.Duration.ofMinutes(5))
                     .header("Accept", "audio/*,application/octet-stream;q=0.9")
                     .header("User-Agent", "ShelfPodcastBot/1.0")
                     .build()

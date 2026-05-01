@@ -7,13 +7,17 @@ import io.tarantini.shelf.catalog.podcast.domain.FeedAuthRequired
 import io.tarantini.shelf.catalog.podcast.domain.FeedFetchFailed
 import io.tarantini.shelf.catalog.podcast.domain.FeedRateLimited
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
+import java.io.ByteArrayOutputStream
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.Duration
 import kotlin.text.Charsets.UTF_8
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private const val MAX_FEED_BYTES = 10L * 1024 * 1024 // 10 MB
 
 sealed interface FeedFetchCredentials {
     data class Basic(val username: String, val password: String) : FeedFetchCredentials
@@ -34,7 +38,10 @@ interface FeedFetchAdapter {
 
 fun feedFetchAdapter(
     httpClient: HttpClient =
-        HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()
+        HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(Duration.ofSeconds(10))
+            .build()
 ): FeedFetchAdapter = JavaNetFeedFetchAdapter(httpClient)
 
 private class JavaNetFeedFetchAdapter(private val httpClient: HttpClient) : FeedFetchAdapter {
@@ -44,6 +51,7 @@ private class JavaNetFeedFetchAdapter(private val httpClient: HttpClient) : Feed
             val requestBuilder =
                 HttpRequest.newBuilder(URI(feedUrl.value))
                     .GET()
+                    .timeout(Duration.ofSeconds(30))
                     .header(
                         "Accept",
                         "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9",
@@ -72,14 +80,23 @@ private class JavaNetFeedFetchAdapter(private val httpClient: HttpClient) : Feed
                 catch({
                     httpClient.send(
                         requestBuilder.build(),
-                        HttpResponse.BodyHandlers.ofString(UTF_8),
+                        HttpResponse.BodyHandlers.ofInputStream(),
                     )
                 }) {
                     raise(FeedFetchFailed)
                 }
 
+            val contentLength =
+                response.headers().firstValueAsLong("Content-Length").let {
+                    if (it.isPresent) it.asLong else null
+                }
+            if (contentLength != null && contentLength > MAX_FEED_BYTES) {
+                response.body().close()
+                raise(FeedFetchFailed)
+            }
+
             when (response.statusCode()) {
-                in 200..299 -> response.body()
+                in 200..299 -> readBounded(response)
                 401,
                 403 -> raise(FeedAuthRequired)
                 429 -> {
@@ -90,4 +107,21 @@ private class JavaNetFeedFetchAdapter(private val httpClient: HttpClient) : Feed
                 else -> raise(FeedFetchFailed)
             }
         }
+
+    context(_: RaiseContext)
+    private fun readBounded(response: HttpResponse<java.io.InputStream>): String {
+        val buffer = ByteArray(8192)
+        val output = ByteArrayOutputStream()
+        var totalRead = 0L
+        response.body().use { input ->
+            while (true) {
+                val n = input.read(buffer)
+                if (n == -1) break
+                totalRead += n
+                if (totalRead > MAX_FEED_BYTES) raise(FeedFetchFailed)
+                output.write(buffer, 0, n)
+            }
+        }
+        return output.toString(UTF_8)
+    }
 }
