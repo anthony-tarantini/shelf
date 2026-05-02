@@ -110,6 +110,13 @@ const config: Config<Payload> = ({
             loader: async () => (
                 await import('./i18n/en/podcasts.json')
             ).default,
+        },
+        {
+            locale: 'en',
+            key: 'stats',
+            loader: async () => (
+                await import('./i18n/en/stats.json')
+            ).default,
         }
     ]
 });

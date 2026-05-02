@@ -1,0 +1,45 @@
+{
+	"page_title": "Reading Stats",
+	"eyebrow": "My Reading",
+	"subtitle": "KOReader sessions ingested via WebDAV.",
+	"nav": {
+		"label": "Stats"
+	},
+	"overview": {
+		"daily_heading": "Daily reading minutes",
+		"daily_subtitle": "Past year",
+		"calendar_heading": "Activity calendar",
+		"calendar_subtitle": "Each cell is one day; brighter means more reading.",
+		"empty": "No reading data yet. Sync a KOReader device via WebDAV to populate stats.",
+		"unavailable_title": "Stats not available",
+		"unavailable_body": "The stats endpoints are not enabled on this server, or no KOReader data has been ingested yet. Sync a device via WebDAV to start collecting reading sessions.",
+		"total_minutes": "Total minutes",
+		"total_pages": "Total pages",
+		"active_days": "Active days"
+	},
+	"books": {
+		"heading": "Books read",
+		"subtitle": "Sorted by total time.",
+		"empty": "No matched books yet.",
+		"col_title": "Title",
+		"col_duration": "Time",
+		"col_pages": "Pages",
+		"col_sessions": "Sessions",
+		"unmatched_heading": "Unmatched",
+		"unmatched_subtitle": "Books KOReader saw but Shelf could not match by file hash.",
+		"view_detail": "View"
+	},
+	"book_detail": {
+		"back": "Back to books",
+		"sessions_heading": "Reading sessions",
+		"sessions_subtitle": "Each bar is one continuous reading window.",
+		"empty_sessions": "No sessions in selected range.",
+		"summary": {
+			"sessions": "Sessions",
+			"duration": "Duration",
+			"pages": "Pages",
+			"first": "First",
+			"last": "Last"
+		}
+	}
+}
