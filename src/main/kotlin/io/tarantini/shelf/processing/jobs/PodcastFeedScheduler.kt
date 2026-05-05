@@ -1,5 +1,6 @@
 package io.tarantini.shelf.processing.jobs
 
+import arrow.core.raise.catch
 import arrow.core.raise.context.either
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.tarantini.shelf.app.id
@@ -29,23 +30,20 @@ class PodcastFeedScheduler(
         scope.launch(Dispatchers.IO) {
             logger.info { "Starting PodcastFeedScheduler..." }
             while (isActive) {
-                runCatching {
-                        either {
-                                val due = feedFetchService.getDuePodcasts()
-                                due.forEach { podcast ->
-                                    jobQueue.enqueueFeedFetchJob(podcast.id.id)
-                                }
+                catch({
+                    either {
+                            val due = feedFetchService.getDuePodcasts()
+                            due.forEach { podcast -> jobQueue.enqueueFeedFetchJob(podcast.id.id) }
+                        }
+                        .mapLeft { err ->
+                            logger.warn {
+                                "Podcast feed scheduling failed: ${err::class.simpleName}"
                             }
-                            .mapLeft { err ->
-                                logger.warn {
-                                    "Podcast feed scheduling failed: ${err::class.simpleName}"
-                                }
-                            }
-                    }
-                    .onFailure { error ->
-                        if (error is CancellationException) throw error
-                        logger.error(error) { "Podcast feed scheduler iteration failed." }
-                    }
+                        }
+                }) { error ->
+                    if (error is CancellationException) throw error
+                    logger.error(error) { "Podcast feed scheduler iteration failed." }
+                }
 
                 delay(intervalSeconds.seconds)
             }

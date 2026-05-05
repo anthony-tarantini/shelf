@@ -1,5 +1,6 @@
 package io.tarantini.shelf.processing.jobs
 
+import arrow.core.raise.catch
 import arrow.core.raise.context.either
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.lettuce.core.api.StatefulRedisConnection
@@ -29,22 +30,21 @@ class PodcastFeedWorker(
             logger.info { "Starting PodcastFeedWorker..." }
             while (isActive) {
                 val podcastId =
-                    runCatching {
-                            if (valkeyConnection != null) {
-                                val commands = valkeyConnection.sync()
-                                val result = commands.brpop(10, "jobs:feed_fetch")
-                                result?.let { PodcastId.fromRaw(it.value) }
-                            } else if (inMemoryChannel != null) {
-                                inMemoryChannel.receive()
-                            } else {
-                                null
-                            }
+                    catch({
+                        if (valkeyConnection != null) {
+                            val commands = valkeyConnection.sync()
+                            val result = commands.brpop(10, "jobs:feed_fetch")
+                            result?.let { PodcastId.fromRaw(it.value) }
+                        } else if (inMemoryChannel != null) {
+                            inMemoryChannel.receive()
+                        } else {
+                            null
                         }
-                        .onFailure { error ->
-                            if (error is CancellationException) throw error
-                            logger.error(error) { "Podcast feed worker iteration failed." }
-                        }
-                        .getOrNull()
+                    }) { error ->
+                        if (error is CancellationException) throw error
+                        logger.error(error) { "Podcast feed worker iteration failed." }
+                        null
+                    }
 
                 if (podcastId != null) {
                     processFetchJob(podcastId)

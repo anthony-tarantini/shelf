@@ -1,5 +1,10 @@
 package io.tarantini.shelf.integration.podcast.libation
 
+import arrow.core.Either
+import arrow.core.raise.catch
+import arrow.core.raise.either
+import arrow.core.raise.ensure
+import arrow.core.raise.ensureNotNull
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.extension
@@ -33,16 +38,15 @@ class LibationScanner(private val parser: LibationManifestParser) {
                 .filter { it.extension.lowercase() == "json" }
                 .forEach { path ->
                     discovered += 1
-                    runCatching { parser.parse(path) }
-                        .mapCatching { manifest ->
-                            toResolvedManifest(manifest, dropDirectory, path)
-                        }
-                        .onSuccess { resolved ->
-                            valid += 1
-                            manifests += resolved
-                            jsonResolvedAudioPaths.add(resolved.audioPath)
-                        }
-                        .onFailure { invalid += 1 }
+                    parseAndResolve(path, dropDirectory)
+                        .fold(
+                            ifLeft = { invalid += 1 },
+                            ifRight = { resolved ->
+                                valid += 1
+                                manifests += resolved
+                                jsonResolvedAudioPaths.add(resolved.audioPath)
+                            },
+                        )
                 }
 
             if (discovered == 0) {
@@ -55,18 +59,18 @@ class LibationScanner(private val parser: LibationManifestParser) {
                             return@forEach
                         }
                         discovered += 1
-                        runCatching {
-                                toFallbackManifest(
-                                    audioPath = audioPath,
-                                    normalizedDropDirectory = normalizedDropDirectory,
-                                    realDropDirectory = realDropDirectory,
-                                )
-                            }
-                            .onSuccess { resolved ->
-                                valid += 1
-                                manifests += resolved
-                            }
-                            .onFailure { invalid += 1 }
+                        toFallbackManifest(
+                                audioPath = audioPath,
+                                normalizedDropDirectory = normalizedDropDirectory,
+                                realDropDirectory = realDropDirectory,
+                            )
+                            .fold(
+                                ifLeft = { invalid += 1 },
+                                ifRight = { resolved ->
+                                    valid += 1
+                                    manifests += resolved
+                                },
+                            )
                     }
             }
         }
@@ -79,54 +83,79 @@ class LibationScanner(private val parser: LibationManifestParser) {
         )
     }
 
+    private fun parseAndResolve(
+        path: Path,
+        dropDirectory: Path,
+    ): Either<LibationScanError, LibationResolvedManifest> = either {
+        val manifest =
+            catch({ parser.parse(path) }) { raise(LibationScanError("Invalid manifest JSON.")) }
+        toResolvedManifest(manifest, dropDirectory, path).bind()
+    }
+
     private fun toResolvedManifest(
         manifest: LibationManifest,
         dropDirectory: Path,
         manifestPath: Path,
-    ): LibationResolvedManifest {
-        if (
-            manifest.asin.isNullOrBlank() ||
-                manifest.title.isNullOrBlank() ||
-                manifest.audioFile.isNullOrBlank()
+    ): Either<LibationScanError, LibationResolvedManifest> = either {
+        ensure(
+            !manifest.asin.isNullOrBlank() &&
+                !manifest.title.isNullOrBlank() &&
+                !manifest.audioFile.isNullOrBlank()
         ) {
-            throw IllegalArgumentException("Manifest is missing required fields.")
+            LibationScanError("Manifest is missing required fields.")
         }
 
         val normalizedDropDirectory = dropDirectory.normalize()
-        val candidateAudioPath = normalizedDropDirectory.resolve(manifest.audioFile).normalize()
-        if (!candidateAudioPath.startsWith(normalizedDropDirectory)) {
-            throw IllegalArgumentException("Manifest audio path escapes drop directory.")
+        val candidateAudioPath =
+            normalizedDropDirectory
+                .resolve(
+                    ensureNotNull(manifest.audioFile) {
+                        LibationScanError("Manifest audio file is missing.")
+                    }
+                )
+                .normalize()
+        ensure(candidateAudioPath.startsWith(normalizedDropDirectory)) {
+            LibationScanError("Manifest audio path escapes drop directory.")
         }
 
-        if (!Files.exists(candidateAudioPath) || !Files.isRegularFile(candidateAudioPath)) {
-            throw IllegalArgumentException("Manifest audio file does not exist.")
+        ensure(Files.exists(candidateAudioPath) && Files.isRegularFile(candidateAudioPath)) {
+            LibationScanError("Manifest audio file does not exist.")
         }
 
         // Reject direct symlink targets so manifests cannot point outside the import root.
-        if (Files.isSymbolicLink(candidateAudioPath)) {
-            throw IllegalArgumentException("Manifest audio path cannot be a symlink.")
+        ensure(!Files.isSymbolicLink(candidateAudioPath)) {
+            LibationScanError("Manifest audio path cannot be a symlink.")
         }
 
-        val realDropDirectory = normalizedDropDirectory.toRealPath()
-        val realAudioPath = candidateAudioPath.toRealPath()
-        if (!realAudioPath.startsWith(realDropDirectory)) {
-            throw IllegalArgumentException("Resolved audio path escapes drop directory.")
+        val realDropDirectory =
+            catch({ normalizedDropDirectory.toRealPath() }) {
+                raise(LibationScanError("Drop directory is inaccessible."))
+            }
+        val realAudioPath =
+            catch({ candidateAudioPath.toRealPath() }) {
+                raise(LibationScanError("Manifest audio file does not exist."))
+            }
+        ensure(realAudioPath.startsWith(realDropDirectory)) {
+            LibationScanError("Resolved audio path escapes drop directory.")
         }
 
         // Reject mistaken self-references where audioFile points back to manifest JSON.
-        if (
-            realAudioPath.extension.lowercase() == "json" || realAudioPath.name == manifestPath.name
+        ensure(
+            realAudioPath.extension.lowercase() != "json" && realAudioPath.name != manifestPath.name
         ) {
-            throw IllegalArgumentException("Manifest audio path must reference an audio file.")
+            LibationScanError("Manifest audio path must reference an audio file.")
         }
 
-        val normalizedTitle = manifest.title.trim()
-        val publishedYear = parsePublishedYear(manifest.publishedAt)
-        if (manifest.durationSeconds != null && manifest.durationSeconds < 0.0) {
-            throw IllegalArgumentException("Manifest durationSeconds cannot be negative.")
+        val normalizedTitle =
+            ensureNotNull(manifest.title) { LibationScanError("Manifest title is missing.") }.trim()
+        val publishedYear = parsePublishedYear(manifest.publishedAt).bind()
+        ensure(manifest.durationSeconds == null || manifest.durationSeconds >= 0.0) {
+            LibationScanError("Manifest durationSeconds cannot be negative.")
         }
-        return LibationResolvedManifest(
-            asin = manifest.asin.trim(),
+        LibationResolvedManifest(
+            asin =
+                ensureNotNull(manifest.asin) { LibationScanError("Manifest asin is missing.") }
+                    .trim(),
             title = normalizedTitle,
             seriesTitle =
                 manifest.seriesTitle?.trim().takeUnless { it.isNullOrBlank() } ?: normalizedTitle,
@@ -138,32 +167,35 @@ class LibationScanner(private val parser: LibationManifestParser) {
         )
     }
 
-    private fun parsePublishedYear(raw: String?): Int? {
+    private fun parsePublishedYear(raw: String?): Either<LibationScanError, Int?> = either {
         val candidate = raw?.trim().orEmpty()
-        if (candidate.isEmpty()) return null
+        if (candidate.isEmpty()) return@either null
         val yearText = candidate.take(4)
         val year =
-            yearText.toIntOrNull() ?: throw IllegalArgumentException("Invalid publishedAt year.")
-        if (year !in 1000..9999) throw IllegalArgumentException("Invalid publishedAt year.")
-        return year
+            ensureNotNull(yearText.toIntOrNull()) { LibationScanError("Invalid publishedAt year.") }
+        ensure(year in 1000..9999) { LibationScanError("Invalid publishedAt year.") }
+        year
     }
 
     private fun toFallbackManifest(
         audioPath: Path,
         normalizedDropDirectory: Path,
         realDropDirectory: Path,
-    ): LibationResolvedManifest {
+    ): Either<LibationScanError, LibationResolvedManifest> = either {
         val normalizedAudioPath = audioPath.toAbsolutePath().normalize()
-        if (!normalizedAudioPath.startsWith(normalizedDropDirectory)) {
-            throw IllegalArgumentException("Audio path escapes drop directory.")
+        ensure(normalizedAudioPath.startsWith(normalizedDropDirectory)) {
+            LibationScanError("Audio path escapes drop directory.")
         }
-        if (Files.isSymbolicLink(normalizedAudioPath)) {
-            throw IllegalArgumentException("Audio path cannot be a symlink.")
+        ensure(!Files.isSymbolicLink(normalizedAudioPath)) {
+            LibationScanError("Audio path cannot be a symlink.")
         }
 
-        val realAudioPath = normalizedAudioPath.toRealPath()
-        if (!realAudioPath.startsWith(realDropDirectory)) {
-            throw IllegalArgumentException("Resolved audio path escapes drop directory.")
+        val realAudioPath =
+            catch({ normalizedAudioPath.toRealPath() }) {
+                raise(LibationScanError("Audio file does not exist."))
+            }
+        ensure(realAudioPath.startsWith(realDropDirectory)) {
+            LibationScanError("Resolved audio path escapes drop directory.")
         }
 
         val title = normalizeTitle(realAudioPath.nameWithoutExtension)
@@ -173,12 +205,11 @@ class LibationScanner(private val parser: LibationManifestParser) {
         val fileAsin = extractAsin(realAudioPath.name)
         val parentAsin = parentSeriesTitle?.let(::extractAsin)
         val asin =
-            fileAsin
-                ?: parentAsin
-                ?: extractAsin(realAudioPath.pathString)
-                ?: throw IllegalArgumentException("Unable to infer ASIN from audio path.")
+            ensureNotNull(fileAsin ?: parentAsin ?: extractAsin(realAudioPath.pathString)) {
+                LibationScanError("Unable to infer ASIN from audio path.")
+            }
 
-        return LibationResolvedManifest(
+        LibationResolvedManifest(
             asin = asin,
             title = title,
             seriesTitle = seriesTitle ?: title,
@@ -201,3 +232,5 @@ class LibationScanner(private val parser: LibationManifestParser) {
         val ASIN_SUFFIX_REGEX = Regex("""\s*\[[A-Za-z0-9]{10}]$""")
     }
 }
+
+private data class LibationScanError(val message: String)

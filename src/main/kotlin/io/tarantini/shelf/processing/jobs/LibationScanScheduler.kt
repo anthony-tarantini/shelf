@@ -1,5 +1,6 @@
 package io.tarantini.shelf.processing.jobs
 
+import arrow.core.raise.catch
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.tarantini.shelf.catalog.podcast.PodcastLibationService
 import kotlin.time.Duration.Companion.seconds
@@ -26,11 +27,10 @@ class LibationScanScheduler(
         scope.launch(Dispatchers.IO) {
             logger.info { "Starting LibationScanScheduler..." }
             while (isActive) {
-                runCatching { libationService.scanNowBestEffort() }
-                    .onFailure { error ->
-                        if (error is CancellationException) throw error
-                        logger.warn(error) { "Libation scan scheduler iteration failed." }
-                    }
+                catch({ libationService.scanNowBestEffort() }) { error ->
+                    if (error is CancellationException) throw error
+                    logger.warn(error) { "Libation scan scheduler iteration failed." }
+                }
 
                 delay(intervalSeconds.seconds)
             }
