@@ -78,23 +78,24 @@ class PodcastRssApiTest :
                     }
                 }
 
-                val feedResponse = client.get("/rss/podcasts/${token.value}")
+                val feedResponse = client.get("/api/rss/podcasts/${token.value}")
                 feedResponse.status shouldBe HttpStatusCode.OK
                 val etag = feedResponse.headers[HttpHeaders.ETag]
                 (etag != null) shouldBe true
                 val feedBody = feedResponse.bodyAsText()
                 feedBody.contains("<rss version=\"2.0\"") shouldBe true
                 feedBody.contains("<item>") shouldBe true
-                feedBody.contains("/rss/podcasts/${token.value}/episodes/$episodeId/audio") shouldBe
-                    true
+                feedBody.contains(
+                    "/api/rss/podcasts/${token.value}/episodes/$episodeId/audio"
+                ) shouldBe true
 
                 val audioResponse =
-                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio")
+                    client.get("/api/rss/podcasts/${token.value}/episodes/$episodeId/audio")
                 audioResponse.status shouldBe HttpStatusCode.OK
                 audioResponse.headers[HttpHeaders.ContentType] shouldBe "audio/mpeg"
 
                 val rangedResponse =
-                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
+                    client.get("/api/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
                         header(HttpHeaders.Range, "bytes=1-2")
                     }
                 rangedResponse.status shouldBe HttpStatusCode.PartialContent
@@ -103,7 +104,7 @@ class PodcastRssApiTest :
                 rangedResponse.body<ByteArray>().toList() shouldContainExactly listOf(2, 3)
 
                 val invalidRangeResponse =
-                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
+                    client.get("/api/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
                         header(HttpHeaders.Range, "bytes=99-100")
                     }
                 invalidRangeResponse.status shouldBe HttpStatusCode.RequestedRangeNotSatisfiable
@@ -130,12 +131,12 @@ class PodcastRssApiTest :
                         .executeAsOne()
                 }
 
-                val first = client.get("/rss/podcasts/${token.value}")
+                val first = client.get("/api/rss/podcasts/${token.value}")
                 first.status shouldBe HttpStatusCode.OK
                 val etag = first.headers[HttpHeaders.ETag] ?: fail("Missing ETag")
 
                 val second =
-                    client.get("/rss/podcasts/${token.value}") {
+                    client.get("/api/rss/podcasts/${token.value}") {
                         header(HttpHeaders.IfNoneMatch, etag)
                     }
                 second.status shouldBe HttpStatusCode.NotModified
@@ -197,7 +198,7 @@ class PodcastRssApiTest :
                 }
 
                 val suffix =
-                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
+                    client.get("/api/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
                         header(HttpHeaders.Range, "bytes=-3")
                     }
                 suffix.status shouldBe HttpStatusCode.PartialContent
@@ -205,7 +206,7 @@ class PodcastRssApiTest :
                 suffix.body<ByteArray>().size shouldBe 3
 
                 val openEnded =
-                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
+                    client.get("/api/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
                         header(HttpHeaders.Range, "bytes=1024-")
                     }
                 openEnded.status shouldBe HttpStatusCode.PartialContent
@@ -213,7 +214,7 @@ class PodcastRssApiTest :
                 openEnded.body<ByteArray>().size shouldBe 10 * 1024 * 1024
 
                 val invalidSyntax =
-                    client.get("/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
+                    client.get("/api/rss/podcasts/${token.value}/episodes/$episodeId/audio") {
                         header(HttpHeaders.Range, "bytes=0-1,3-4")
                     }
                 invalidSyntax.status shouldBe HttpStatusCode.RequestedRangeNotSatisfiable

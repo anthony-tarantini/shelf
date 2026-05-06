@@ -25,7 +25,7 @@ import kotlin.uuid.ExperimentalUuidApi
 private const val MAX_RANGE_BYTES = 10L * 1024 * 1024 // 10 MB
 
 fun Route.podcastRssRoutes(rssService: PodcastRssService, storageService: StorageService) {
-    get("/rss/podcasts/{token}") {
+    get("/api/rss/podcasts/{token}") {
         either {
                 val token = FeedToken(call.parameters["token"])
                 rssService.generateFeed(token)
@@ -45,7 +45,7 @@ fun Route.podcastRssRoutes(rssService: PodcastRssService, storageService: Storag
             )
     }
 
-    get("/rss/podcasts/{token}/episodes/{episodeId}/audio") {
+    get("/api/rss/podcasts/{token}/episodes/{episodeId}/audio") {
         either {
                 val token = FeedToken(call.parameters["token"])
                 val episodeId = PodcastEpisodeId(call.parameters["episodeId"])

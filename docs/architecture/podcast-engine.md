@@ -752,7 +752,7 @@ val due = podcastQueries.selectDuePodcasts().executeAsList()
 ```kotlin
 fun Route.podcastRssRoutes(rssService: PodcastRssService) {
     // No JWT — token-authenticated via URL path
-    get("/rss/podcasts/{token}") {
+    get("/api/rss/podcasts/{token}") {
         respond({
             // FeedToken() validates untrusted route input (not fromRaw)
             val token = FeedToken(call.parameters["token"])
@@ -761,7 +761,7 @@ fun Route.podcastRssRoutes(rssService: PodcastRssService) {
     }
 
     // Byte-range audio streaming
-    get("/rss/podcasts/{token}/episodes/{bookId}/audio") {
+    get("/api/rss/podcasts/{token}/episodes/{bookId}/audio") {
         either {
             // Both use validated constructors — untrusted route input
             val token = FeedToken(call.parameters["token"])

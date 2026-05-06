@@ -68,12 +68,12 @@ private class DefaultPodcastRssService(
 
             val channelTitle = escapeXml(summary.series_title)
             val description = escapeXml("Private podcast feed for ${summary.series_title}")
-            val channelLink = "$publicRootUrl/rss/podcasts/${token.value}"
+            val channelLink = "$publicRootUrl/api/rss/podcasts/${token.value}"
 
             val items =
                 episodes.joinToString("\n") { row ->
                     val enclosureUrl =
-                        "$publicRootUrl/rss/podcasts/${token.value}/episodes/${row.episode_id.value}/audio"
+                        "$publicRootUrl/api/rss/podcasts/${token.value}/episodes/${row.episode_id.value}/audio"
                     val pubDate =
                         row.published_at
                             ?.toInstant()
