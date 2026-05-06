@@ -50,6 +50,8 @@ class PodcastPersistenceQueriesTest :
                             season = 1,
                             episode = 1,
                             publishedAt = OffsetDateTime.now(),
+                            description = null,
+                            author = null,
                         )
                         .executeAsOne()
                 val secondEpisode =
@@ -64,6 +66,8 @@ class PodcastPersistenceQueriesTest :
                             season = 1,
                             episode = 2,
                             publishedAt = OffsetDateTime.now(),
+                            description = null,
+                            author = null,
                         )
                         .executeAsOne()
 
@@ -233,6 +237,8 @@ class PodcastPersistenceQueriesTest :
                             season = 1,
                             episode = 4,
                             publishedAt = OffsetDateTime.now().minusDays(2),
+                            description = null,
+                            author = null,
                         )
                         .executeAsOne()
                 val episodeB =
@@ -247,6 +253,8 @@ class PodcastPersistenceQueriesTest :
                             season = 1,
                             episode = 9,
                             publishedAt = OffsetDateTime.now().minusDays(1),
+                            description = null,
+                            author = null,
                         )
                         .executeAsOne()
 

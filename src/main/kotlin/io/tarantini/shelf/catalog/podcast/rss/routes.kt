@@ -3,10 +3,14 @@
 package io.tarantini.shelf.catalog.podcast.rss
 
 import arrow.core.raise.context.either
+import io.ktor.http.CacheControl
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
+import io.ktor.http.withCharset
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.response.cacheControl
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
@@ -28,7 +32,7 @@ fun Route.podcastRssRoutes(rssService: PodcastRssService, storageService: Storag
     get("/api/rss/podcasts/{token}") {
         either {
                 val token = FeedToken(call.parameters["token"])
-                rssService.generateFeed(token)
+                rssService.generateFeed(token, requestBaseUrl(call))
             }
             .fold(
                 { err: AppError -> respond(err) },
@@ -40,7 +44,42 @@ fun Route.podcastRssRoutes(rssService: PodcastRssService, storageService: Storag
                         return@get
                     }
                     call.response.header(HttpHeaders.ETag, quotedEtag)
-                    call.respondText(feed.xml, ContentType.parse(rssService.feedContentType()))
+                    call.respondText(
+                        feed.xml,
+                        ContentType.parse(rssService.feedContentType()).withCharset(Charsets.UTF_8),
+                    )
+                },
+            )
+    }
+
+    get("/api/rss/podcasts/{token}/cover") {
+        either {
+                val token = FeedToken(call.parameters["token"])
+                rssService.resolveCover(token)
+            }
+            .fold(
+                { err: AppError -> respond(err) },
+                { cover ->
+                    either {
+                            val (length, channel) = storageService.getReadChannel(cover.path)
+                            val mime =
+                                when (cover.path.extension().lowercase()) {
+                                    "png" -> ContentType.Image.PNG
+                                    "webp" -> ContentType.parse("image/webp")
+                                    else -> ContentType.Image.JPEG
+                                }
+                            call.response.cacheControl(CacheControl.MaxAge(maxAgeSeconds = 86400))
+                            call.respond(
+                                object : OutgoingContent.ReadChannelContent() {
+                                    override val contentLength = length
+                                    override val contentType = mime
+
+                                    override fun readFrom() = channel
+                                }
+                            )
+                            null
+                        }
+                        .fold({ err: AppError -> respond(err) }, { _ -> })
                 },
             )
     }
@@ -104,6 +143,14 @@ fun Route.podcastRssRoutes(rssService: PodcastRssService, storageService: Storag
                 },
             )
     }
+}
+
+private fun requestBaseUrl(call: ApplicationCall): String {
+    val forwardedProto = call.request.headers["X-Forwarded-Proto"]?.substringBefore(',')?.trim()
+    val forwardedHost = call.request.headers["X-Forwarded-Host"]?.substringBefore(',')?.trim()
+    val scheme = forwardedProto?.takeIf { it.isNotBlank() } ?: call.request.local.scheme
+    val host = forwardedHost?.takeIf { it.isNotBlank() } ?: call.request.headers[HttpHeaders.Host]
+    return if (host.isNullOrBlank()) "" else "$scheme://$host"
 }
 
 private sealed interface ByteRangeParse {

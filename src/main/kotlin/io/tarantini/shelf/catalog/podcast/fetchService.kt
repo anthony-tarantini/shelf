@@ -137,6 +137,8 @@ private class DefaultPodcastFeedFetchService(
                                     season = season,
                                     episode = resolvedEpisodeNumber,
                                     publishedAt = episode.publishedAt.toOffsetDateTimeUtc(),
+                                    description = episode.description,
+                                    author = null,
                                 )
                                 .executeAsOne()
                         val claimed =

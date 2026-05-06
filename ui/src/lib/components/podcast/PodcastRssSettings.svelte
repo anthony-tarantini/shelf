@@ -15,6 +15,7 @@
 
 	let isRotating = $state(false);
 	let isRevoking = $state(false);
+	let isReprobing = $state(false);
 	let showRotateConfirm = $state(false);
 	let showRevokeConfirm = $state(false);
 	let error = $state<string | null>(null);
@@ -39,6 +40,22 @@
 		showRotateConfirm = false;
 		if (result.right) {
 			onUpdate(result.right);
+		} else if (result.left) {
+			error = result.left.message;
+		}
+	}
+
+	async function reprobeEpisodes() {
+		isReprobing = true;
+		error = null;
+		const result = await api.post<{ updatedCount: number; skippedCount: number }>(
+			`/podcasts/${podcast.id}/reprobe`,
+			{},
+		);
+		isReprobing = false;
+		if (result.right) {
+			successMessage = `Reprobed ${result.right.updatedCount} episode(s); ${result.right.skippedCount} skipped.`;
+			setTimeout(() => (successMessage = null), 5000);
 		} else if (result.left) {
 			error = result.left.message;
 		}
@@ -99,6 +116,19 @@
 					class="mt-2 rounded-lg border border-border bg-background px-4 py-2 text-xs font-bold text-foreground transition-all hover:bg-accent disabled:opacity-50"
 				>
 					{isRotating ? '...' : $t('podcasts.settings.rotate_token')}
+				</button>
+			</div>
+
+			<div class="flex flex-col gap-2 rounded-xl border border-border p-4">
+				<h3 class="text-sm font-bold text-foreground">Reprobe episodes</h3>
+				<p class="text-xs text-muted-foreground">Re-extract duration, author, summary, and pubDate from stored audio files.</p>
+				<button
+					type="button"
+					disabled={isReprobing}
+					onclick={reprobeEpisodes}
+					class="mt-2 rounded-lg border border-border bg-background px-4 py-2 text-xs font-bold text-foreground transition-all hover:bg-accent disabled:opacity-50"
+				>
+					{isReprobing ? '...' : 'Reprobe episodes'}
 				</button>
 			</div>
 

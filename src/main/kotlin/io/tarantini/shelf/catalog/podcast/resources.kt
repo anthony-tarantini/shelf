@@ -17,5 +17,7 @@ data class PodcastsResource(val parent: RootResource = RootResource) {
         @Resource("revoke-token") data class RevokeToken(val parent: Id)
 
         @Resource("credentials") data class Credentials(val parent: Id)
+
+        @Resource("reprobe") data class Reprobe(val parent: Id)
     }
 }

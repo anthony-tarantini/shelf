@@ -57,6 +57,8 @@ class PodcastRssApiTest :
                                     season = 1,
                                     episode = 1,
                                     publishedAt = java.time.OffsetDateTime.now(),
+                                    description = null,
+                                    author = null,
                                 )
                                 .executeAsOne()
                         episodeId = insertedEpisodeId.value.toString()
@@ -83,8 +85,13 @@ class PodcastRssApiTest :
                 val etag = feedResponse.headers[HttpHeaders.ETag]
                 (etag != null) shouldBe true
                 val feedBody = feedResponse.bodyAsText()
+                feedBody.startsWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>") shouldBe true
                 feedBody.contains("<rss version=\"2.0\"") shouldBe true
                 feedBody.contains("<item>") shouldBe true
+                feedBody.contains("<language>en-us</language>") shouldBe true
+                feedBody.contains("<itunes:explicit>no</itunes:explicit>") shouldBe true
+                feedBody.contains("<itunes:category text=\"Fiction\"") shouldBe true
+                feedBody.contains("<itunes:duration>00:01:00</itunes:duration>") shouldBe true
                 feedBody.contains(
                     "/api/rss/podcasts/${token.value}/episodes/$episodeId/audio"
                 ) shouldBe true
@@ -179,6 +186,8 @@ class PodcastRssApiTest :
                                     season = 1,
                                     episode = 1,
                                     publishedAt = java.time.OffsetDateTime.now(),
+                                    description = null,
+                                    author = null,
                                 )
                                 .executeAsOne()
                         episodeId = insertedEpisodeId.value.toString()

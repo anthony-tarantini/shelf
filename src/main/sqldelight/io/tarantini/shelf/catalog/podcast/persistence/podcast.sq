@@ -35,9 +35,12 @@ CREATE TABLE IF NOT EXISTS podcast_episodes (
     season INTEGER NOT NULL DEFAULT 0,
     episode INTEGER NOT NULL,
     published_at TIMESTAMP WITH TIME ZONE,
+    description TEXT,
+    author TEXT,
     sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL),
     UNIQUE (podcast_id, season, episode)
 );
+
 
 CREATE INDEX IF NOT EXISTS idx_podcast_episodes_podcast
 ON podcast_episodes(podcast_id, season ASC, episode ASC);
@@ -123,7 +126,10 @@ SELECT
     pe.episode,
     pe.published_at,
     pe.audio_path,
-    pe.audio_size
+    pe.audio_size,
+    pe.total_time,
+    pe.description,
+    pe.author
 FROM podcast_episodes pe
 WHERE pe.podcast_id = :podcastId
 ORDER BY pe.season ASC, pe.episode ASC;
@@ -173,7 +179,9 @@ INSERT INTO podcast_episodes (
     total_time,
     season,
     episode,
-    published_at
+    published_at,
+    description,
+    author
 )
 VALUES (
     :podcastId,
@@ -184,9 +192,22 @@ VALUES (
     :totalTime,
     :season,
     :episode,
-    :publishedAt
+    :publishedAt,
+    :description,
+    :author
 )
 RETURNING id;
+
+selectEpisodesForReprobeByPodcastId:
+SELECT id, audio_path FROM podcast_episodes WHERE podcast_id = :podcastId;
+
+updateEpisodeProbedMetadata:
+UPDATE podcast_episodes
+SET total_time = :totalTime,
+    description = :description,
+    author = :author,
+    published_at = COALESCE(:publishedAt, published_at)
+WHERE id = :episodeId;
 
 insert:
 INSERT INTO podcasts (series_id, feed_url, feed_token, auto_sanitize, auto_fetch, fetch_interval_minutes)

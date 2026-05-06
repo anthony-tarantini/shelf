@@ -131,6 +131,12 @@ fun Route.podcastRoutes(
         }
     }
 
+    post<PodcastsResource.Id.Reprobe> { resource ->
+        sharedCatalogMutation(jwtService) {
+            respond({ podcastService.reprobeEpisodes(PodcastId(resource.parent.id)) })
+        }
+    }
+
     delete<PodcastsResource.Id.Credentials> { resource ->
         sharedCatalogMutation(jwtService) {
             respond(

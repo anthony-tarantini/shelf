@@ -152,6 +152,13 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
         0,
     )
 
+    driver.execute(
+        null,
+        "ALTER TABLE podcast_episodes ADD COLUMN IF NOT EXISTS description TEXT;",
+        0,
+    )
+    driver.execute(null, "ALTER TABLE podcast_episodes ADD COLUMN IF NOT EXISTS author TEXT;", 0)
+
     return Database(
         driver,
         authorsAdapter = Authors.Adapter(AuthorId.adapter),

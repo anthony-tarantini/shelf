@@ -4,7 +4,10 @@ package io.tarantini.shelf.catalog.podcast
 
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.podcast.domain.*
+import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
 import io.tarantini.shelf.integration.podcast.PodcastCredentialService
+import io.tarantini.shelf.processing.audiobook.probePodcastEpisode
+import io.tarantini.shelf.processing.storage.StorageService
 import kotlin.uuid.ExperimentalUuidApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,7 +44,12 @@ interface PodcastModifier {
 
     context(_: RaiseContext)
     suspend fun deletePodcast(id: PodcastId)
+
+    context(_: RaiseContext)
+    suspend fun reprobeEpisodes(id: PodcastId): PodcastReprobeResult
 }
+
+data class PodcastReprobeResult(val updatedCount: Int, val skippedCount: Int)
 
 interface PodcastService : PodcastProvider, PodcastModifier
 
@@ -49,12 +57,23 @@ fun podcastService(
     readRepository: PodcastReadRepository,
     mutationRepository: PodcastMutationRepository,
     credentialService: PodcastCredentialService,
-): PodcastService = PodcastAggregateService(readRepository, mutationRepository, credentialService)
+    podcastQueries: PodcastQueries,
+    storageService: StorageService,
+): PodcastService =
+    PodcastAggregateService(
+        readRepository,
+        mutationRepository,
+        credentialService,
+        podcastQueries,
+        storageService,
+    )
 
 private class PodcastAggregateService(
     private val readRepository: PodcastReadRepository,
     private val mutationRepository: PodcastMutationRepository,
     private val credentialService: PodcastCredentialService,
+    private val podcastQueries: PodcastQueries,
+    private val storageService: StorageService,
 ) : PodcastService {
     context(_: RaiseContext)
     override suspend fun getPodcasts(): List<PodcastSummary> =
@@ -130,4 +149,35 @@ private class PodcastAggregateService(
             mutationRepository.deletePodcast(id)
         }
     }
+
+    context(_: RaiseContext)
+    override suspend fun reprobeEpisodes(id: PodcastId): PodcastReprobeResult =
+        withContext(Dispatchers.IO) {
+            mutationRepository.getPodcastById(id)
+            val rows = podcastQueries.selectEpisodesForReprobeByPodcastId(id).executeAsList()
+            var updated = 0
+            var skipped = 0
+            for (row in rows) {
+                val probe =
+                    runCatching { storageService.resolve(row.audio_path) }
+                        .getOrNull()
+                        ?.let { probePodcastEpisode(it) }
+                if (probe == null) {
+                    skipped += 1
+                } else {
+                    podcastQueries.updateEpisodeProbedMetadata(
+                        totalTime = probe.totalSeconds,
+                        description = probe.description,
+                        author = probe.author,
+                        publishedAt = probe.publishedAt,
+                        episodeId = row.id,
+                    )
+                    updated += 1
+                }
+            }
+            if (updated > 0) {
+                podcastQueries.bumpVersion(id)
+            }
+            PodcastReprobeResult(updatedCount = updated, skippedCount = skipped)
+        }
 }

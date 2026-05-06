@@ -43,6 +43,9 @@ ON libation_import_records(canonical_series_key);
 selectLatestRun:
 SELECT * FROM libation_import_runs ORDER BY started_at DESC LIMIT 1;
 
+selectRunById:
+SELECT * FROM libation_import_runs WHERE id = :id;
+
 startRun:
 INSERT INTO libation_import_runs (status)
 VALUES ('RUNNING')

@@ -12,6 +12,7 @@ import io.tarantini.shelf.integration.podcast.libation.LibationManifestParser
 import io.tarantini.shelf.integration.podcast.libation.LibationScanner
 import io.tarantini.shelf.testing.MediaFixtureFactory
 import java.nio.file.Files
+import java.util.UUID
 import kotlin.io.path.writeText
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -70,7 +71,9 @@ class PodcastLibationServiceTest :
                 second.invalidManifestCount shouldBe 0
 
                 val latestRun =
-                    deps.database.libationImportQueries.selectLatestRun().executeAsOneOrNull()
+                    deps.database.libationImportQueries
+                        .selectRunById(UUID.fromString(second.lastRunId!!))
+                        .executeAsOneOrNull()
                 latestRun.shouldNotBeNull()
                 latestRun.status shouldBe "COMPLETED"
                 latestRun.imported_created_count shouldBe 0
@@ -190,7 +193,9 @@ class PodcastLibationServiceTest :
                 scan.importedFailedCount shouldBe 0
 
                 val latestRun =
-                    deps.database.libationImportQueries.selectLatestRun().executeAsOneOrNull()
+                    deps.database.libationImportQueries
+                        .selectRunById(UUID.fromString(scan.lastRunId!!))
+                        .executeAsOneOrNull()
                 latestRun.shouldNotBeNull()
                 latestRun.status shouldBe "COMPLETED"
                 latestRun.invalid_manifest_count shouldBe 1

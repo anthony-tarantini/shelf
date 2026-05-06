@@ -129,6 +129,8 @@ fun PodcastQueries.createEpisode(
     season: Int,
     episode: Int,
     publishedAt: Instant?,
+    description: String? = null,
+    author: String? = null,
 ): PodcastEpisodeId =
     insertEpisode(
             podcastId = podcastId,
@@ -140,6 +142,8 @@ fun PodcastQueries.createEpisode(
             season = season,
             episode = episode,
             publishedAt = publishedAt.toOffsetDateTimeUtc(),
+            description = description,
+            author = author,
         )
         .executeAsOne()
 

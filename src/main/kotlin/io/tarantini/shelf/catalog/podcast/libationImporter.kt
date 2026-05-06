@@ -16,6 +16,7 @@ import io.tarantini.shelf.integration.persistence.LibationImportQueries
 import io.tarantini.shelf.integration.podcast.libation.LibationResolvedManifest
 import io.tarantini.shelf.integration.podcast.libation.canonicalSeriesKey
 import io.tarantini.shelf.processing.audiobook.ffmpeg
+import io.tarantini.shelf.processing.audiobook.probePodcastEpisode
 import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.processing.storage.StorageService
 import java.nio.file.Files
@@ -115,6 +116,10 @@ class LibationManifestImporter(
                 )
             }
             val coverPath = extractAndPersistCover(seriesId, podcastId, manifest)
+            val probe =
+                runCatching { probePodcastEpisode(manifest.audioPath) }
+                    .onFailure { logger.warn(it) { "Podcast episode probe failed." } }
+                    .getOrNull()
 
             val result = runCatching {
                 podcastQueries.transactionWithResult {
@@ -139,10 +144,12 @@ class LibationManifestImporter(
                                 coverPath = coverPath,
                                 audioPath = audioPath,
                                 audioSize = Files.size(manifest.audioPath),
-                                totalTime = manifest.durationSeconds,
+                                totalTime = manifest.durationSeconds ?: probe?.totalSeconds,
                                 season = season,
                                 episode = nextEpisode,
-                                publishedAt = null,
+                                publishedAt = probe?.publishedAt,
+                                description = manifest.description ?: probe?.description,
+                                author = probe?.author,
                             )
                             .executeAsOne()
 

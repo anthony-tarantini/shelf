@@ -14,6 +14,7 @@ import io.ktor.server.auth.Authentication
 import io.ktor.server.auth.UserIdPrincipal
 import io.ktor.server.auth.basic
 import io.ktor.server.metrics.micrometer.MicrometerMetrics
+import io.ktor.server.plugins.autohead.AutoHeadResponse
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
@@ -45,6 +46,7 @@ private fun isNoisyHealthPath(path: String): Boolean = noisyHealthPaths.contains
 
 fun Application.configure(deps: Dependencies) {
     install(DefaultHeaders)
+    install(AutoHeadResponse)
     install(PartialContent) { maxRangeCount = 10 }
     install(Resources)
     if (deps.observability.config.metricsEnabled) {
