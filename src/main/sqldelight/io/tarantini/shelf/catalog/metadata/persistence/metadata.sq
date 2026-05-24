@@ -42,6 +42,16 @@ CREATE TABLE IF NOT EXISTS editions (
 CREATE INDEX IF NOT EXISTS idx_editions_book_id ON editions(book_id);
 CREATE INDEX IF NOT EXISTS idx_editions_file_hash ON editions(file_hash);
 
+CREATE TABLE IF NOT EXISTS edition_file_hash_history (
+    edition_id UUID AS EditionId NOT NULL REFERENCES editions(id) ON DELETE CASCADE,
+    file_hash VARCHAR(32) NOT NULL,
+    recorded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (edition_id, file_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_edition_file_hash_history_hash
+    ON edition_file_hash_history(file_hash);
+
 -- Chapters Table (Tied to the specific Edition)
 CREATE TABLE IF NOT EXISTS chapters (
     id UUID AS ChapterId PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -87,7 +97,14 @@ selectEditionsByBookIds:
 SELECT * FROM editions WHERE book_id IN :bookIds;
 
 selectEditionByFileHash:
-SELECT * FROM editions WHERE file_hash = :fileHash;
+SELECT * FROM editions
+WHERE file_hash = :fileHash
+UNION ALL
+SELECT e.* FROM edition_file_hash_history h
+JOIN editions e ON e.id = h.edition_id
+WHERE h.file_hash = :fileHash
+  AND (e.file_hash IS NULL OR e.file_hash <> :fileHash)
+LIMIT 1;
 
 selectChaptersByEditionId:
 SELECT * FROM chapters
@@ -179,9 +196,18 @@ UPDATE editions
 SET isbn_10 = :isbn10, isbn_13 = :isbn13, asin = :asin, narrator = :narrator
 WHERE book_id = :bookId AND format = :format;
 
+updateEditionFileHashById:
+UPDATE editions
+SET file_hash = :fileHash
+WHERE id = :editionId;
+
+insertEditionFileHashHistory:
+INSERT INTO edition_file_hash_history (edition_id, file_hash)
+VALUES (:editionId, :fileHash)
+ON CONFLICT (edition_id, file_hash) DO NOTHING;
+
 deleteEditionsByBookId:
 DELETE FROM editions WHERE book_id = :bookId;
 
 deleteChaptersByEditionId:
 DELETE FROM chapters WHERE edition_id = :editionId;
-

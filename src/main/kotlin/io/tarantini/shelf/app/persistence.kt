@@ -20,6 +20,7 @@ import io.tarantini.shelf.catalog.metadata.domain.ISBN10
 import io.tarantini.shelf.catalog.metadata.domain.ISBN13
 import io.tarantini.shelf.catalog.metadata.domain.MetadataId
 import io.tarantini.shelf.catalog.metadata.persistence.Chapters
+import io.tarantini.shelf.catalog.metadata.persistence.Edition_file_hash_history
 import io.tarantini.shelf.catalog.metadata.persistence.Editions
 import io.tarantini.shelf.catalog.metadata.persistence.Metadata
 import io.tarantini.shelf.catalog.persistence.Book_authors
@@ -251,5 +252,7 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
             ),
         user_settingsAdapter = User_settings.Adapter(UserId.adapter),
         metadata_sync_statusAdapter = Metadata_sync_status.Adapter(BookId.adapter),
+        edition_file_hash_historyAdapter =
+            Edition_file_hash_history.Adapter(edition_idAdapter = EditionId.adapter),
     )
 }

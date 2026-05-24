@@ -25,6 +25,10 @@
 	let success = $state(false);
 
 	let scanPath = $state('');
+	let availableScanRoots = $state<string[]>([]);
+	let selectedScanRoot = $state('');
+	let availableDirectories = $state<string[]>([]);
+	let selectedDirectory = $state('');
 	let scanning = $state(false);
 	let scanError = $state<string | null>(null);
 	let scanSuccess = $state(false);
@@ -36,6 +40,36 @@
 	$effect(() => {
 		libation = initialLibation;
 	});
+
+	$effect(() => {
+		void loadScanRoots();
+	});
+
+	async function loadScanRoots() {
+		const result = await api.get<string[]>('/books/import/roots');
+		if (!result.left && result.right) {
+			availableScanRoots = result.right;
+			if (!selectedScanRoot && availableScanRoots.length > 0) {
+				selectedScanRoot = availableScanRoots[0];
+				await loadDirectories(selectedScanRoot);
+			}
+		}
+	}
+
+	async function loadDirectories(root: string) {
+		const result = await api.get<string[]>(
+			`/books/import/directories?root=${encodeURIComponent(root)}`
+		);
+		if (!result.left && result.right) {
+			availableDirectories = result.right;
+			selectedDirectory = availableDirectories[0] ?? '';
+			scanPath = selectedDirectory || root;
+		} else {
+			availableDirectories = [];
+			selectedDirectory = '';
+			scanPath = root;
+		}
+	}
 
 	async function handleUpload() {
 		if (!fileInput?.files?.[0]) {
@@ -63,6 +97,7 @@
 	}
 
 	async function handleScan() {
+		scanPath = selectedDirectory || selectedScanRoot || scanPath;
 		if (!scanPath) {
 			scanError = $t('import.ingest.scan.error_missing_path');
 			return;
@@ -253,11 +288,41 @@
 					>
 						<input
 							id="scanPath"
-							type="text"
-							bind:value={scanPath}
-							placeholder={$t('import.ingest.scan.field_placeholder')}
-							class="ui-input"
+							type="hidden"
+							value={scanPath}
 						/>
+						<select
+							id="scanRoot"
+							bind:value={selectedScanRoot}
+							class="ui-input"
+							onchange={async () => {
+								await loadDirectories(selectedScanRoot);
+							}}
+						>
+							{#if availableScanRoots.length === 0}
+								<option value="">{$t('import.ingest.scan.no_roots')}</option>
+							{:else}
+								{#each availableScanRoots as root}
+									<option value={root}>{root}</option>
+								{/each}
+							{/if}
+						</select>
+						<select
+							id="scanDirectory"
+							bind:value={selectedDirectory}
+							class="ui-input mt-3"
+							onchange={() => {
+								scanPath = selectedDirectory || selectedScanRoot;
+							}}
+						>
+							{#if availableDirectories.length === 0}
+								<option value="">{$t('import.ingest.scan.no_directories')}</option>
+							{:else}
+								{#each availableDirectories as directory}
+									<option value={directory}>{directory}</option>
+								{/each}
+							{/if}
+						</select>
 					</FormField>
 
 					{#if scanError}

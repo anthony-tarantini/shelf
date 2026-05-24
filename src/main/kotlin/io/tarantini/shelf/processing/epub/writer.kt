@@ -12,6 +12,7 @@ import javax.xml.transform.OutputKeys
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
+import javax.xml.xpath.XPathFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.w3c.dom.Document
@@ -23,6 +24,7 @@ data class EpubMetadataUpdates(
     val description: String? = null,
     val publisher: String? = null,
     val publishYear: Int? = null,
+    val coverImagePath: Path? = null,
 )
 
 interface EpubWriter {
@@ -51,6 +53,7 @@ fun epubWriter(): EpubWriter =
                         val opfBytes = Files.readAllBytes(opfPath)
                         val doc = parseXml(opfBytes)
 
+                        val coverEntryPath = findCoverEntryPath(doc, opfPathStr)
                         applyUpdates(doc, updates)
 
                         // Write back the modified OPF
@@ -63,6 +66,19 @@ fun epubWriter(): EpubWriter =
                             )
                             transformer.transform(DOMSource(doc), StreamResult(os))
                         }
+
+                        if (updates.coverImagePath != null && coverEntryPath != null) {
+                            val coverPathInZip = fs.getPath(coverEntryPath)
+                            if (
+                                Files.exists(coverPathInZip) && Files.exists(updates.coverImagePath)
+                            ) {
+                                Files.newOutputStream(coverPathInZip).use { output ->
+                                    Files.newInputStream(updates.coverImagePath).use { input ->
+                                        input.copyTo(output)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }) { _: Exception ->
                     raise(InvalidOPF)
@@ -70,6 +86,22 @@ fun epubWriter(): EpubWriter =
             }
         }
     }
+
+private fun findCoverEntryPath(doc: Document, opfPathStr: String): String? {
+    val xpath =
+        XPathFactory.newInstance().newXPath().apply { namespaceContext = epubNamespaceContext }
+    val coverId = xpath.evaluate("//opf:meta[@name='cover']/@content", doc).trim()
+    val coverHref =
+        if (coverId.isNotBlank()) {
+            xpath.evaluate("//opf:item[@id='$coverId']/@href", doc).trim()
+        } else {
+            xpath.evaluate("//opf:item[contains(@properties, 'cover-image')]/@href", doc).trim()
+        }
+    if (coverHref.isBlank()) return null
+
+    val opfDir = if (opfPathStr.contains("/")) opfPathStr.substringBeforeLast("/") + "/" else ""
+    return (opfDir + coverHref).normalizePath()
+}
 
 private fun applyUpdates(doc: Document, updates: EpubMetadataUpdates) {
     val metadataNodes = doc.getElementsByTagName("metadata")
@@ -123,4 +155,18 @@ private fun removeNodes(parent: Element, tagName: String) {
         toRemove.add(nodes.item(i))
     }
     toRemove.forEach { parent.removeChild(it) }
+}
+
+private fun String.normalizePath(): String {
+    val parts = split("/")
+    val stack = mutableListOf<String>()
+    for (part in parts) {
+        when (part) {
+            ".",
+            "" -> Unit
+            ".." -> if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
+            else -> stack.add(part)
+        }
+    }
+    return stack.joinToString("/")
 }

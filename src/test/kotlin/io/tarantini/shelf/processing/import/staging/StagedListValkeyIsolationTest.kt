@@ -76,8 +76,10 @@ class StagedListValkeyIsolationTest :
                     SyncMetadataWorker(
                         scope = scope,
                         bookAggregateProvider = mockk<BookAggregateProvider>(relaxed = true),
+                        metadataRepository = mockk<MetadataRepository>(relaxed = true),
                         epubWriter = mockk<EpubWriter>(relaxed = true),
                         storageService = mockk<StorageService>(relaxed = true),
+                        metadataSyncStatusRepository = mockk(relaxed = true),
                         valkeyConnection = workerConnection,
                     )
                 worker.start()

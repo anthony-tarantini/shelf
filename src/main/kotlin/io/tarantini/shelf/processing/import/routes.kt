@@ -106,6 +106,18 @@ fun Route.importRoutes(
         }
     }
 
+    get<ImportResource.Roots> {
+        sharedCatalogRead(jwtService) { context ->
+            respond({ with(context) { importService.getAvailableScanRoots() } })
+        }
+    }
+
+    get<ImportResource.Directories> { resource ->
+        sharedCatalogRead(jwtService) { context ->
+            respond({ with(context) { importService.getAvailableDirectories(resource.root) } })
+        }
+    }
+
     post<ImportApiResource.Libation.Scan> {
         sharedCatalogMutation(jwtService) { respond({ podcastLibationService.scanNow() }) }
     }

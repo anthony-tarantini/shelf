@@ -3,9 +3,12 @@ package io.tarantini.shelf.processing.jobs
 import arrow.core.raise.either
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.lettuce.core.api.StatefulRedisConnection
+import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.book.BookAggregateProvider
 import io.tarantini.shelf.catalog.book.domain.BookId
+import io.tarantini.shelf.catalog.metadata.MetadataRepository
 import io.tarantini.shelf.catalog.metadata.domain.BookFormat
+import io.tarantini.shelf.integration.koreader.koreaderHash
 import io.tarantini.shelf.processing.epub.EpubMetadataUpdates
 import io.tarantini.shelf.processing.epub.EpubWriter
 import io.tarantini.shelf.processing.storage.StorageService
@@ -19,6 +22,7 @@ private val logger = KotlinLogging.logger {}
 class SyncMetadataWorker(
     private val scope: CoroutineScope,
     private val bookAggregateProvider: BookAggregateProvider,
+    private val metadataRepository: MetadataRepository,
     private val epubWriter: EpubWriter,
     private val storageService: StorageService,
     private val metadataSyncStatusRepository: MetadataSyncStatusRepository,
@@ -86,6 +90,10 @@ class SyncMetadataWorker(
 
                 val filePath = storageService.resolve(ebook.path)
                 if (Files.exists(filePath)) {
+                    val coverImagePath =
+                        aggregate.book.coverPath
+                            ?.let { storageService.resolve(it) }
+                            ?.takeIf { Files.exists(it) }
                     val updates =
                         EpubMetadataUpdates(
                             title = metadata.title,
@@ -93,9 +101,20 @@ class SyncMetadataWorker(
                             description = metadata.description,
                             publisher = metadata.publisher,
                             publishYear = metadata.published,
+                            coverImagePath = coverImagePath,
                         )
 
                     epubWriter.updateMetadata(filePath, updates)
+                    val refreshedHash =
+                        filePath.koreaderHash()
+                            ?: run {
+                                metadataSyncStatusRepository.markFailed(
+                                    bookId,
+                                    "Metadata synced, but computing updated file hash failed.",
+                                )
+                                return@either
+                            }
+                    metadataRepository.updateEditionFileHash(ebook.id.id, refreshedHash)
                     metadataSyncStatusRepository.markSucceeded(bookId)
                     logger.info { "Metadata sync completed." }
                 } else {

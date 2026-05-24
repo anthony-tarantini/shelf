@@ -338,6 +338,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             SyncMetadataWorker(
                 scope = scope,
                 bookAggregateProvider = bookService,
+                metadataRepository = metadataRepository,
                 epubWriter = epubWriter,
                 storageService = storageService,
                 valkeyConnection = workerValkeyConnection,

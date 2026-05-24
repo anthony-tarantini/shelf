@@ -18,6 +18,7 @@ import io.tarantini.shelf.catalog.book.BookAggregateProvider
 import io.tarantini.shelf.catalog.book.domain.BookAggregate
 import io.tarantini.shelf.catalog.book.domain.BookId
 import io.tarantini.shelf.catalog.book.domain.BookRoot
+import io.tarantini.shelf.catalog.metadata.MetadataRepository
 import io.tarantini.shelf.catalog.metadata.domain.*
 import io.tarantini.shelf.processing.epub.EpubMetadataUpdates
 import io.tarantini.shelf.processing.epub.EpubWriter
@@ -82,6 +83,7 @@ class SyncMetadataWorkerTest :
                 )
 
             val bookAggregateProvider = mockk<BookAggregateProvider>()
+            val metadataRepository = mockk<MetadataRepository>(relaxed = true)
             val epubWriter = mockk<EpubWriter>()
             val storageService = mockk<StorageService>()
             val metadataSyncStatusRepository = mockk<MetadataSyncStatusRepository>(relaxed = true)
@@ -101,6 +103,7 @@ class SyncMetadataWorkerTest :
                     SyncMetadataWorker(
                         scope = testScope,
                         bookAggregateProvider = bookAggregateProvider,
+                        metadataRepository = metadataRepository,
                         epubWriter = epubWriter,
                         storageService = storageService,
                         metadataSyncStatusRepository = metadataSyncStatusRepository,
@@ -128,6 +131,7 @@ class SyncMetadataWorkerTest :
                         description = "Updated Description",
                         publisher = "Updated Publisher",
                         publishYear = 2024,
+                        coverImagePath = tempFile,
                     )
             } finally {
                 java.nio.file.Files.deleteIfExists(tempFile)

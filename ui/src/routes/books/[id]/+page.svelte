@@ -74,7 +74,7 @@
 
     async function fetchSyncStatus(bookId: string): Promise<MetadataSyncStatus | null> {
         const syncResult = await api.get<MetadataSyncStatus>(`/books/${bookId}/metadata-sync-status`);
-        if (syncResult.left) return null;
+        if (syncResult.left || !syncResult.right) return null;
         return syncResult.right.status === 'NONE' ? null : syncResult.right;
     }
 

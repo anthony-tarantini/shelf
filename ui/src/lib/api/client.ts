@@ -15,6 +15,7 @@ export type Either<E, T> = {
 
 type RequestBody = FormData | Record<string, unknown> | Array<unknown> | string | null;
 const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
+const DEFAULT_UPLOAD_TIMEOUT_MS = 300000;
 
 function resolveRequestTimeoutMs(): number {
   const envValue =
@@ -28,11 +29,13 @@ function resolveRequestTimeoutMs(): number {
 export class ApiClient {
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
+  private readonly uploadTimeoutMs: number;
   private token: string | null = null;
 
   constructor(baseUrl: string = '/api') {
     this.baseUrl = baseUrl;
     this.timeoutMs = resolveRequestTimeoutMs();
+    this.uploadTimeoutMs = DEFAULT_UPLOAD_TIMEOUT_MS;
     if (browser) {
       this.token = localStorage.getItem('shelf_token');
     }
@@ -62,6 +65,7 @@ export class ApiClient {
     path: string,
     body?: RequestBody,
     isFormData: boolean = false,
+    timeoutMs?: number,
     fetchFn: typeof fetch = fetch
   ): Promise<Either<AppError, T>> {
     const headers: Record<string, string> = {};
@@ -84,7 +88,8 @@ export class ApiClient {
       }
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+      const requestTimeoutMs = timeoutMs ?? this.timeoutMs;
+      const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
       const response = await fetchFn(`${this.baseUrl}${path}`, {
         method,
         headers,
@@ -132,30 +137,37 @@ export class ApiClient {
   }
 
   get<T>(path: string, fetchFn: typeof fetch = fetch) {
-    return this.request<T>('GET', path, undefined, false, fetchFn);
+    return this.request<T>('GET', path, undefined, false, undefined, fetchFn);
   }
 
   post<T>(path: string, body?: RequestBody, fetchFn: typeof fetch = fetch) {
     const requestBody = body ? { data: body } : undefined;
-    return this.request<T>('POST', path, requestBody, false, fetchFn);
+    return this.request<T>('POST', path, requestBody, false, undefined, fetchFn);
   }
 
   upload<T>(path: string, formData: FormData, fetchFn: typeof fetch = fetch) {
-    return this.request<T>('POST', path, formData, true, fetchFn);
+    return this.request<T>(
+      'POST',
+      path,
+      formData,
+      true,
+      this.uploadTimeoutMs,
+      fetchFn
+    );
   }
 
   put<T>(path: string, body: RequestBody, fetchFn: typeof fetch = fetch) {
     const requestBody = body ? { data: body } : undefined;
-    return this.request<T>('PUT', path, requestBody, false, fetchFn);
+    return this.request<T>('PUT', path, requestBody, false, undefined, fetchFn);
   }
 
   patch<T>(path: string, body: RequestBody, fetchFn: typeof fetch = fetch) {
     const requestBody = body ? { data: body } : undefined;
-    return this.request<T>('PATCH', path, requestBody, false, fetchFn);
+    return this.request<T>('PATCH', path, requestBody, false, undefined, fetchFn);
   }
 
   delete<T>(path: string, fetchFn: typeof fetch = fetch) {
-    return this.request<T>('DELETE', path, undefined, false, fetchFn);
+    return this.request<T>('DELETE', path, undefined, false, undefined, fetchFn);
   }
 }
 

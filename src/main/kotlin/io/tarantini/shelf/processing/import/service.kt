@@ -62,6 +62,12 @@ interface ImportService {
 
     context(_: RaiseContext, auth: JwtContext)
     suspend fun getScanProgress(): ImportScanProgress?
+
+    context(_: RaiseContext, auth: JwtContext)
+    suspend fun getAvailableScanRoots(): List<String>
+
+    context(_: RaiseContext, auth: JwtContext)
+    suspend fun getAvailableDirectories(rootPath: String?): List<String>
 }
 
 fun importService(
@@ -222,6 +228,37 @@ fun importService(
         override suspend fun getScanProgress(): ImportScanProgress? =
             scanProgressMutex.withLock { scanProgress[auth.userId] }
 
+        context(_: RaiseContext, auth: JwtContext)
+        override suspend fun getAvailableScanRoots(): List<String> =
+            normalizedScanRoots.map { it.toString() }
+
+        context(_: RaiseContext, auth: JwtContext)
+        override suspend fun getAvailableDirectories(rootPath: String?): List<String> =
+            withContext(Dispatchers.IO) {
+                val root =
+                    if (rootPath.isNullOrBlank()) {
+                        normalizedScanRoots.firstOrNull() ?: raise(DirectoryNotFound)
+                    } else {
+                        Paths.get(rootPath).toAbsolutePath().normalize()
+                    }
+
+                if (normalizedScanRoots.none { root.startsWith(it) }) {
+                    raise(DirectoryNotFound)
+                }
+                if (!Files.exists(root) || !Files.isDirectory(root)) {
+                    raise(DirectoryNotFound)
+                }
+
+                val dirs = mutableListOf(root.toString())
+                Files.walk(root, 4).use { stream ->
+                    stream
+                        .filter { it != root && Files.isDirectory(it) }
+                        .sorted()
+                        .forEach { dirs += it.toString() }
+                }
+                dirs.take(500)
+            }
+
         private suspend fun queueImportForScan(
             sourcePath: Path,
             fileName: String,
@@ -234,7 +271,9 @@ fun importService(
                     sourcePath = sourcePath,
                     fileName = fileName,
                     staged = true,
-                    deleteSource = false,
+                    // Directory-scan imports are ingress-only: once staged into canonical
+                    // storage, remove the source file so upload areas stay clean.
+                    deleteSource = true,
                     scanRunId = runId,
                 )
             )

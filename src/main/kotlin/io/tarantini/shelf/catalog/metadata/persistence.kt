@@ -140,6 +140,8 @@ fun MetadataQueries.saveEdition(edition: NewEdition): EditionId = transactionWit
             )
             .executeAsOne()
 
+    edition.fileHash?.let { insertEditionFileHashHistory(id, it) }
+
     deleteChaptersByEditionId(id)
     id
 }

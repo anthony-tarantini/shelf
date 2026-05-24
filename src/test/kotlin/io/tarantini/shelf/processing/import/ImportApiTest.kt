@@ -26,11 +26,53 @@ import io.tarantini.shelf.user.identity.domain.UserId
 import io.tarantini.shelf.user.identity.domain.UserRequest
 import io.tarantini.shelf.user.identity.domain.UserRole
 import io.tarantini.shelf.user.identity.domain.UserWithToken
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import kotlin.uuid.ExperimentalUuidApi
 
 class ImportApiTest :
     IntegrationSpec({
+        "return configured scan roots for authenticated users" {
+            testApp { client ->
+                val token = registerUser(client, "scan-roots@example.com", "scanroots")
+
+                val response =
+                    client.get("/api/books/import/roots") {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                    }
+
+                response.status shouldBe HttpStatusCode.OK
+                val roots = response.body<Response<List<String>>>().data
+                roots.isNotEmpty() shouldBe true
+            }
+        }
+
+        "return directories for a selected scan root" {
+            testApp { client ->
+                val token = registerUser(client, "scan-directories@example.com", "scandirectories")
+
+                val rootsResponse =
+                    client.get("/api/books/import/roots") {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                    }
+                rootsResponse.status shouldBe HttpStatusCode.OK
+                val roots = rootsResponse.body<Response<List<String>>>().data
+                roots.isNotEmpty() shouldBe true
+
+                val root = roots.first()
+                val encodedRoot = URLEncoder.encode(root, StandardCharsets.UTF_8)
+                val directoriesResponse =
+                    client.get("/api/books/import/directories?root=$encodedRoot") {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                    }
+
+                directoriesResponse.status shouldBe HttpStatusCode.OK
+                val directories = directoriesResponse.body<Response<List<String>>>().data
+                directories.contains(root) shouldBe true
+            }
+        }
+
         "allow directory scan for admin users" {
             testApp { client ->
                 val response =

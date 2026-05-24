@@ -40,7 +40,8 @@ private fun String.sha256(): String =
         "%02x".format(it)
     }
 
-private val noisyHealthPaths = setOf("/readiness", "/health", "/healthz", "/readyz", "/livez")
+private val noisyHealthPaths =
+    setOf("/readiness", "/health", "/healthz", "/readyz", "/livez", "/api/health")
 
 private fun isNoisyHealthPath(path: String): Boolean = noisyHealthPaths.contains(path)
 

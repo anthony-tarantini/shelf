@@ -50,6 +50,10 @@ class ImportResource(val parent: BooksResource = BooksResource()) {
     @Resource("scan") class Scan(val parent: ImportResource)
 
     @Resource("progress") class Progress(val parent: ImportResource)
+
+    @Resource("roots") class Roots(val parent: ImportResource)
+
+    @Resource("directories") class Directories(val parent: ImportResource, val root: String? = null)
 }
 
 @Resource("import")

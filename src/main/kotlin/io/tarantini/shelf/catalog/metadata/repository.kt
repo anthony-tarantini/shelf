@@ -44,6 +44,9 @@ interface MetadataRepository {
     )
 
     context(_: RaiseContext)
+    fun updateEditionFileHash(editionId: EditionId, fileHash: String)
+
+    context(_: RaiseContext)
     fun deleteMetadataByBookId(bookId: BookId)
 }
 
@@ -94,6 +97,12 @@ private class SqlDelightMetadataRepository(private val metadataQueries: Metadata
         format: BookFormat,
     ) {
         metadataQueries.updateEditionIdentifiers(isbn10, isbn13, asin, narrator, bookId, format)
+    }
+
+    context(_: RaiseContext)
+    override fun updateEditionFileHash(editionId: EditionId, fileHash: String) {
+        metadataQueries.updateEditionFileHashById(fileHash, editionId)
+        metadataQueries.insertEditionFileHashHistory(editionId, fileHash)
     }
 
     context(_: RaiseContext)
