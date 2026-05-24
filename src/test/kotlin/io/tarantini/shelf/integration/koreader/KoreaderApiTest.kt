@@ -108,6 +108,16 @@ class KoreaderApiTest :
                 responseBody.contains(documentHash) shouldBe true
                 responseBody.contains("0.5") shouldBe true
                 responseBody.contains("Kindle") shouldBe true
+
+                // KOReader may probe a nested stats path before uploading statistics.sqlite.
+                val webdavPropfindResponse =
+                    client.request("/koreader/webdav/stats/") {
+                        method = HttpMethod("PROPFIND")
+                        header("Depth", "1")
+                        header("x-auth-user", username)
+                        header("x-auth-key", md5Key)
+                    }
+                webdavPropfindResponse.status shouldBe HttpStatusCode.MultiStatus
             }
         }
     })

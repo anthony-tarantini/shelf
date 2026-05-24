@@ -198,34 +198,41 @@ private fun Route.registerProgressUpdateRoute(deps: Dependencies) {
 
 private fun Route.configureKoreaderWebdavRoutes(deps: Dependencies) {
     route("/webdav") {
-        val storageRoot = deps.env.storage.path
-        handle {
-            koreaderTokenAuth(deps.koreaderAuthService, deps.observability) { auth ->
-                val userStorageDir =
-                    Paths.get(storageRoot, "users", auth.userId.value.toString(), "koreader")
-                userStorageDir.createDirectories()
-                val statsFile = userStorageDir.resolve("statistics.sqlite")
-                logger.info(
-                    "KOReader webdav request method={} statsFileExists={}",
-                    call.request.local.method.value,
-                    statsFile.exists(),
-                )
+        registerWebdavHandler(deps)
+        route("{path...}") { registerWebdavHandler(deps) }
+    }
+}
 
-                when (call.request.local.method) {
-                    HttpMethod.parse("PROPFIND") -> respondWebdavPropfind(statsFile)
-                    HttpMethod.Get -> respondWebdavGet(statsFile)
-                    HttpMethod.Put -> {
-                        respondWebdavPut(statsFile)
-                        triggerStatsIngest(deps, auth.userId, statsFile)
-                    }
-                    HttpMethod.Options -> respondWebdavOptions()
-                    else -> {
-                        logger.warn(
-                            "KOReader webdav method not allowed method={}",
-                            call.request.local.method.value,
-                        )
-                        call.respond(HttpStatusCode.MethodNotAllowed)
-                    }
+private fun Route.registerWebdavHandler(deps: Dependencies) {
+    val storageRoot = deps.env.storage.path
+    handle {
+        koreaderTokenAuth(deps.koreaderAuthService, deps.observability) { auth ->
+            val userStorageDir =
+                Paths.get(storageRoot, "users", auth.userId.value.toString(), "koreader")
+            userStorageDir.createDirectories()
+            val statsFile = userStorageDir.resolve("statistics.sqlite")
+            logger.info(
+                "KOReader webdav request method={} uri={} statsFileExists={}",
+                call.request.local.method.value,
+                call.request.uri,
+                statsFile.exists(),
+            )
+
+            when (call.request.local.method) {
+                HttpMethod.parse("PROPFIND") -> respondWebdavPropfind(statsFile)
+                HttpMethod.Get -> respondWebdavGet(statsFile)
+                HttpMethod.Put -> {
+                    respondWebdavPut(statsFile)
+                    triggerStatsIngest(deps, auth.userId, statsFile)
+                }
+                HttpMethod.Options -> respondWebdavOptions()
+                else -> {
+                    logger.warn(
+                        "KOReader webdav method not allowed method={} uri={}",
+                        call.request.local.method.value,
+                        call.request.uri,
+                    )
+                    call.respond(HttpStatusCode.MethodNotAllowed)
                 }
             }
         }
