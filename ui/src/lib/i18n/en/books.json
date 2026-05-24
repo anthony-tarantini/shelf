@@ -5,6 +5,13 @@
   "loading_reader": "Loading reader...",
   "not_found": "Book not found",
   "update_failed": "Book update failed",
+  "sync_status": {
+    "title": "File Metadata Sync",
+    "pending": "Metadata saved. File sync is queued.",
+    "polling": "Metadata saved. Waiting for file sync to complete...",
+    "succeeded": "Metadata saved and synced to file.",
+    "failed": "Metadata saved, but file sync failed."
+  },
   "header": {
     "back": "Back to Library",
     "eyebrow": "Book Detail",

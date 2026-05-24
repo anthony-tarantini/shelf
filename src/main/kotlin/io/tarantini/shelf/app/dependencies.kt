@@ -162,6 +162,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         }
         val externalMetadataProvider = hardcover(hardcoverApolloClient)
         val metadataRepository = metadataRepository(metadataQueries)
+        val metadataSyncStatusRepository = metadataSyncStatusRepository(metadataSyncStatusQueries)
         val koreaderStatsRepository = koreaderStatsRepository(koreaderStatsQueries)
         val koreaderStatsService = koreaderStatsService(koreaderStatsRepository, metadataRepository)
         val metadataService =
@@ -221,6 +222,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 metadataRepository,
                 settingsService,
                 jobQueue,
+                metadataSyncStatusRepository,
             )
         val libraryService = libraryService(libraryQueries, bookQueries)
         val searchService = searchService(bookQueries, authorQueries, seriesQueries)
@@ -340,6 +342,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 storageService = storageService,
                 valkeyConnection = workerValkeyConnection,
                 inMemoryChannel = inMemoryChannel,
+                metadataSyncStatusRepository = metadataSyncStatusRepository,
             )
         worker.start()
 

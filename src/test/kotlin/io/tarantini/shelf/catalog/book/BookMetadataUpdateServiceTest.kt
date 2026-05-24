@@ -14,6 +14,7 @@ import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.book.domain.*
 import io.tarantini.shelf.organization.settings.SettingsService
 import io.tarantini.shelf.organization.settings.UserSettingsRoot
+import io.tarantini.shelf.processing.jobs.MetadataSyncStatusRepository
 import io.tarantini.shelf.processing.storage.StorageService
 import io.tarantini.shelf.user.identity.domain.UserId
 import kotlin.uuid.Uuid
@@ -26,6 +27,7 @@ class BookMetadataUpdateServiceTest :
             val storageService = mockk<StorageService>(relaxed = true)
             val settingsService = mockk<SettingsService>()
             val eventHandler = mockk<BookDomainEventHandler>()
+            val metadataSyncStatusRepository = mockk<MetadataSyncStatusRepository>(relaxed = true)
 
             val service =
                 BookMetadataUpdateService(
@@ -34,6 +36,7 @@ class BookMetadataUpdateServiceTest :
                     storageService = storageService,
                     settingsService = settingsService,
                     eventHandler = eventHandler,
+                    metadataSyncStatusRepository = metadataSyncStatusRepository,
                 )
 
             val bookId = BookId.fromRaw(Uuid.random())
@@ -107,6 +110,7 @@ class BookMetadataUpdateServiceTest :
             val storageService = mockk<StorageService>(relaxed = true)
             val settingsService = mockk<SettingsService>()
             val eventHandler = mockk<BookDomainEventHandler>(relaxed = true)
+            val metadataSyncStatusRepository = mockk<MetadataSyncStatusRepository>(relaxed = true)
 
             val service =
                 BookMetadataUpdateService(
@@ -115,6 +119,7 @@ class BookMetadataUpdateServiceTest :
                     storageService = storageService,
                     settingsService = settingsService,
                     eventHandler = eventHandler,
+                    metadataSyncStatusRepository = metadataSyncStatusRepository,
                 )
 
             val bookId = BookId.fromRaw(Uuid.random())

@@ -49,6 +49,7 @@ import io.tarantini.shelf.integration.persistence.Libation_import_records
 import io.tarantini.shelf.organization.library.domain.LibraryId
 import io.tarantini.shelf.organization.library.persistence.Libraries
 import io.tarantini.shelf.organization.settings.persistence.User_settings
+import io.tarantini.shelf.processing.jobs.persistence.Metadata_sync_status
 import io.tarantini.shelf.processing.sanitization.domain.SanitizationJobId
 import io.tarantini.shelf.processing.sanitization.persistence.Sanitization_jobs
 import io.tarantini.shelf.processing.storage.StoragePath
@@ -102,6 +103,7 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
             "koreader_progress",
             "koreader_users",
             "user_settings",
+            "metadata_sync_status",
         )
         .forEach { table ->
             driver.execute(null, "SELECT enable_temporal_versioning('$table');", 0)
@@ -248,5 +250,6 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
                 book_idAdapter = BookId.adapter,
             ),
         user_settingsAdapter = User_settings.Adapter(UserId.adapter),
+        metadata_sync_statusAdapter = Metadata_sync_status.Adapter(BookId.adapter),
     )
 }

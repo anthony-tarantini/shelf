@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {type AuthorRoot, type BookSeriesEntry, MediaType} from '$lib/types/models';
+    import {type AuthorRoot, type BookSeriesEntry, type MetadataSyncStatus, MediaType} from '$lib/types/models';
     import {bookAggregateToView} from '$lib/types/metadata';
     import {safeHtml} from "$lib/actions/safeHtml";
     import {t} from '$lib/i18n';
@@ -36,6 +36,8 @@
     let metadataMode = $state(false);
     let processing = $state(false);
     let error = $state<string | null>(null);
+    let syncStatus = $state<MetadataSyncStatus | null>(null);
+    let syncPolling = $state(false);
     const metadataBookView = $derived(details ? bookAggregateToView(details) : null);
     let initialFormData = $derived<BookMetadataFormState>({
         id: book?.id || '',
@@ -70,6 +72,33 @@
         error = null;
     }
 
+    async function fetchSyncStatus(bookId: string): Promise<MetadataSyncStatus | null> {
+        const syncResult = await api.get<MetadataSyncStatus>(`/books/${bookId}/metadata-sync-status`);
+        if (syncResult.left) return null;
+        return syncResult.right.status === 'NONE' ? null : syncResult.right;
+    }
+
+    async function pollSyncStatus(bookId: string) {
+        syncPolling = true;
+        const startedAt = Date.now();
+        const timeoutMs = 30_000;
+        const intervalMs = 1_500;
+
+        while (Date.now() - startedAt < timeoutMs) {
+            const status = await fetchSyncStatus(bookId);
+            syncStatus = status;
+
+            if (status && (status.status === 'SUCCEEDED' || status.status === 'FAILED')) {
+                syncPolling = false;
+                return;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, intervalMs));
+        }
+
+        syncPolling = false;
+    }
+
     async function handleSave(formData: BookMetadataFormState) {
         if (!book) return;
         processing = true;
@@ -98,10 +127,28 @@
             error = result.left.message;
             processing = false;
         } else {
+            syncStatus = await fetchSyncStatus(book.id);
+            if (syncStatus && syncStatus.status === 'PENDING') {
+                void pollSyncStatus(book.id);
+            }
             await invalidateAll();
             editMode = false;
             processing = false;
         }
+    }
+
+    function syncBannerKind(status: MetadataSyncStatus | null): 'success' | 'error' | 'info' {
+        if (status == null) return 'info';
+        if (status.status === 'SUCCEEDED') return 'success';
+        if (status.status === 'FAILED') return 'error';
+        return 'info';
+    }
+
+    function syncBannerMessage(status: MetadataSyncStatus | null): string {
+        if (status == null) return '';
+        if (status.status === 'SUCCEEDED') return $t('books.sync_status.succeeded');
+        if (status.status === 'FAILED') return status.errorMessage || $t('books.sync_status.failed');
+        return syncPolling ? $t('books.sync_status.polling') : $t('books.sync_status.pending');
     }
 </script>
 
@@ -122,6 +169,15 @@
         {#if error}
             <div class="mb-8">
                 <StatusBanner kind="error" title={$t('books.update_failed')} message={error} />
+            </div>
+        {/if}
+        {#if syncStatus}
+            <div class="mb-8">
+                <StatusBanner
+                        kind={syncBannerKind(syncStatus)}
+                        title={$t('books.sync_status.title')}
+                        message={syncBannerMessage(syncStatus)}
+                />
             </div>
         {/if}
 
@@ -149,7 +205,14 @@
                             <MetadataManager
                                     book={metadataBookView}
                                     onCancel={() => metadataMode = false}
-                                    onApplySuccess={async () => { metadataMode = false; await invalidateAll(); }}
+                                    onApplySuccess={async () => {
+                                        syncStatus = await fetchSyncStatus(book.id);
+                                        if (syncStatus && syncStatus.status === 'PENDING') {
+                                            void pollSyncStatus(book.id);
+                                        }
+                                        metadataMode = false;
+                                        await invalidateAll();
+                                    }}
                                     onError={(msg) => error = msg}
                                     onApply={(payload) => api.patch(`/books/${book.id}/metadata`, payload)}
                                     coverApiPath={`/api/books/${book.id}/cover`}

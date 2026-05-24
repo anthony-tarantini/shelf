@@ -21,6 +21,7 @@ class SyncMetadataWorker(
     private val bookAggregateProvider: BookAggregateProvider,
     private val epubWriter: EpubWriter,
     private val storageService: StorageService,
+    private val metadataSyncStatusRepository: MetadataSyncStatusRepository,
     private val valkeyConnection: StatefulRedisConnection<String, String>? = null,
     private val inMemoryChannel: Channel<BookId>? = null,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -60,12 +61,26 @@ class SyncMetadataWorker(
 
         either {
                 val aggregate = bookAggregateProvider.getBookAggregate(bookId)
-                val metadataAggregate = aggregate.metadata ?: return@either
+                val metadataAggregate =
+                    aggregate.metadata
+                        ?: run {
+                            metadataSyncStatusRepository.markFailed(
+                                bookId,
+                                "No metadata aggregate available for this book.",
+                            )
+                            return@either
+                        }
 
                 // Currently we only support EPUB sync
                 val ebookEntry =
                     metadataAggregate.editions.find { it.edition.format == BookFormat.EBOOK }
-                        ?: return@either
+                        ?: run {
+                            metadataSyncStatusRepository.markFailed(
+                                bookId,
+                                "No EPUB edition available for metadata sync.",
+                            )
+                            return@either
+                        }
                 val ebook = ebookEntry.edition
                 val metadata = metadataAggregate.metadata
 
@@ -81,12 +96,22 @@ class SyncMetadataWorker(
                         )
 
                     epubWriter.updateMetadata(filePath, updates)
+                    metadataSyncStatusRepository.markSucceeded(bookId)
                     logger.info { "Metadata sync completed." }
                 } else {
+                    metadataSyncStatusRepository.markFailed(bookId, "Source EPUB file not found.")
                     logger.warn { "Metadata sync skipped because source file was not found." }
                 }
             }
             .mapLeft { error ->
+                runCatching {
+                    either {
+                        metadataSyncStatusRepository.markFailed(
+                            bookId,
+                            "File metadata sync failed: ${error::class.simpleName}",
+                        )
+                    }
+                }
                 logger.error { "Metadata sync failed: ${error::class.simpleName}" }
             }
     }

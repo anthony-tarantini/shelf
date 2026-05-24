@@ -80,5 +80,10 @@ data class BooksResource(val parent: RootResource = RootResource) {
         data class Metadata(val parent: Id) {
             val id = parent.id
         }
+
+        @Resource("metadata-sync-status")
+        data class MetadataSyncStatus(val parent: Id) {
+            val id = parent.id
+        }
     }
 }

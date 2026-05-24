@@ -1,0 +1,31 @@
+import io.tarantini.shelf.catalog.book.domain.BookId;
+
+CREATE TABLE IF NOT EXISTS metadata_sync_status (
+    book_id UUID AS BookId PRIMARY KEY,
+    status TEXT NOT NULL,
+    error_message TEXT,
+    updated_at_ms BIGINT NOT NULL
+);
+
+upsertMetadataSyncStatus:
+INSERT INTO metadata_sync_status (
+    book_id,
+    status,
+    error_message,
+    updated_at_ms
+)
+VALUES (
+    :bookId,
+    :status,
+    :errorMessage,
+    :updatedAtMs
+)
+ON CONFLICT (book_id) DO UPDATE SET
+    status = excluded.status,
+    error_message = excluded.error_message,
+    updated_at_ms = excluded.updated_at_ms;
+
+selectMetadataSyncStatusByBookId:
+SELECT book_id, status, error_message, updated_at_ms
+FROM metadata_sync_status
+WHERE book_id = :bookId;

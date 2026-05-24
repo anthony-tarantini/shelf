@@ -3,6 +3,7 @@
 package io.tarantini.shelf.catalog.book
 
 import arrow.core.raise.context.ensureNotNull
+import arrow.core.raise.context.raise
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.app.id
 import io.tarantini.shelf.catalog.author.BookAuthorProvider
@@ -21,6 +22,8 @@ import io.tarantini.shelf.catalog.series.persistence.SeriesQueries
 import io.tarantini.shelf.organization.library.domain.LibraryId
 import io.tarantini.shelf.organization.settings.SettingsService
 import io.tarantini.shelf.processing.jobs.JobQueue
+import io.tarantini.shelf.processing.jobs.MetadataSyncStatus
+import io.tarantini.shelf.processing.jobs.MetadataSyncStatusRepository
 import io.tarantini.shelf.processing.storage.FileBytes
 import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.processing.storage.StorageService
@@ -150,6 +153,11 @@ interface BookMetadataModifier {
     suspend fun updateBookMetadata(userId: UserId, id: BookId, command: UpdateBookMetadataCommand)
 }
 
+interface BookMetadataSyncStatusProvider {
+    context(_: RaiseContext)
+    suspend fun getMetadataSyncStatus(id: BookId): MetadataSyncStatus?
+}
+
 interface BookService :
     BookProvider,
     BookAggregateProvider,
@@ -161,7 +169,8 @@ interface BookService :
     LibraryBookProvider,
     BookModifier,
     BookAssetProvider,
-    BookMetadataModifier
+    BookMetadataModifier,
+    BookMetadataSyncStatusProvider
 
 private val ALLOWED_COVER_HOSTS = listOf("hardcover.app")
 
@@ -176,6 +185,7 @@ fun bookService(
     metadataRepository: MetadataRepository,
     settingsService: SettingsService,
     jobQueue: JobQueue,
+    metadataSyncStatusRepository: MetadataSyncStatusRepository,
 ): BookService {
     val readRepository =
         bookReadRepository(
@@ -215,6 +225,7 @@ fun bookService(
             storageService = storageService,
             settingsService = settingsService,
             eventHandler = JobQueueBookDomainEventHandler(jobQueue),
+            metadataSyncStatusRepository = metadataSyncStatusRepository,
         )
 
     return object :
@@ -229,7 +240,8 @@ fun bookService(
         LibraryBookProvider by readService,
         BookModifier by writeService,
         BookAssetProvider by assetService,
-        BookMetadataModifier by metadataUpdateService {}
+        BookMetadataModifier by metadataUpdateService,
+        BookMetadataSyncStatusProvider by metadataUpdateService {}
 }
 
 private class BookReadService(
@@ -549,7 +561,8 @@ internal class BookMetadataUpdateService(
     private val storageService: StorageService,
     private val settingsService: SettingsService,
     private val eventHandler: BookDomainEventHandler,
-) : BookMetadataModifier {
+    private val metadataSyncStatusRepository: MetadataSyncStatusRepository,
+) : BookMetadataModifier, BookMetadataSyncStatusProvider {
     context(_: RaiseContext)
     override suspend fun updateBookMetadata(
         userId: UserId,
@@ -576,8 +589,19 @@ internal class BookMetadataUpdateService(
             )
 
         repository.applyMetadataMutation(id, decision.mutation)
-        decision.events.forEach { event -> eventHandler.handle(event) }
+        decision.events.forEach { event ->
+            runCatching { eventHandler.handle(event) }
+                .onSuccess { metadataSyncStatusRepository.markPending(id) }
+                .getOrElse {
+                    metadataSyncStatusRepository.markFailed(id, "Failed to schedule file sync job.")
+                    raise(MetadataSyncEnqueueFailed)
+                }
+        }
     }
+
+    context(_: RaiseContext)
+    override suspend fun getMetadataSyncStatus(id: BookId): MetadataSyncStatus? =
+        metadataSyncStatusRepository.get(id)
 }
 
 private class JobQueueBookDomainEventHandler(private val jobQueue: JobQueue) :

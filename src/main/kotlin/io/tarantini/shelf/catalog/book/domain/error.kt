@@ -12,6 +12,8 @@ object BookAlreadyExists : BookPersistenceError
 
 data object BookCoverNotFound : BookError
 
+data object MetadataSyncEnqueueFailed : BookError
+
 sealed interface BookValidationError : BookError
 
 object EmptyBookTitle : BookValidationError

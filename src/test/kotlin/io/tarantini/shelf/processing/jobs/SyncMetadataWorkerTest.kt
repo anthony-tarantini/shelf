@@ -84,6 +84,7 @@ class SyncMetadataWorkerTest :
             val bookAggregateProvider = mockk<BookAggregateProvider>()
             val epubWriter = mockk<EpubWriter>()
             val storageService = mockk<StorageService>()
+            val metadataSyncStatusRepository = mockk<MetadataSyncStatusRepository>(relaxed = true)
 
             val tempFile = kotlin.io.path.createTempFile("test", ".epub")
             try {
@@ -102,6 +103,7 @@ class SyncMetadataWorkerTest :
                         bookAggregateProvider = bookAggregateProvider,
                         epubWriter = epubWriter,
                         storageService = storageService,
+                        metadataSyncStatusRepository = metadataSyncStatusRepository,
                         inMemoryChannel = channel,
                         dispatcher = StandardTestDispatcher(testScope.testScheduler),
                     )

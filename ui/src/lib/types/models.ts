@@ -247,6 +247,14 @@ export interface StagedBookPage {
   size: number;
 }
 
+export type MetadataSyncState = 'NONE' | 'PENDING' | 'SUCCEEDED' | 'FAILED';
+
+export interface MetadataSyncStatus {
+  status: MetadataSyncState;
+  errorMessage?: string | null;
+  updatedAtMs: number;
+}
+
 export type ImportScanStatus = 'IDLE' | 'RUNNING' | 'COMPLETED' | 'FAILED';
 
 export interface FailedFileDetail {

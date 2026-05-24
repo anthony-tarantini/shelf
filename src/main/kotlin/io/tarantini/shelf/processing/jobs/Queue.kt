@@ -4,7 +4,9 @@ import io.lettuce.core.api.StatefulRedisConnection
 import io.tarantini.shelf.catalog.book.domain.BookId
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import kotlin.uuid.ExperimentalUuidApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.withContext
 
 interface JobQueue {
     suspend fun enqueueSyncMetadataJob(bookId: BookId)
@@ -17,12 +19,16 @@ class ValkeyJobQueue(private val connection: StatefulRedisConnection<String, Str
 
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun enqueueSyncMetadataJob(bookId: BookId) {
-        commands.lpush("jobs:sync_metadata", bookId.value.toString())
+        withContext(Dispatchers.IO) {
+            commands.lpush("jobs:sync_metadata", bookId.value.toString()).get()
+        }
     }
 
     @OptIn(ExperimentalUuidApi::class)
     override suspend fun enqueueFeedFetchJob(podcastId: PodcastId) {
-        commands.lpush("jobs:feed_fetch", podcastId.value.toString())
+        withContext(Dispatchers.IO) {
+            commands.lpush("jobs:feed_fetch", podcastId.value.toString()).get()
+        }
     }
 }
 

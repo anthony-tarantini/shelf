@@ -52,6 +52,7 @@ fun Application.routes(deps: Dependencies) = routing {
         deps.bookService,
         deps.bookService,
         deps.bookService,
+        deps.bookService,
         deps.storageService,
         deps.authorService,
         deps.seriesService,

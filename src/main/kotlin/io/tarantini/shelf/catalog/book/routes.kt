@@ -21,12 +21,14 @@ import io.tarantini.shelf.app.Request
 import io.tarantini.shelf.app.respond
 import io.tarantini.shelf.catalog.author.AuthorService
 import io.tarantini.shelf.catalog.book.domain.BookId
+import io.tarantini.shelf.catalog.book.domain.MetadataSyncStatusResponse
 import io.tarantini.shelf.catalog.book.domain.UpdateBookMetadataRequest
 import io.tarantini.shelf.catalog.book.domain.toCommand
 import io.tarantini.shelf.catalog.metadata.domain.BookFormat
 import io.tarantini.shelf.catalog.metadata.domain.ebookMimeType
 import io.tarantini.shelf.catalog.series.SeriesService
 import io.tarantini.shelf.observability.Observability
+import io.tarantini.shelf.processing.jobs.MetadataSyncState
 import io.tarantini.shelf.processing.storage.StorageService
 import io.tarantini.shelf.user.activity.ActivityService
 import io.tarantini.shelf.user.activity.domain.ReadStatus
@@ -49,6 +51,7 @@ fun Route.bookRoutes(
     bookModifier: BookModifier,
     bookAssetProvider: BookAssetProvider,
     bookMetadataModifier: BookMetadataModifier,
+    bookMetadataSyncStatusProvider: BookMetadataSyncStatusProvider,
     storageService: StorageService,
     authorService: AuthorService,
     seriesService: SeriesService,
@@ -313,6 +316,28 @@ fun Route.bookRoutes(
                     req.toCommand(),
                 )
                 mapOf("message" to "Metadata updated")
+            })
+        }
+    }
+
+    get<BooksResource.Id.MetadataSyncStatus> { resource ->
+        sharedCatalogRead(jwtService) {
+            respond({
+                val status =
+                    bookMetadataSyncStatusProvider.getMetadataSyncStatus(BookId(resource.id))
+                if (status == null) {
+                    MetadataSyncStatusResponse(
+                        status = MetadataSyncState.NONE,
+                        errorMessage = null,
+                        updatedAtMs = System.currentTimeMillis(),
+                    )
+                } else {
+                    MetadataSyncStatusResponse(
+                        status = status.status,
+                        errorMessage = status.errorMessage,
+                        updatedAtMs = status.updatedAtMs,
+                    )
+                }
             })
         }
     }

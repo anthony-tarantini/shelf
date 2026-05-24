@@ -8,6 +8,7 @@ import io.tarantini.shelf.catalog.metadata.domain.ISBN10
 import io.tarantini.shelf.catalog.metadata.domain.ISBN13
 import io.tarantini.shelf.processing.import.domain.StagedEditionMetadata
 import io.tarantini.shelf.processing.import.domain.StagedSeries
+import io.tarantini.shelf.processing.jobs.MetadataSyncState
 import io.tarantini.shelf.processing.storage.StoragePath
 import io.tarantini.shelf.user.activity.domain.BookUserState
 import kotlinx.serialization.Serializable
@@ -45,6 +46,13 @@ data class UpdateBookMetadataRequest(
     val ebookMetadata: StagedEditionMetadata? = null,
     val audiobookMetadata: StagedEditionMetadata? = null,
     val coverUrl: String? = null,
+)
+
+@Serializable
+data class MetadataSyncStatusResponse(
+    val status: MetadataSyncState,
+    val errorMessage: String? = null,
+    val updatedAtMs: Long,
 )
 
 context(_: RaiseContext)

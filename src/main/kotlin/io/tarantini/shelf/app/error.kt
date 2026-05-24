@@ -33,6 +33,7 @@ import io.tarantini.shelf.catalog.book.domain.EmptyBookTitle
 import io.tarantini.shelf.catalog.book.domain.InvalidBookCoverUrl
 import io.tarantini.shelf.catalog.book.domain.InvalidBookId
 import io.tarantini.shelf.catalog.book.domain.InvalidBookPublishDate
+import io.tarantini.shelf.catalog.book.domain.MetadataSyncEnqueueFailed
 import io.tarantini.shelf.catalog.book.domain.SeriesRequiresAuthors
 import io.tarantini.shelf.catalog.book.domain.UnknownSelectedAuthorMapping
 import io.tarantini.shelf.catalog.metadata.domain.EditionNotFound
@@ -302,6 +303,9 @@ private fun BookError.toHttpResponse(): Pair<HttpStatusCode, String> =
         InvalidBookId -> HttpStatusCode.BadRequest to "Invalid book id"
         InvalidBookPublishDate -> HttpStatusCode.BadRequest to "Invalid book publish date"
         InvalidBookCoverUrl -> HttpStatusCode.BadRequest to "Invalid cover URL"
+        MetadataSyncEnqueueFailed ->
+            HttpStatusCode.ServiceUnavailable to
+                "Metadata saved, but scheduling file sync failed. Please try again."
         SeriesRequiresAuthors -> HttpStatusCode.BadRequest to "Series updates require authors"
         UnknownSelectedAuthorMapping ->
             HttpStatusCode.BadRequest to "selectedAuthorIds contains unknown author keys"
