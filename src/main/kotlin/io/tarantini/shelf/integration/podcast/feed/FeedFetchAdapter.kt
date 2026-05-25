@@ -31,9 +31,24 @@ sealed interface FeedFetchCredentials {
     data class AudibleActivationBytes(val bytes: String) : FeedFetchCredentials
 }
 
+sealed interface FeedFetchResponse {
+    data object NotModified : FeedFetchResponse
+
+    data class Body(val xml: String, val etag: String?, val lastModified: String?) :
+        FeedFetchResponse
+}
+
 interface FeedFetchAdapter {
     context(_: RaiseContext)
     suspend fun fetch(feedUrl: FeedUrl, credentials: FeedFetchCredentials? = null): String
+
+    context(_: RaiseContext)
+    suspend fun fetchConditional(
+        feedUrl: FeedUrl,
+        ifNoneMatch: String? = null,
+        ifModifiedSince: String? = null,
+        credentials: FeedFetchCredentials? = null,
+    ): FeedFetchResponse
 }
 
 fun feedFetchAdapter(
@@ -47,6 +62,18 @@ fun feedFetchAdapter(
 private class JavaNetFeedFetchAdapter(private val httpClient: HttpClient) : FeedFetchAdapter {
     context(_: RaiseContext)
     override suspend fun fetch(feedUrl: FeedUrl, credentials: FeedFetchCredentials?): String =
+        when (val r = fetchConditional(feedUrl, null, null, credentials)) {
+            is FeedFetchResponse.Body -> r.xml
+            FeedFetchResponse.NotModified -> raise(FeedFetchFailed)
+        }
+
+    context(_: RaiseContext)
+    override suspend fun fetchConditional(
+        feedUrl: FeedUrl,
+        ifNoneMatch: String?,
+        ifModifiedSince: String?,
+        credentials: FeedFetchCredentials?,
+    ): FeedFetchResponse =
         withContext(Dispatchers.IO) {
             val requestBuilder =
                 HttpRequest.newBuilder(URI(feedUrl.value))
@@ -57,6 +84,10 @@ private class JavaNetFeedFetchAdapter(private val httpClient: HttpClient) : Feed
                         "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9",
                     )
                     .header("User-Agent", "ShelfPodcastBot/1.0")
+
+            if (!ifNoneMatch.isNullOrBlank()) requestBuilder.header("If-None-Match", ifNoneMatch)
+            if (!ifModifiedSince.isNullOrBlank())
+                requestBuilder.header("If-Modified-Since", ifModifiedSince)
 
             when (credentials) {
                 is FeedFetchCredentials.Basic -> {
@@ -96,7 +127,16 @@ private class JavaNetFeedFetchAdapter(private val httpClient: HttpClient) : Feed
             }
 
             when (response.statusCode()) {
-                in 200..299 -> readBounded(response)
+                304 -> {
+                    response.body().close()
+                    FeedFetchResponse.NotModified
+                }
+                in 200..299 -> {
+                    val xml = readBounded(response)
+                    val etag = response.headers().firstValue("ETag").orElse(null)
+                    val lastModified = response.headers().firstValue("Last-Modified").orElse(null)
+                    FeedFetchResponse.Body(xml = xml, etag = etag, lastModified = lastModified)
+                }
                 401,
                 403 -> raise(FeedAuthRequired)
                 429 -> {

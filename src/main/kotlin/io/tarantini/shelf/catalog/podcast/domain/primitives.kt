@@ -131,3 +131,49 @@ value class EpisodeNumber private constructor(val value: Int) {
         fun fromRaw(value: Int) = EpisodeNumber(value)
     }
 }
+
+@JvmInline
+@Serializable
+value class UpstreamGuid private constructor(override val value: String) : StringValueClass {
+    companion object {
+        context(_: RaiseContext)
+        operator fun invoke(raw: String?): UpstreamGuid {
+            ensureNotNull(raw) { InvalidUpstreamGuid }
+            val normalized = raw.trim()
+            ensure(normalized.isNotEmpty()) { InvalidUpstreamGuid }
+            return UpstreamGuid(normalized)
+        }
+
+        fun fromRaw(raw: String) = UpstreamGuid(raw)
+
+        val adapter = object : StringAdapter<UpstreamGuid>(::fromRaw) {}
+    }
+}
+
+@Serializable
+enum class FeedFlavor {
+    LIBATION_BACKED,
+    PUBLIC_DOWNLOAD,
+}
+
+@Serializable
+enum class EpisodeMappingMode {
+    AUTO_GUID,
+    AUTO_SEASON_EPISODE,
+    MANUAL,
+    UNMATCHED,
+}
+
+@Serializable
+enum class AssetSource {
+    SHELF_HOSTED,
+    UPSTREAM_PASSTHROUGH,
+}
+
+@Serializable
+enum class DownloadJobState {
+    QUEUED,
+    RUNNING,
+    READY,
+    FAILED,
+}

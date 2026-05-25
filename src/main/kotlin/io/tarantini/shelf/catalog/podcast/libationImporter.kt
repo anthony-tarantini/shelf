@@ -5,6 +5,7 @@ package io.tarantini.shelf.catalog.podcast
 import arrow.core.raise.context.either
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.tarantini.shelf.app.toOffsetDateTimeUtc
+import io.tarantini.shelf.catalog.podcast.domain.FeedFlavor
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
 import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId
@@ -38,6 +39,8 @@ class LibationManifestImporter(
     private val seriesQueries: SeriesQueries,
     private val podcastQueries: PodcastQueries,
     private val storageService: StorageService,
+    private val mappingService: io.tarantini.shelf.catalog.podcast.upstream.PodcastMappingService? =
+        null,
 ) {
     suspend fun importManifest(
         manifest: LibationResolvedManifest,
@@ -188,21 +191,37 @@ class LibationManifestImporter(
                 }
             }
 
-            result.getOrElse { error ->
-                logger.warn(error) { "Libation manifest import failed." }
-                upsertImportRecord(
-                    sourceKey = sourceKey,
-                    canonicalSeriesKey = canonicalSeriesKey,
-                    manifest = manifest,
-                    seriesId = seriesId,
-                    podcastId = podcastId,
-                    episodeId = record?.episode_id,
-                    status = "FAILED",
-                    lastError = error.message ?: "Unknown import error",
-                    firstImportedAt = record?.first_imported_at,
-                )
-                LibationImportOutcome.Failed(error.message ?: "Unknown import error")
+            val outcome =
+                result.getOrElse { error ->
+                    logger.warn(error) { "Libation manifest import failed." }
+                    upsertImportRecord(
+                        sourceKey = sourceKey,
+                        canonicalSeriesKey = canonicalSeriesKey,
+                        manifest = manifest,
+                        seriesId = seriesId,
+                        podcastId = podcastId,
+                        episodeId = record?.episode_id,
+                        status = "FAILED",
+                        lastError = error.message ?: "Unknown import error",
+                        firstImportedAt = record?.first_imported_at,
+                    )
+                    LibationImportOutcome.Failed(error.message ?: "Unknown import error")
+                }
+
+            if (outcome == LibationImportOutcome.Created && mappingService != null) {
+                val episodeId =
+                    podcastQueries
+                        .selectEpisodeIdByPodcastAndGuid(podcastId = podcastId, guid = guid)
+                        .executeAsOneOrNull()
+                if (episodeId != null) {
+                    either { mappingService.attemptAutoMatchForHostedEpisode(podcastId, episodeId) }
+                        .onLeft { err ->
+                            logger.debug { "Libation upstream auto-match skipped: $err" }
+                        }
+                }
             }
+
+            outcome
         }
 
     private fun upsertImportRecord(
@@ -251,6 +270,7 @@ class LibationManifestImporter(
                     autoSanitize = true,
                     autoFetch = false,
                     fetchIntervalMinutes = 1_440,
+                    feedFlavor = FeedFlavor.LIBATION_BACKED,
                 )
                 .executeAsOne()
 

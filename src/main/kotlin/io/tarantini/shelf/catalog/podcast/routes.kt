@@ -30,6 +30,9 @@ fun Route.podcastRoutes(
     podcastService: PodcastService,
     jwtService: JwtService,
     storageService: StorageService,
+    upstreamFeedService: io.tarantini.shelf.catalog.podcast.upstream.PodcastUpstreamFeedService,
+    mappingService: io.tarantini.shelf.catalog.podcast.upstream.PodcastMappingService,
+    readRepository: PodcastReadRepository,
 ) {
     post<PodcastsResource> {
         sharedCatalogMutation(jwtService) {
@@ -134,6 +137,48 @@ fun Route.podcastRoutes(
     post<PodcastsResource.Id.Reprobe> { resource ->
         sharedCatalogMutation(jwtService) {
             respond({ podcastService.reprobeEpisodes(PodcastId(resource.parent.id)) })
+        }
+    }
+
+    post<PodcastsResource.Id.UpstreamRefresh> { resource ->
+        sharedCatalogMutation(jwtService) {
+            respond({ upstreamFeedService.cacheUpstreamFeed(PodcastId(resource.parent.id)) })
+        }
+    }
+
+    get<PodcastsResource.Id.UpstreamEpisodes> { resource ->
+        sharedCatalogRead(jwtService) {
+            respond({ readRepository.listUpstreamEpisodes(PodcastId(resource.parent.id)) })
+        }
+    }
+
+    get<PodcastsResource.Id.MappingsUnmatched> { resource ->
+        sharedCatalogRead(jwtService) {
+            respond({ mappingService.listUnmatched(PodcastId(resource.parent.id)) })
+        }
+    }
+
+    put<PodcastsResource.Id.Mapping> { resource ->
+        sharedCatalogMutation(jwtService) {
+            respond({
+                val request = call.receive<Request<MappingRequest>>().data
+                mappingService.setManualMapping(
+                    podcastId = PodcastId(resource.parent.id),
+                    upstreamGuid = UpstreamGuid(resource.upstreamGuid),
+                    hostedEpisodeId = request.hostedEpisodeId?.let { PodcastEpisodeId(it) },
+                )
+            })
+        }
+    }
+
+    delete<PodcastsResource.Id.Mapping> { resource ->
+        sharedCatalogMutation(jwtService) {
+            respond({
+                mappingService.clearMapping(
+                    podcastId = PodcastId(resource.parent.id),
+                    upstreamGuid = UpstreamGuid(resource.upstreamGuid),
+                )
+            })
         }
     }
 

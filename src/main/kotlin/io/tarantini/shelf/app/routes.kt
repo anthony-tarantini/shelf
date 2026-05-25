@@ -63,7 +63,14 @@ fun Application.routes(deps: Dependencies) = routing {
     )
     metadataRoutes(deps.metadataService, deps.jwtService)
     with(deps.sqlDriver) { searchRoutes(deps.searchService, deps.activityService, deps.jwtService) }
-    podcastRoutes(deps.podcastService, deps.jwtService, deps.storageService)
+    podcastRoutes(
+        deps.podcastService,
+        deps.jwtService,
+        deps.storageService,
+        deps.podcastUpstreamFeedService,
+        deps.podcastMappingService,
+        deps.podcastReadRepository,
+    )
     podcastRssRoutes(deps.podcastRssService, deps.storageService)
     seriesRoutes(
         deps.seriesService,

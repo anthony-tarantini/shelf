@@ -91,6 +91,10 @@ class Dependencies(
     val searchService: SearchService,
     val podcastService: PodcastService,
     val podcastRssService: PodcastRssService,
+    val podcastUpstreamFeedService:
+        io.tarantini.shelf.catalog.podcast.upstream.PodcastUpstreamFeedService,
+    val podcastMappingService: io.tarantini.shelf.catalog.podcast.upstream.PodcastMappingService,
+    val podcastReadRepository: io.tarantini.shelf.catalog.podcast.PodcastReadRepository,
     val libraryService: LibraryService,
     val storageService: StorageService,
     val activityService: ActivityService,
@@ -239,16 +243,6 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         }
         val encryptionService = EncryptionService(env.integration.encryptionSecret)
         val credentialService = podcastCredentialService(credentialsQueries, encryptionService)
-        val podcastLibationService =
-            io.tarantini.shelf.catalog.podcast.podcastLibationService(
-                enabled = env.integration.libationImportEnabled,
-                dropDirectory = env.integration.libationDropDir,
-                scanner = LibationScanner(LibationManifestParser()),
-                libationImportQueries = libationImportQueries,
-                seriesQueries = seriesQueries,
-                podcastQueries = podcastQueries,
-                storageService = storageService,
-            )
         val minusPodAdapter =
             io.tarantini.shelf.integration.podcast.sanitization.minusPodAdapter(
                 env.integration.minuspodUrl,
@@ -262,6 +256,24 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val podcastMutationRepository =
             io.tarantini.shelf.catalog.podcast.podcastMutationRepository(podcastQueries)
 
+        val podcastMappingService =
+            io.tarantini.shelf.catalog.podcast.upstream.podcastMappingService(
+                readRepository = podcastReadRepository,
+                mutationRepository = podcastMutationRepository,
+            )
+
+        val podcastLibationService =
+            io.tarantini.shelf.catalog.podcast.podcastLibationService(
+                enabled = env.integration.libationImportEnabled,
+                dropDirectory = env.integration.libationDropDir,
+                scanner = LibationScanner(LibationManifestParser()),
+                libationImportQueries = libationImportQueries,
+                seriesQueries = seriesQueries,
+                podcastQueries = podcastQueries,
+                storageService = storageService,
+                mappingService = podcastMappingService,
+            )
+
         val podcastService =
             podcastService(
                 readRepository = podcastReadRepository,
@@ -271,6 +283,9 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 storageService = storageService,
             )
 
+        val sharedFeedFetchAdapter = feedFetchAdapter()
+        val sharedFeedParser = feedParser()
+
         val podcastFeedFetchService =
             podcastFeedFetchService(
                 readRepository = podcastReadRepository,
@@ -278,10 +293,20 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 podcastQueries = podcastQueries,
                 storageService = storageService,
                 credentialService = credentialService,
-                feedFetchAdapter = feedFetchAdapter(),
-                feedParser = feedParser(),
+                feedFetchAdapter = sharedFeedFetchAdapter,
+                feedParser = sharedFeedParser,
                 audioFetchAdapter = episodeAudioFetchAdapter(),
             )
+
+        val podcastUpstreamFeedService =
+            io.tarantini.shelf.catalog.podcast.upstream.podcastUpstreamFeedService(
+                readRepository = podcastReadRepository,
+                mutationRepository = podcastMutationRepository,
+                credentialService = credentialService,
+                feedFetchAdapter = sharedFeedFetchAdapter,
+                feedParser = sharedFeedParser,
+            )
+
         val podcastRssService =
             podcastRssService(
                 readRepository = podcastReadRepository,
@@ -384,6 +409,9 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             searchService,
             podcastService,
             podcastRssService,
+            podcastUpstreamFeedService,
+            podcastMappingService,
+            podcastReadRepository,
             libraryService,
             storageService,
             activityService,

@@ -19,5 +19,14 @@ data class PodcastsResource(val parent: RootResource = RootResource) {
         @Resource("credentials") data class Credentials(val parent: Id)
 
         @Resource("reprobe") data class Reprobe(val parent: Id)
+
+        @Resource("upstream/refresh") data class UpstreamRefresh(val parent: Id)
+
+        @Resource("upstream/episodes") data class UpstreamEpisodes(val parent: Id)
+
+        @Resource("mappings/unmatched") data class MappingsUnmatched(val parent: Id)
+
+        @Resource("mappings/{upstreamGuid}")
+        data class Mapping(val parent: Id, val upstreamGuid: String)
     }
 }

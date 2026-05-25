@@ -29,12 +29,20 @@ import io.tarantini.shelf.catalog.persistence.Book_moods
 import io.tarantini.shelf.catalog.persistence.Library_books
 import io.tarantini.shelf.catalog.persistence.Series_authors
 import io.tarantini.shelf.catalog.persistence.Series_books
+import io.tarantini.shelf.catalog.podcast.domain.DownloadJobState
+import io.tarantini.shelf.catalog.podcast.domain.EpisodeMappingMode
+import io.tarantini.shelf.catalog.podcast.domain.FeedFlavor
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
 import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
+import io.tarantini.shelf.catalog.podcast.domain.UpstreamGuid
 import io.tarantini.shelf.catalog.podcast.persistence.Episode_guids
+import io.tarantini.shelf.catalog.podcast.persistence.Podcast_download_jobs
+import io.tarantini.shelf.catalog.podcast.persistence.Podcast_episode_mappings
 import io.tarantini.shelf.catalog.podcast.persistence.Podcast_episodes
+import io.tarantini.shelf.catalog.podcast.persistence.Podcast_upstream_episodes
+import io.tarantini.shelf.catalog.podcast.persistence.Podcast_upstream_feeds
 import io.tarantini.shelf.catalog.podcast.persistence.Podcasts
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import io.tarantini.shelf.catalog.series.persistence.Series
@@ -162,6 +170,33 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
     )
     driver.execute(null, "ALTER TABLE podcast_episodes ADD COLUMN IF NOT EXISTS author TEXT;", 0)
 
+    driver.execute(
+        null,
+        "ALTER TABLE podcasts ADD COLUMN IF NOT EXISTS feed_flavor TEXT NOT NULL DEFAULT 'PUBLIC_DOWNLOAD';",
+        0,
+    )
+    driver.execute(null, "ALTER TABLE podcasts ADD COLUMN IF NOT EXISTS upstream_etag TEXT;", 0)
+    driver.execute(
+        null,
+        "ALTER TABLE podcasts ADD COLUMN IF NOT EXISTS upstream_last_modified TEXT;",
+        0,
+    )
+    driver.execute(
+        null,
+        "ALTER TABLE podcasts ADD COLUMN IF NOT EXISTS upstream_fetched_at TIMESTAMP WITH TIME ZONE;",
+        0,
+    )
+    driver.execute(
+        null,
+        "UPDATE podcasts SET feed_flavor = 'LIBATION_BACKED' " +
+            "WHERE feed_flavor = 'PUBLIC_DOWNLOAD' " +
+            "AND EXISTS (" +
+            "SELECT 1 FROM libation_import_records r " +
+            "WHERE r.podcast_id = podcasts.id" +
+            ");",
+        0,
+    )
+
     return Database(
         driver,
         authorsAdapter = Authors.Adapter(AuthorId.adapter),
@@ -191,6 +226,7 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
                 feed_urlAdapter = FeedUrl.adapter,
                 feed_tokenAdapter = FeedToken.adapter,
                 feed_token_previousAdapter = FeedToken.adapter,
+                feed_flavorAdapter = EnumColumnAdapter<FeedFlavor>(),
             ),
         podcast_episodesAdapter =
             Podcast_episodes.Adapter(
@@ -200,6 +236,25 @@ suspend fun ResourceScope.sqlDelight(dataSource: DataSource): Database {
                 audio_pathAdapter = StoragePath.adapter,
             ),
         episode_guidsAdapter = Episode_guids.Adapter(PodcastId.adapter, PodcastEpisodeId.adapter),
+        podcast_upstream_feedsAdapter = Podcast_upstream_feeds.Adapter(PodcastId.adapter),
+        podcast_upstream_episodesAdapter =
+            Podcast_upstream_episodes.Adapter(
+                podcast_idAdapter = PodcastId.adapter,
+                upstream_guidAdapter = UpstreamGuid.adapter,
+            ),
+        podcast_episode_mappingsAdapter =
+            Podcast_episode_mappings.Adapter(
+                podcast_idAdapter = PodcastId.adapter,
+                upstream_guidAdapter = UpstreamGuid.adapter,
+                hosted_episode_idAdapter = PodcastEpisodeId.adapter,
+                modeAdapter = EnumColumnAdapter<EpisodeMappingMode>(),
+            ),
+        podcast_download_jobsAdapter =
+            Podcast_download_jobs.Adapter(
+                podcast_idAdapter = PodcastId.adapter,
+                upstream_guidAdapter = UpstreamGuid.adapter,
+                stateAdapter = EnumColumnAdapter<DownloadJobState>(),
+            ),
         usersAdapter =
             Users.Adapter(
                 idAdapter = UserId.adapter,

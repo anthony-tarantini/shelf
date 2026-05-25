@@ -38,6 +38,24 @@ interface PodcastReadRepository {
 
     context(_: RaiseContext)
     suspend fun getMaxEpisodeForSeason(podcastId: PodcastId, season: Int): Int
+
+    context(_: RaiseContext)
+    suspend fun getCachedFeed(podcastId: PodcastId): CachedUpstreamFeed?
+
+    context(_: RaiseContext)
+    suspend fun getCachedFeedXml(podcastId: PodcastId): String?
+
+    context(_: RaiseContext)
+    suspend fun listUpstreamEpisodes(podcastId: PodcastId): List<UpstreamEpisodeRecord>
+
+    context(_: RaiseContext)
+    suspend fun listMappings(podcastId: PodcastId): List<EpisodeMapping>
+
+    context(_: RaiseContext)
+    suspend fun findMapping(podcastId: PodcastId, upstreamGuid: UpstreamGuid): EpisodeMapping?
+
+    context(_: RaiseContext)
+    suspend fun listEpisodes(podcastId: PodcastId): List<EpisodeEntry>
 }
 
 fun podcastReadRepository(
@@ -98,4 +116,31 @@ private class SqlDelightPodcastReadRepository(
     context(_: RaiseContext)
     override suspend fun getMaxEpisodeForSeason(podcastId: PodcastId, season: Int): Int =
         withContext(Dispatchers.IO) { queries.getMaxEpisodeForSeason(podcastId, season) }
+
+    context(_: RaiseContext)
+    override suspend fun getCachedFeed(podcastId: PodcastId): CachedUpstreamFeed? =
+        withContext(Dispatchers.IO) { queries.getUpstreamFeed(podcastId) }
+
+    context(_: RaiseContext)
+    override suspend fun getCachedFeedXml(podcastId: PodcastId): String? =
+        withContext(Dispatchers.IO) { queries.getUpstreamRawXml(podcastId) }
+
+    context(_: RaiseContext)
+    override suspend fun listUpstreamEpisodes(podcastId: PodcastId): List<UpstreamEpisodeRecord> =
+        withContext(Dispatchers.IO) { queries.getUpstreamEpisodes(podcastId) }
+
+    context(_: RaiseContext)
+    override suspend fun listMappings(podcastId: PodcastId): List<EpisodeMapping> =
+        withContext(Dispatchers.IO) { queries.getMappings(podcastId) }
+
+    context(_: RaiseContext)
+    override suspend fun findMapping(
+        podcastId: PodcastId,
+        upstreamGuid: UpstreamGuid,
+    ): EpisodeMapping? =
+        withContext(Dispatchers.IO) { queries.findMapping(podcastId, upstreamGuid) }
+
+    context(_: RaiseContext)
+    override suspend fun listEpisodes(podcastId: PodcastId): List<EpisodeEntry> =
+        withContext(Dispatchers.IO) { queries.getEpisodesByPodcastId(podcastId) }
 }

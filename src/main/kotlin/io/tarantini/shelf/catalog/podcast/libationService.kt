@@ -42,6 +42,7 @@ fun podcastLibationService(
     seriesQueries: SeriesQueries,
     podcastQueries: PodcastQueries,
     storageService: StorageService,
+    mappingService: io.tarantini.shelf.catalog.podcast.upstream.PodcastMappingService? = null,
 ): PodcastLibationService =
     DefaultPodcastLibationService(
         enabled = enabled,
@@ -54,6 +55,7 @@ fun podcastLibationService(
                 seriesQueries = seriesQueries,
                 podcastQueries = podcastQueries,
                 storageService = storageService,
+                mappingService = mappingService,
             ),
     )
 

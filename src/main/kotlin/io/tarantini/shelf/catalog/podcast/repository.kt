@@ -3,11 +3,15 @@
 package io.tarantini.shelf.catalog.podcast
 
 import io.tarantini.shelf.RaiseContext
+import io.tarantini.shelf.catalog.podcast.domain.EpisodeMapping
+import io.tarantini.shelf.catalog.podcast.domain.FeedFlavor
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.NewPodcastRoot
 import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
 import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastRoot
+import io.tarantini.shelf.catalog.podcast.domain.UpstreamEpisodeRecord
+import io.tarantini.shelf.catalog.podcast.domain.UpstreamGuid
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
 import io.tarantini.shelf.processing.storage.StoragePath
 import kotlin.time.Instant
@@ -64,6 +68,36 @@ interface PodcastMutationRepository {
 
     context(_: RaiseContext)
     suspend fun deletePodcast(id: PodcastId)
+
+    context(_: RaiseContext)
+    suspend fun setFeedFlavor(id: PodcastId, feedFlavor: FeedFlavor): SavedPodcastRoot
+
+    context(_: RaiseContext)
+    suspend fun saveUpstreamFeed(
+        podcastId: PodcastId,
+        rawXml: String,
+        channelTitle: String?,
+        etag: String?,
+        lastModified: String?,
+        fetchedAt: Instant,
+        upserts: List<UpstreamEpisodeRecord>,
+        removedGuids: List<UpstreamGuid>,
+        newMappings: List<EpisodeMapping>,
+    ): SavedPodcastRoot
+
+    context(_: RaiseContext)
+    suspend fun recordUpstreamUnchanged(
+        id: PodcastId,
+        etag: String?,
+        lastModified: String?,
+        fetchedAt: Instant,
+    ): SavedPodcastRoot
+
+    context(_: RaiseContext)
+    suspend fun upsertMapping(mapping: EpisodeMapping): SavedPodcastRoot
+
+    context(_: RaiseContext)
+    suspend fun clearMapping(podcastId: PodcastId, upstreamGuid: UpstreamGuid): SavedPodcastRoot
 }
 
 fun podcastMutationRepository(queries: PodcastQueries): PodcastMutationRepository =
@@ -86,6 +120,7 @@ private class SqlDelightPodcastMutationRepository(private val queries: PodcastQu
                     autoSanitize = podcast.autoSanitize,
                     autoFetch = podcast.autoFetch,
                     fetchIntervalMinutes = podcast.fetchIntervalMinutes,
+                    feedFlavor = podcast.feedFlavor,
                 )
                 queries.getPodcastBySeriesId(podcast.seriesId)
             }
@@ -182,4 +217,82 @@ private class SqlDelightPodcastMutationRepository(private val queries: PodcastQu
     override suspend fun deletePodcast(id: PodcastId) {
         withContext(Dispatchers.IO) { queries.deletePodcast(id) }
     }
+
+    context(_: RaiseContext)
+    override suspend fun setFeedFlavor(id: PodcastId, feedFlavor: FeedFlavor): SavedPodcastRoot =
+        withContext(Dispatchers.IO) {
+            queries.transactionWithResult {
+                queries.setFeedFlavor(id, feedFlavor)
+                queries.getPodcastById(id)
+            }
+        }
+
+    context(_: RaiseContext)
+    override suspend fun saveUpstreamFeed(
+        podcastId: PodcastId,
+        rawXml: String,
+        channelTitle: String?,
+        etag: String?,
+        lastModified: String?,
+        fetchedAt: Instant,
+        upserts: List<UpstreamEpisodeRecord>,
+        removedGuids: List<UpstreamGuid>,
+        newMappings: List<EpisodeMapping>,
+    ): SavedPodcastRoot =
+        withContext(Dispatchers.IO) {
+            queries.transactionWithResult {
+                queries.persistUpstreamFeed(
+                    podcastId = podcastId,
+                    rawXml = rawXml,
+                    channelTitle = channelTitle,
+                    etag = etag,
+                    lastModified = lastModified,
+                    fetchedAt = fetchedAt,
+                    byteSize = rawXml.toByteArray().size.toLong(),
+                )
+                upserts.forEach { queries.persistUpstreamEpisode(it) }
+                removedGuids.forEach { queries.removeUpstreamEpisode(podcastId, it) }
+                newMappings.forEach { queries.persistMapping(it) }
+                queries.recordUpstreamConditional(podcastId, etag, lastModified, fetchedAt)
+                queries.bumpPodcastVersion(podcastId)
+                queries.getPodcastById(podcastId)
+            }
+        }
+
+    context(_: RaiseContext)
+    override suspend fun recordUpstreamUnchanged(
+        id: PodcastId,
+        etag: String?,
+        lastModified: String?,
+        fetchedAt: Instant,
+    ): SavedPodcastRoot =
+        withContext(Dispatchers.IO) {
+            queries.transactionWithResult {
+                queries.recordUpstreamConditional(id, etag, lastModified, fetchedAt)
+                queries.getPodcastById(id)
+            }
+        }
+
+    context(_: RaiseContext)
+    override suspend fun upsertMapping(mapping: EpisodeMapping): SavedPodcastRoot =
+        withContext(Dispatchers.IO) {
+            queries.transactionWithResult {
+                queries.persistMapping(mapping)
+                queries.bumpPodcastVersion(mapping.podcastId)
+                queries.getPodcastById(mapping.podcastId)
+            }
+        }
+
+    context(_: RaiseContext)
+    override suspend fun clearMapping(
+        podcastId: PodcastId,
+        upstreamGuid: UpstreamGuid,
+    ): SavedPodcastRoot =
+        withContext(Dispatchers.IO) {
+            queries.transactionWithResult {
+                queries.removeMapping(podcastId, upstreamGuid)
+                queries.bumpPodcastVersion(podcastId)
+                queries.getPodcastById(podcastId)
+            }
+        }
 }

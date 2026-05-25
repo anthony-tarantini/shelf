@@ -53,22 +53,27 @@ import io.tarantini.shelf.catalog.metadata.domain.MetadataNotFound
 import io.tarantini.shelf.catalog.metadata.domain.ShortASIN
 import io.tarantini.shelf.catalog.metadata.domain.ShortISBN
 import io.tarantini.shelf.catalog.metadata.domain.ShortISBN13
+import io.tarantini.shelf.catalog.podcast.domain.DownloadAlreadyQueued
 import io.tarantini.shelf.catalog.podcast.domain.EmptyFeedUrl
 import io.tarantini.shelf.catalog.podcast.domain.EmptyPodcastId
 import io.tarantini.shelf.catalog.podcast.domain.FeedAuthRequired
 import io.tarantini.shelf.catalog.podcast.domain.FeedFetchFailed
 import io.tarantini.shelf.catalog.podcast.domain.FeedParseFailed
 import io.tarantini.shelf.catalog.podcast.domain.FeedRateLimited
+import io.tarantini.shelf.catalog.podcast.domain.HostedEpisodeAlreadyMapped
 import io.tarantini.shelf.catalog.podcast.domain.InvalidEpisodeIndex
 import io.tarantini.shelf.catalog.podcast.domain.InvalidFeedToken
 import io.tarantini.shelf.catalog.podcast.domain.InvalidFeedUrl
 import io.tarantini.shelf.catalog.podcast.domain.InvalidFetchInterval
 import io.tarantini.shelf.catalog.podcast.domain.InvalidPodcastId
+import io.tarantini.shelf.catalog.podcast.domain.InvalidUpstreamGuid
 import io.tarantini.shelf.catalog.podcast.domain.LibationScanFailed
+import io.tarantini.shelf.catalog.podcast.domain.MappingConflict
 import io.tarantini.shelf.catalog.podcast.domain.PodcastAlreadyExists
 import io.tarantini.shelf.catalog.podcast.domain.PodcastError
 import io.tarantini.shelf.catalog.podcast.domain.PodcastFeedAlreadySubscribed
 import io.tarantini.shelf.catalog.podcast.domain.PodcastNotFound
+import io.tarantini.shelf.catalog.podcast.domain.UpstreamFeedMissing
 import io.tarantini.shelf.catalog.series.domain.EmptySeriesId
 import io.tarantini.shelf.catalog.series.domain.EmptySeriesSlug
 import io.tarantini.shelf.catalog.series.domain.EmptySeriesTitle
@@ -226,6 +231,12 @@ private fun PodcastError.toHttpResponse(): Pair<HttpStatusCode, String> =
                 (retryAfterSeconds?.let { "Feed rate limited. Retry after $it seconds" }
                     ?: "Feed rate limited")
         is LibationScanFailed -> HttpStatusCode.BadGateway to "Libation scan failed"
+        InvalidUpstreamGuid -> HttpStatusCode.BadRequest to "Invalid upstream episode guid"
+        UpstreamFeedMissing -> HttpStatusCode.NotFound to "Upstream feed cache not found"
+        MappingConflict -> HttpStatusCode.Conflict to "Episode mapping conflicts with existing"
+        HostedEpisodeAlreadyMapped ->
+            HttpStatusCode.Conflict to "Hosted episode is already mapped to another upstream guid"
+        DownloadAlreadyQueued -> HttpStatusCode.Conflict to "Download already queued for episode"
     }
 
 private fun SanitizationError.toHttpResponse(): Pair<HttpStatusCode, String> =

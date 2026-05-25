@@ -28,6 +28,10 @@ private constructor(
     val lastFetchedAt: Instant?,
     val fetchIntervalMinutes: Int,
     val version: Int,
+    val feedFlavor: FeedFlavor,
+    val upstreamEtag: String?,
+    val upstreamLastModified: String?,
+    val upstreamFetchedAt: Instant?,
 ) {
     fun isTokenValid(token: FeedToken, now: Instant): Boolean =
         (token == feedToken && (feedTokenExpiresAt == null || now < feedTokenExpiresAt)) ||
@@ -43,6 +47,7 @@ private constructor(
             autoSanitize: Boolean = true,
             autoFetch: Boolean = true,
             fetchIntervalMinutes: Int = 60,
+            feedFlavor: FeedFlavor = FeedFlavor.PUBLIC_DOWNLOAD,
         ) =
             PodcastRoot<PersistenceState.Unsaved>(
                 id = Identity.Unsaved,
@@ -57,6 +62,10 @@ private constructor(
                 lastFetchedAt = null,
                 fetchIntervalMinutes = fetchIntervalMinutes,
                 version = 0,
+                feedFlavor = feedFlavor,
+                upstreamEtag = null,
+                upstreamLastModified = null,
+                upstreamFetchedAt = null,
             )
 
         fun fromRaw(
@@ -72,6 +81,10 @@ private constructor(
             lastFetchedAt: Instant?,
             fetchIntervalMinutes: Int,
             version: Int,
+            feedFlavor: FeedFlavor,
+            upstreamEtag: String?,
+            upstreamLastModified: String?,
+            upstreamFetchedAt: Instant?,
         ) =
             PodcastRoot<PersistenceState.Persisted>(
                 id = Identity.Persisted(id),
@@ -86,6 +99,10 @@ private constructor(
                 lastFetchedAt = lastFetchedAt,
                 fetchIntervalMinutes = fetchIntervalMinutes,
                 version = version,
+                feedFlavor = feedFlavor,
+                upstreamEtag = upstreamEtag,
+                upstreamLastModified = upstreamLastModified,
+                upstreamFetchedAt = upstreamFetchedAt,
             )
     }
 }
@@ -137,6 +154,58 @@ enum class CredentialStatus {
     HAS_CREDENTIAL,
     NO_CREDENTIAL,
 }
+
+@Serializable
+data class CachedUpstreamFeed(
+    val podcastId: PodcastId,
+    val channelTitle: String?,
+    val upstreamEtag: String?,
+    val upstreamLastModified: String?,
+    val fetchedAt: Instant,
+    val byteSize: Long,
+)
+
+@Serializable
+data class UpstreamEpisodeRecord(
+    val podcastId: PodcastId,
+    val upstreamGuid: UpstreamGuid,
+    val title: String,
+    val season: Int?,
+    val episode: Int?,
+    val publishedAt: Instant?,
+    val upstreamAudioUrl: String,
+    val upstreamAudioSize: Long?,
+    val upstreamAudioMime: String?,
+    val durationSeconds: Double?,
+    val firstSeenAt: Instant,
+    val lastSeenAt: Instant,
+)
+
+@Serializable
+data class EpisodeMapping(
+    val podcastId: PodcastId,
+    val upstreamGuid: UpstreamGuid,
+    val hostedEpisodeId: PodcastEpisodeId?,
+    val mode: EpisodeMappingMode,
+    val manualOverride: Boolean,
+    val updatedAt: Instant,
+)
+
+@Serializable
+data class MappingSuggestion(
+    val upstream: UpstreamEpisodeRecord,
+    val candidates: List<EpisodeEntry>,
+)
+
+@Serializable
+data class DownloadJob(
+    val podcastId: PodcastId,
+    val upstreamGuid: UpstreamGuid,
+    val state: DownloadJobState,
+    val error: String?,
+    val startedAt: Instant?,
+    val finishedAt: Instant?,
+)
 
 @Serializable
 data class LibationScanStatus(

@@ -5,6 +5,8 @@ import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.series.domain.SeriesId
 import kotlinx.serialization.Serializable
 
+@Serializable data class MappingRequest(val hostedEpisodeId: String? = null)
+
 @Serializable
 data class PodcastRequest(
     val seriesId: String? = null,

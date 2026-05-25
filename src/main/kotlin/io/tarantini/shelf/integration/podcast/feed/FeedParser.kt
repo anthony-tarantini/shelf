@@ -156,6 +156,9 @@ private fun parseXml(xml: String): Document {
     return builder.parse(InputSource(StringReader(xml)))
 }
 
+context(_: RaiseContext)
+fun parseFeedDocument(xml: String): Document = catch({ parseXml(xml) }) { raise(FeedParseFailed) }
+
 private fun localName(node: Node): String = node.localName ?: node.nodeName.substringAfterLast(':')
 
 private fun firstChild(parent: Element?, name: String): Element? {

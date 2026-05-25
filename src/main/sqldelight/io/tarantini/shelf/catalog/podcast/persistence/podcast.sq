@@ -1,7 +1,11 @@
+import io.tarantini.shelf.catalog.podcast.domain.DownloadJobState;
+import io.tarantini.shelf.catalog.podcast.domain.EpisodeMappingMode;
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId;
 import io.tarantini.shelf.catalog.podcast.domain.PodcastEpisodeId;
+import io.tarantini.shelf.catalog.podcast.domain.FeedFlavor;
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken;
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl;
+import io.tarantini.shelf.catalog.podcast.domain.UpstreamGuid;
 import io.tarantini.shelf.catalog.series.domain.SeriesId;
 import io.tarantini.shelf.processing.storage.StoragePath;
 
@@ -18,6 +22,10 @@ CREATE TABLE IF NOT EXISTS podcasts (
     last_fetched_at TIMESTAMP WITH TIME ZONE,
     fetch_interval_minutes INTEGER NOT NULL DEFAULT 60,
     version INTEGER NOT NULL DEFAULT 0,
+    feed_flavor TEXT AS FeedFlavor NOT NULL DEFAULT 'PUBLIC_DOWNLOAD',
+    upstream_etag TEXT,
+    upstream_last_modified TEXT,
+    upstream_fetched_at TIMESTAMP WITH TIME ZONE,
     sys_period tstzrange NOT NULL DEFAULT tstzrange(current_timestamp, NULL)
 );
 
@@ -54,6 +62,60 @@ CREATE TABLE IF NOT EXISTS episode_guids (
 
 CREATE INDEX IF NOT EXISTS idx_episode_guids_episode
 ON episode_guids(episode_id);
+
+CREATE TABLE IF NOT EXISTS podcast_upstream_feeds (
+    podcast_id UUID AS PodcastId PRIMARY KEY REFERENCES podcasts(id) ON DELETE CASCADE,
+    raw_xml TEXT NOT NULL,
+    channel_title TEXT,
+    upstream_etag TEXT,
+    upstream_last_modified TEXT,
+    fetched_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    byte_size BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS podcast_upstream_episodes (
+    podcast_id UUID AS PodcastId NOT NULL REFERENCES podcasts(id) ON DELETE CASCADE,
+    upstream_guid TEXT AS UpstreamGuid NOT NULL,
+    title TEXT NOT NULL,
+    season INTEGER,
+    episode INTEGER,
+    published_at TIMESTAMP WITH TIME ZONE,
+    upstream_audio_url TEXT NOT NULL,
+    upstream_audio_size BIGINT,
+    upstream_audio_mime TEXT,
+    duration_seconds DOUBLE PRECISION,
+    first_seen_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    last_seen_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    PRIMARY KEY (podcast_id, upstream_guid)
+);
+
+CREATE INDEX IF NOT EXISTS idx_podcast_upstream_episodes_season_ep
+ON podcast_upstream_episodes(podcast_id, season, episode);
+
+CREATE TABLE IF NOT EXISTS podcast_episode_mappings (
+    podcast_id UUID AS PodcastId NOT NULL REFERENCES podcasts(id) ON DELETE CASCADE,
+    upstream_guid TEXT AS UpstreamGuid NOT NULL,
+    hosted_episode_id UUID AS PodcastEpisodeId REFERENCES podcast_episodes(id) ON DELETE SET NULL,
+    mode TEXT AS EpisodeMappingMode NOT NULL,
+    manual_override BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    PRIMARY KEY (podcast_id, upstream_guid),
+    UNIQUE (podcast_id, hosted_episode_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_podcast_episode_mappings_hosted
+ON podcast_episode_mappings(hosted_episode_id);
+
+CREATE TABLE IF NOT EXISTS podcast_download_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    podcast_id UUID AS PodcastId NOT NULL REFERENCES podcasts(id) ON DELETE CASCADE,
+    upstream_guid TEXT AS UpstreamGuid NOT NULL,
+    state TEXT AS DownloadJobState NOT NULL,
+    error TEXT,
+    started_at TIMESTAMP WITH TIME ZONE,
+    finished_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE (podcast_id, upstream_guid)
+);
 
 CREATE OR REPLACE VIEW podcastSummaries AS
 SELECT
@@ -210,9 +272,21 @@ SET total_time = :totalTime,
 WHERE id = :episodeId;
 
 insert:
-INSERT INTO podcasts (series_id, feed_url, feed_token, auto_sanitize, auto_fetch, fetch_interval_minutes)
-VALUES (:seriesId, :feedUrl, :feedToken, :autoSanitize, :autoFetch, :fetchIntervalMinutes)
+INSERT INTO podcasts (series_id, feed_url, feed_token, auto_sanitize, auto_fetch, fetch_interval_minutes, feed_flavor)
+VALUES (:seriesId, :feedUrl, :feedToken, :autoSanitize, :autoFetch, :fetchIntervalMinutes, :feedFlavor)
 RETURNING id;
+
+updateFeedFlavor:
+UPDATE podcasts
+SET feed_flavor = :feedFlavor
+WHERE id = :id;
+
+updateUpstreamConditional:
+UPDATE podcasts
+SET upstream_etag = :etag,
+    upstream_last_modified = :lastModified,
+    upstream_fetched_at = :fetchedAt
+WHERE id = :id;
 
 updateFeedConfig:
 UPDATE podcasts
@@ -253,3 +327,104 @@ RETURNING guid;
 
 deleteById:
 DELETE FROM podcasts WHERE id = :id;
+
+-- podcast_upstream_feeds
+
+selectUpstreamFeed:
+SELECT * FROM podcast_upstream_feeds WHERE podcast_id = :podcastId;
+
+upsertUpstreamFeed:
+INSERT INTO podcast_upstream_feeds (
+    podcast_id, raw_xml, channel_title, upstream_etag, upstream_last_modified, fetched_at, byte_size
+) VALUES (
+    :podcastId, :rawXml, :channelTitle, :etag, :lastModified, :fetchedAt, :byteSize
+)
+ON CONFLICT (podcast_id) DO UPDATE SET
+    raw_xml = EXCLUDED.raw_xml,
+    channel_title = EXCLUDED.channel_title,
+    upstream_etag = EXCLUDED.upstream_etag,
+    upstream_last_modified = EXCLUDED.upstream_last_modified,
+    fetched_at = EXCLUDED.fetched_at,
+    byte_size = EXCLUDED.byte_size;
+
+deleteUpstreamFeed:
+DELETE FROM podcast_upstream_feeds WHERE podcast_id = :podcastId;
+
+-- podcast_upstream_episodes
+
+selectUpstreamEpisodes:
+SELECT * FROM podcast_upstream_episodes
+WHERE podcast_id = :podcastId
+ORDER BY published_at DESC NULLS LAST;
+
+upsertUpstreamEpisode:
+INSERT INTO podcast_upstream_episodes (
+    podcast_id, upstream_guid, title, season, episode, published_at,
+    upstream_audio_url, upstream_audio_size, upstream_audio_mime, duration_seconds,
+    first_seen_at, last_seen_at
+) VALUES (
+    :podcastId, :upstreamGuid, :title, :season, :episode, :publishedAt,
+    :upstreamAudioUrl, :upstreamAudioSize, :upstreamAudioMime, :durationSeconds,
+    :firstSeenAt, :lastSeenAt
+)
+ON CONFLICT (podcast_id, upstream_guid) DO UPDATE SET
+    title = EXCLUDED.title,
+    season = EXCLUDED.season,
+    episode = EXCLUDED.episode,
+    published_at = EXCLUDED.published_at,
+    upstream_audio_url = EXCLUDED.upstream_audio_url,
+    upstream_audio_size = EXCLUDED.upstream_audio_size,
+    upstream_audio_mime = EXCLUDED.upstream_audio_mime,
+    duration_seconds = EXCLUDED.duration_seconds,
+    last_seen_at = EXCLUDED.last_seen_at;
+
+deleteUpstreamEpisode:
+DELETE FROM podcast_upstream_episodes
+WHERE podcast_id = :podcastId AND upstream_guid = :upstreamGuid;
+
+-- podcast_episode_mappings
+
+selectMappings:
+SELECT * FROM podcast_episode_mappings WHERE podcast_id = :podcastId;
+
+selectMappingByGuid:
+SELECT * FROM podcast_episode_mappings
+WHERE podcast_id = :podcastId AND upstream_guid = :upstreamGuid;
+
+upsertMapping:
+INSERT INTO podcast_episode_mappings (
+    podcast_id, upstream_guid, hosted_episode_id, mode, manual_override, updated_at
+) VALUES (
+    :podcastId, :upstreamGuid, :hostedEpisodeId, :mode, :manualOverride, :updatedAt
+)
+ON CONFLICT (podcast_id, upstream_guid) DO UPDATE SET
+    hosted_episode_id = EXCLUDED.hosted_episode_id,
+    mode = EXCLUDED.mode,
+    manual_override = EXCLUDED.manual_override,
+    updated_at = EXCLUDED.updated_at;
+
+deleteMapping:
+DELETE FROM podcast_episode_mappings
+WHERE podcast_id = :podcastId AND upstream_guid = :upstreamGuid;
+
+-- podcast_download_jobs
+
+selectDownloadJobs:
+SELECT * FROM podcast_download_jobs WHERE podcast_id = :podcastId;
+
+selectDownloadJob:
+SELECT * FROM podcast_download_jobs
+WHERE podcast_id = :podcastId AND upstream_guid = :upstreamGuid;
+
+insertDownloadJob:
+INSERT INTO podcast_download_jobs (podcast_id, upstream_guid, state)
+VALUES (:podcastId, :upstreamGuid, :state)
+RETURNING id;
+
+updateDownloadJob:
+UPDATE podcast_download_jobs
+SET state = :state,
+    error = :error,
+    started_at = :startedAt,
+    finished_at = :finishedAt
+WHERE podcast_id = :podcastId AND upstream_guid = :upstreamGuid;

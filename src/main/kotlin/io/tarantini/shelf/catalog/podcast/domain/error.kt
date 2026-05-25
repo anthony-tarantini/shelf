@@ -28,6 +28,16 @@ object InvalidEpisodeIndex : PodcastValidationError
 
 object InvalidFetchInterval : PodcastValidationError
 
+object InvalidUpstreamGuid : PodcastValidationError
+
+object UpstreamFeedMissing : PodcastPersistenceError
+
+object MappingConflict : PodcastPersistenceError
+
+object HostedEpisodeAlreadyMapped : PodcastPersistenceError
+
+object DownloadAlreadyQueued : PodcastPersistenceError
+
 sealed interface PodcastIntegrationError : PodcastError
 
 object FeedFetchFailed : PodcastIntegrationError
