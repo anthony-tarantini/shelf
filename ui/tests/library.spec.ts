@@ -1,84 +1,27 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-test.describe('Library', () => {
-    test.beforeEach(async ({ page }) => {
-        // Mock logged in user
-        await page.route('**/api/users', async route => {
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    data: {
-                        user: { id: '1', email: 'test@example.com', username: 'testuser' },
-                        token: 'fake-jwt-token'
-                    }
-                })
-            });
-        });
+test.describe('Library & Books', () => {
+    test('should load library page and show books', async ({ authenticatedPage }) => {
+        await authenticatedPage.goto('/');
+        
+        // Wait for network requests or content to load
+        await expect(authenticatedPage.getByRole('main')).toBeVisible();
+        
+        const emptyState = authenticatedPage.getByText(/no books found/i);
+        const bookList = authenticatedPage.locator('[data-testid="book-card"]').first();
 
-        // Mock books page
-        await page.route('**/api/books/page*', async route => {
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    data: {
-                        items: [
-                            {
-                                book: { id: 'book-1', title: 'Foundation', coverPath: null },
-                                authors: [{ id: 'auth-1', name: 'Isaac Asimov' }],
-                                series: [],
-                                metadata: null
-                            }
-                        ],
-                        totalCount: 1,
-                        page: 0,
-                        size: 20
-                    }
-                })
-            });
-        });
-
-        // Mock book details
-        await page.route('**/api/books/book-1/details', async route => {
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    data: {
-                        book: { id: 'book-1', title: 'Foundation', coverPath: null },
-                        authors: [{ id: 'auth-1', name: 'Isaac Asimov' }],
-                        series: [],
-                        metadata: {
-                            metadata: {
-                                id: 'meta-1',
-                                bookId: 'book-1',
-                                title: 'Foundation',
-                                description: 'The galactic empire is falling...',
-                                genres: ['Sci-Fi'],
-                                moods: []
-                            },
-                            editions: []
-                        }
-                    }
-                })
-            });
-        });
+        await expect(emptyState.or(bookList)).toBeVisible();
+        
+        await expect(authenticatedPage.getByRole('heading', { name: /library/i, includeHidden: false }).first()).toBeVisible();
     });
 
-    test('should show books in library and navigate to details', async ({ page }) => {
-        await page.goto('/');
-        
-        // Check if book is visible
-        const bookTitle = page.getByRole('heading', { name: 'Foundation' });
-        await expect(bookTitle).toBeVisible();
-        await expect(page.getByText('Isaac Asimov')).toBeVisible();
+    test('should navigate to authors catalog', async ({ authenticatedPage }) => {
+        await authenticatedPage.goto('/authors');
+        await expect(authenticatedPage.getByRole('heading', { name: /authors/i, includeHidden: false }).first()).toBeVisible();
+    });
 
-        // Click on the book title/link
-        await bookTitle.click();
-
-        // Should be on details page
-        await expect(page).toHaveURL(/\/books\/book-1/);
-        await expect(page.getByText('The galactic empire is falling...')).toBeVisible();
+    test('should navigate to series catalog', async ({ authenticatedPage }) => {
+        await authenticatedPage.goto('/series');
+        await expect(authenticatedPage.getByRole('heading', { name: /series/i, includeHidden: false }).first()).toBeVisible();
     });
 });

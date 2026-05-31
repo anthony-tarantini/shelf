@@ -17,6 +17,31 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 		const headers = new Headers(event.request.headers);
 
+		// Support SSR auth: sanitize the Cookie header and conditionally promote it to Authorization.
+		// Always remove shelf_token from the forwarded Cookie header to avoid redundant/unintended token forwarding.
+		const cookies = headers.get('cookie');
+		if (cookies) {
+			const sanitized = cookies
+				.split(';')
+				.map(c => c.trim())
+				.filter(c => !c.startsWith('shelf_token='))
+				.join('; ');
+			if (sanitized) {
+				headers.set('cookie', sanitized);
+			} else {
+				headers.delete('cookie');
+			}
+		}
+
+		// Only promote cookie to Authorization if ENABLE_E2E_AUTH is set,
+		// to maintain the bearer-token model in production.
+		if (process.env.ENABLE_E2E_AUTH === 'true') {
+			const token = event.cookies.get('shelf_token');
+			if (token && !headers.has('Authorization')) {
+				headers.set('Authorization', `Bearer ${token}`);
+			}
+		}
+
 		// Forward essential headers for proxying
 		headers.set('host', targetUrl.host);
 		headers.set('X-Forwarded-Host', event.url.host);

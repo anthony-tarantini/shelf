@@ -110,7 +110,7 @@ let loadError = $state<string | null>(null);
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
 				</svg>
 			</div>
-			<p class="text-lg text-muted-foreground">{$t('podcasts.empty_state')}</p>
+			<p data-testid="podcasts-empty" class="text-lg text-muted-foreground">{$t('podcasts.empty_state')}</p>
 			<a
 				href={resolve('/podcasts/subscribe')}
 				class="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-bold text-primary-foreground transition-colors hover:bg-primary/90"
@@ -125,6 +125,7 @@ let loadError = $state<string | null>(null);
 		<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 			{#each sorted as podcast (podcast.id)}
 				<a
+					data-testid="podcast-card"
 					href={`/podcasts/${podcast.id}`}
 					class="group flex items-center gap-4 rounded-[1.5rem] border border-border bg-card/80 p-3 shadow-xl transition-all hover:-translate-y-1 hover:border-primary/50"
 				>

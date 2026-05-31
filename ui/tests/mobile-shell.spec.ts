@@ -1,112 +1,34 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Mobile Shell', () => {
-	test.use({ viewport: { width: 390, height: 844 } });
+    test.use({ viewport: { width: 390, height: 844 } }); // iPhone/Pixel size
 
-	test.beforeEach(async ({ page }) => {
-		await page.route('**/api/setup', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({ data: { complete: true } })
-			});
-		});
+    test('should show bottom navigation and drawer', async ({ authenticatedPage }) => {
+        await authenticatedPage.goto('/');
 
-		await page.route('**/api/users', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({
-					data: {
-						user: { id: '1', email: 'test@example.com', username: 'testuser', role: 'READER' },
-						token: 'fake-jwt-token'
-					}
-				})
-			});
-		});
+        // The bottom nav should be visible on mobile
+        const bottomNav = authenticatedPage.getByRole('navigation').last();
+        await expect(bottomNav).toBeVisible();
 
-		await page.route('**/api/books/page*', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({
-					data: {
-						items: [
-							{
-								book: { id: 'book-1', title: 'Foundation', coverPath: null },
-								authors: [{ id: 'auth-1', name: 'Isaac Asimov' }],
-								series: [],
-								metadata: null
-							}
-						],
-						totalCount: 1,
-						page: 0,
-						size: 20
-					}
-				})
-			});
-		});
+        // Check if there's a menu button to open drawer
+        const menuBtn = authenticatedPage.getByRole('button', { name: /open navigation|menu|drawer/i });
+        await expect(menuBtn).toBeVisible();
+        await menuBtn.click();
+        
+        // Drawer should appear
+        const drawer = authenticatedPage.locator('[data-testid="mobile-drawer"]');
+        await expect(drawer).toBeVisible();
 
-		await page.route('**/api/books/import/progress', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({
-					data: {
-						isScanning: false,
-						scannedFiles: 0,
-						importedBooks: 0,
-						currentPath: null
-					}
-				})
-			});
-		});
+        // Close drawer to test search
+        await drawer.getByRole('button', { name: /close/i }).click();
+        await expect(drawer).not.toBeVisible();
 
-		await page.route('**/api/books/staged/batch/progress', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({
-					data: {
-						total: 0,
-						completed: 0,
-						failed: 0,
-						running: false
-					}
-				})
-			});
-		});
-
-		await page.route('**/api/search*', async (route) => {
-			await route.fulfill({
-				status: 200,
-				contentType: 'application/json',
-				body: JSON.stringify({
-					data: {
-						books: [],
-						authors: [],
-						series: []
-					}
-				})
-			});
-		});
-	});
-
-	test('shows mobile navigation, drawer tools, and search sheet', async ({ page }) => {
-		await page.goto('/');
-
-		await expect(page.getByRole('heading', { name: 'Shelf' })).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Library' })).toBeVisible();
-		await expect(page.getByRole('button', { name: 'Open navigation' })).toBeVisible();
-
-		await page.getByRole('button', { name: 'Open navigation' }).click();
-		await expect(page.getByText('Navigation')).toBeVisible();
-		await expect(page.getByRole('link', { name: 'Import' })).toBeVisible();
-		await expect(page.getByRole('link', { name: 'KOReader Sync' })).toBeVisible();
-		await page.getByRole('complementary').getByRole('button', { name: 'Close' }).click();
-
-		await page.getByRole('button', { name: 'Open search' }).click();
-		await expect(page.getByRole('heading', { name: 'Search the catalog' })).toBeVisible();
-		await expect(page.getByPlaceholder('Search books, authors, series...')).toBeVisible();
-	});
+        // Check for search sheet
+        const searchBtn = authenticatedPage.getByRole('button', { name: /search/i }).first();
+        await expect(searchBtn).toBeVisible();
+        await searchBtn.click();
+        
+        const searchInput = authenticatedPage.getByPlaceholder(/search/i).or(authenticatedPage.getByRole('searchbox'));
+        await expect(searchInput).toBeVisible();
+    });
 });

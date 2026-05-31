@@ -34,7 +34,7 @@
         {@const formats = getFormats(book)}
         {@const authorNames = getAuthorNames(book)}
         {@const userState = book.userState}
-        <a href={resolve(`/books/${id}`)} class="bg-card/80 border border-border rounded-[1.5rem] p-3 shadow-xl hover:border-primary/50 hover:-translate-y-1 transition-all group flex items-center gap-4">
+        <a data-testid="book-card" href={resolve(`/books/${id}`)} class="bg-card/80 border border-border rounded-[1.5rem] p-3 shadow-xl hover:border-primary/50 hover:-translate-y-1 transition-all group flex items-center gap-4">
             <div class="w-20 h-28 shrink-0 rounded-lg overflow-hidden bg-background isolate">
                 {#if coverPath}
                     <AuthenticatedImage src={`/api/books/${id}/cover?v=${encodeURIComponent(coverPath)}`} alt={title} class="h-full w-full object-contain p-1 transition-opacity duration-300 group-hover:opacity-90" />

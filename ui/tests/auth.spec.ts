@@ -1,57 +1,51 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Authentication', () => {
-    test.beforeEach(async ({ page }) => {
-        // Mock the initial user check that happens on every page load
-        await page.route('**/api/users', async route => {
-            await route.fulfill({
-                status: 401,
-                contentType: 'application/json',
-                body: JSON.stringify({ type: 'Unauthorized', message: 'Not logged in' })
-            });
-        });
+    // These tests use the default `page` which is unauthenticated
+
+    test('should show login page and allow valid login', async ({ page }) => {
+        await page.goto('/login');
+        await expect(page.getByRole('heading', { name: /welcome back/i, includeHidden: false })).toBeVisible();
+
+        await page.getByLabel(/email/i).fill('admin@example.com');
+        await page.getByLabel(/password/i).fill('adminpassword');
+        await page.getByRole('button', { name: /login|sign in/i }).click();
+
+        // Should redirect to library or admin depending on backend logic
+        await expect(page).toHaveURL(/\/(admin\/users|)$/);
     });
 
-    test('should show login page', async ({ page }) => {
+    test('should show error on invalid login', async ({ page }) => {
         await page.goto('/login');
-        await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
+        await page.getByLabel(/email/i).fill('admin@example.com');
+        await page.getByLabel(/password/i).fill('wrongpassword');
+        await page.getByRole('button', { name: /login|sign in/i }).click();
+
+        await expect(page.locator('.bg-destructive\\/10').first()).toBeVisible();
+        await expect(page).toHaveURL(/\/login/);
     });
 
-    test('should allow user to log in', async ({ page }) => {
-        // Mock the login API
-        await page.route('**/api/users/login', async route => {
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    data: {
-                        user: { id: '1', email: 'test@example.com', username: 'testuser' },
-                        token: 'fake-jwt-token'
-                    }
-                })
-            });
-        });
+    test('should redirect unauthenticated to login', async ({ page }) => {
+        await page.goto('/admin/library');
+        await expect(page).toHaveURL(/\/login/);
+    });
 
-        // Mock the user check AFTER login
-        await page.route('**/api/users', async route => {
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    data: {
-                        user: { id: '1', email: 'test@example.com', username: 'testuser' },
-                        token: 'fake-jwt-token'
-                    }
-                })
-            });
-        });
+    test('should logout successfully', async ({ authenticatedPage }) => {
+        await authenticatedPage.goto('/');
+        
+        // Find logout button (might be in a menu)
+        const menuBtn = authenticatedPage.getByRole('button', { name: /user menu|profile|admin/i });
+        if (await menuBtn.isVisible()) {
+            await menuBtn.click();
+        }
+        
+        const logoutBtn = authenticatedPage.getByRole('button', { name: /logout|log out|sign out/i });
+        await expect(logoutBtn).toBeVisible();
+        await logoutBtn.click();
+        await expect(authenticatedPage).toHaveURL(/\/login/);
 
-        await page.goto('/login');
-        await page.getByLabel(/email/i).fill('test@example.com');
-        await page.getByLabel(/password/i).fill('password123');
-        await page.getByRole('button', { name: /sign in/i }).click();
-
-        // Should redirect to home
-        await expect(page).toHaveURL('/');
+        // Robustness: reload and ensure we're still at login (session is cleared)
+        await authenticatedPage.reload();
+        await expect(authenticatedPage).toHaveURL(/\/login/);
     });
 });

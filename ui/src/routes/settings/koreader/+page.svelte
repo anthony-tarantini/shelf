@@ -130,7 +130,7 @@
             {#if createdToken}
                 <div class="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
                     <StatusBanner kind="success" title={$t('settings.koreader.tokens.new_token_title')} message={$t('settings.koreader.tokens.new_token_message')} compact={true} />
-                    <code class="block p-2 bg-background border border-border rounded-lg text-xs break-all select-all font-mono font-bold text-primary">{createdToken.token}</code>
+                    <code data-testid="new-token-value" class="block p-2 bg-background border border-border rounded-lg text-xs break-all select-all font-mono font-bold text-primary">{createdToken.token}</code>
                     <button onclick={() => createdToken = null} class="text-[10px] text-primary hover:underline">{$t('settings.koreader.tokens.clear_notice')}</button>
                 </div>
             {/if}

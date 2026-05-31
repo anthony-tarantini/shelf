@@ -359,7 +359,7 @@
 				{#if isMobileNavOpen}
 					<div class="fixed inset-0 z-40 lg:hidden">
 						<button type="button" class="absolute inset-0 bg-black/45 backdrop-blur-sm" onclick={() => (isMobileNavOpen = false)} aria-label={$t('common.actions.close')}></button>
-						<aside class="absolute inset-y-0 right-0 flex w-[min(24rem,100vw)] flex-col border-l border-border bg-card/98 shadow-2xl" style="padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom));">
+						<aside data-testid="mobile-drawer" class="absolute inset-y-0 right-0 flex w-[min(24rem,100vw)] flex-col border-l border-border bg-card/98 shadow-2xl" style="padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom));">
 							<div class="flex items-start justify-between gap-4 px-5 pb-4">
 								<div>
 									<p class="text-[10px] font-bold uppercase tracking-[0.28em] text-primary">

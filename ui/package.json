@@ -12,7 +12,10 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "lint": "eslint . && npm run check",
     "test:unit": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:up": "podman compose -f e2e.docker-compose.yaml up -d --wait",
+    "test:e2e:down": "podman compose -f e2e.docker-compose.yaml down -v",
+    "test:e2e:full": "trap 'npm run test:e2e:down' EXIT; npm run test:e2e:up && npm run test:e2e"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -8,6 +8,8 @@ node_modules
 /.svelte-kit
 /build
 /test-results
+/playwright-report
+tests/.auth/
 
 # OS
 .DS_Store
