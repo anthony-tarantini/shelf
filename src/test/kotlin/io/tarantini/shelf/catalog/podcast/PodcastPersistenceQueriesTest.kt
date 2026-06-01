@@ -29,6 +29,8 @@ class PodcastPersistenceQueriesTest :
                         autoSanitize = true,
                         autoFetch = true,
                         fetchIntervalMinutes = 60,
+                        feedFlavor =
+                            io.tarantini.shelf.catalog.podcast.domain.FeedFlavor.PUBLIC_DOWNLOAD,
                     )
                     .executeAsOne()
             return podcastId to token
@@ -157,6 +159,8 @@ class PodcastPersistenceQueriesTest :
                             autoSanitize = true,
                             autoFetch = true,
                             fetchIntervalMinutes = 60,
+                            feedFlavor =
+                                io.tarantini.shelf.catalog.podcast.domain.FeedFlavor.PUBLIC_DOWNLOAD,
                         )
                         .executeAsOne()
 
@@ -170,6 +174,8 @@ class PodcastPersistenceQueriesTest :
                             autoSanitize = true,
                             autoFetch = true,
                             fetchIntervalMinutes = 60,
+                            feedFlavor =
+                                io.tarantini.shelf.catalog.podcast.domain.FeedFlavor.PUBLIC_DOWNLOAD,
                         )
                         .executeAsOne()
                 deps.database.podcastQueries.updateLastFetched(OffsetDateTime.now(), notDueId)
@@ -182,6 +188,8 @@ class PodcastPersistenceQueriesTest :
                         autoSanitize = true,
                         autoFetch = false,
                         fetchIntervalMinutes = 60,
+                        feedFlavor =
+                            io.tarantini.shelf.catalog.podcast.domain.FeedFlavor.PUBLIC_DOWNLOAD,
                     )
                     .executeAsOne()
 

@@ -42,6 +42,9 @@ class PodcastRssApiTest :
                                     autoSanitize = false,
                                     autoFetch = false,
                                     fetchIntervalMinutes = 60,
+                                    feedFlavor =
+                                        io.tarantini.shelf.catalog.podcast.domain.FeedFlavor
+                                            .PUBLIC_DOWNLOAD,
                                 )
                                 .executeAsOne()
 
@@ -134,6 +137,8 @@ class PodcastRssApiTest :
                             autoSanitize = false,
                             autoFetch = false,
                             fetchIntervalMinutes = 60,
+                            feedFlavor =
+                                io.tarantini.shelf.catalog.podcast.domain.FeedFlavor.PUBLIC_DOWNLOAD,
                         )
                         .executeAsOne()
                 }
@@ -171,6 +176,9 @@ class PodcastRssApiTest :
                                     autoSanitize = false,
                                     autoFetch = false,
                                     fetchIntervalMinutes = 60,
+                                    feedFlavor =
+                                        io.tarantini.shelf.catalog.podcast.domain.FeedFlavor
+                                            .PUBLIC_DOWNLOAD,
                                 )
                                 .executeAsOne()
 

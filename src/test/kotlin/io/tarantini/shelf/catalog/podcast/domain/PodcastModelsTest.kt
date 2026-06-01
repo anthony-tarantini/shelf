@@ -44,6 +44,10 @@ class PodcastModelsTest :
                     lastFetchedAt = null,
                     fetchIntervalMinutes = 30,
                     version = 2,
+                    feedFlavor = FeedFlavor.PUBLIC_DOWNLOAD,
+                    upstreamEtag = null,
+                    upstreamLastModified = null,
+                    upstreamFetchedAt = null,
                 )
 
             root.id shouldBe Identity.Persisted(podcastId)
@@ -69,6 +73,10 @@ class PodcastModelsTest :
                     lastFetchedAt = null,
                     fetchIntervalMinutes = 60,
                     version = 0,
+                    feedFlavor = FeedFlavor.PUBLIC_DOWNLOAD,
+                    upstreamEtag = null,
+                    upstreamLastModified = null,
+                    upstreamFetchedAt = null,
                 )
 
             root.isTokenValid(currentToken, now) shouldBe true

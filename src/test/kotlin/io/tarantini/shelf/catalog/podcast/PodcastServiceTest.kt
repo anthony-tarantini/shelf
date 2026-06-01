@@ -12,6 +12,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.tarantini.shelf.RaiseContext
 import io.tarantini.shelf.catalog.podcast.domain.CreatePodcastCommand
+import io.tarantini.shelf.catalog.podcast.domain.FeedFlavor
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
 import io.tarantini.shelf.catalog.podcast.domain.PodcastId
@@ -40,6 +41,10 @@ class PodcastServiceTest :
                     lastFetchedAt = null,
                     fetchIntervalMinutes = 60,
                     version = 0,
+                    feedFlavor = FeedFlavor.PUBLIC_DOWNLOAD,
+                    upstreamEtag = null,
+                    upstreamLastModified = null,
+                    upstreamFetchedAt = null,
                 )
 
             val calls = mutableListOf<String>()
@@ -99,6 +104,10 @@ class PodcastServiceTest :
                     lastFetchedAt = null,
                     fetchIntervalMinutes = 60,
                     version = 0,
+                    feedFlavor = FeedFlavor.PUBLIC_DOWNLOAD,
+                    upstreamEtag = null,
+                    upstreamLastModified = null,
+                    upstreamFetchedAt = null,
                 )
             val updated =
                 PodcastRoot.fromRaw(
@@ -114,6 +123,10 @@ class PodcastServiceTest :
                     lastFetchedAt = existing.lastFetchedAt,
                     fetchIntervalMinutes = 30,
                     version = existing.version,
+                    feedFlavor = existing.feedFlavor,
+                    upstreamEtag = existing.upstreamEtag,
+                    upstreamLastModified = existing.upstreamLastModified,
+                    upstreamFetchedAt = existing.upstreamFetchedAt,
                 )
 
             val calls = mutableListOf<String>()
@@ -175,6 +188,10 @@ class PodcastServiceTest :
                     lastFetchedAt = null,
                     fetchIntervalMinutes = 60,
                     version = 0,
+                    feedFlavor = FeedFlavor.PUBLIC_DOWNLOAD,
+                    upstreamEtag = null,
+                    upstreamLastModified = null,
+                    upstreamFetchedAt = null,
                 )
 
             val calls = mutableListOf<String>()
