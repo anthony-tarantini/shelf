@@ -70,6 +70,13 @@ nav:
     - OPDS Feed: user-guide/opds.md
     - KOReader Sync: user-guide/koreader.md
     - PWA Install: user-guide/pwa-install.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Domain Modeling: architecture/domain-modeling.md
+    - Service Decomposition: architecture/service-decomposition.md
+    - Metadata Update Flow: architecture/metadata-update-flow.md
+    - Podcast Engine: architecture/podcast-engine.md
+    - Observability: architecture/observability.md
   - Contributing:
     - Development Setup: contributing/development-setup.md
     - Code Conventions: contributing/code-conventions.md

@@ -21,8 +21,12 @@ shelf/
 | File | Purpose |
 |------|---------|
 | `primitives.kt` | Value classes and validated domain primitives |
-| `api.kt` | External-facing request/response DTOs |
+| `api.kt` | External-facing request/response DTOs and request-to-command mappers |
+| `commands.kt` | Validated command types and value objects |
+| `decider.kt` | Pure decision functions: `(snapshot, command) -> decision/mutation` |
 | `models.kt` | Roots, records, aggregates, summaries |
+| `normalization.kt` | Canonicalization helpers (optional) |
+| `events.kt` | Domain event types (optional) |
 | `error.kt` | Domain-specific `AppError` variants |
 | `service.kt` | Orchestration, policy, and business rules |
 | `persistence.kt` | Typed SQLDelight access and aggregate persistence |

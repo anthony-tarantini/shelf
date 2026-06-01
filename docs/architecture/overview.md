@@ -9,7 +9,7 @@ Shelf is a single-module Kotlin application organized by domain.
 ```
 shelf/
 ├── src/main/kotlin/io/tarantini/shelf/
-���   ├── app/                 # App bootstrap, env parsing, adapters, shared HTTP helpers
+│   ├── app/                 # App bootstrap, env parsing, adapters, shared HTTP helpers
 │   ├── catalog/             # Book, author, series, metadata, search, OPDS
 │   ├── organization/        # Library ownership and organization features
 │   ├── processing/          # Import, staging, storage, EPUB/audiobook parsing
@@ -37,9 +37,10 @@ shelf/
 | `api.kt` | External-facing request/response DTOs and request-to-command mappers |
 | `commands.kt` | Validated command types and value objects |
 | `decider.kt` | Pure decision functions: (snapshot, command) -> decision/mutation |
-| `error.kt` | Domain-specific `AppError` variants |
 | `models.kt` | Roots, records, aggregates, summaries |
 | `normalization.kt` | Canonicalization helpers (optional) |
+| `events.kt` | Domain event types (optional) |
+| `error.kt` | Domain-specific `AppError` variants |
 | `service.kt` | Orchestration, policy, and business rules |
 | `persistence.kt` | Typed SQLDelight access and aggregate persistence |
 | `routes.kt` | HTTP boundary only |

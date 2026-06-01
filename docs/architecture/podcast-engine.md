@@ -978,37 +978,13 @@ Shelf consumes Libation export artifacts from a shared filesystem drop directory
 
 ---
 
-## Implementation Order
+## Implementation Status
 
 ### Milestone 1: Podcast Ingestion + RSS Distribution (COMPLETE)
-Steps 1-13.
+Core podcast domain with feed parsing, episode ingestion, GUID deduplication, and private RSS distribution.
 
 ### Milestone 1.5: Libation Container Bridge (COMPLETE)
-14. **Infrastructure:** Add `libation` service to compose files.
-15. **Scanner Adapter:** Build Kotlin parser/scanner for Libation manifests under `integration/podcast/libation`.
-16. **Scheduler:** Add periodic Libation scan scheduler controlled by env configuration.
-17. **Frontend Integration:** Replace Audible dashboard widgets/routes with Libation scan + status UI.
-18. **Dashboard Integration:** Wire Libation scan status into the Podcasts dashboard model.
+Libation container integration for importing audiobooks from walled gardens via shared drop directory.
 
 ### Milestone 2: Commercial Crusher (MinusPod Sidecar)
-19. **Infrastructure:** Add `ttlequals0/minuspod` image to `docker-compose.yaml`.
-20. **MinusPod Client:** Build Kotlin adapter for MinusPod REST API.
-21. **Feed Orchestration:** Update fetch service to swap original URLs for MinusPod proxy URLs.
-22. **Status Integration:** Add "Processing" status to Shelf UI based on MinusPod polling.
-23. **Manual Review:** Adapt UI to allow users to trigger re-processing or review MinusPod segments.
-
-
----
-
-## Open Questions
-
-### Milestone 1
-1. **Storage layout** — Episodes under `{storage_root}/podcasts/{series_id}/` or reuse existing book storage layout?
-2. **Multi-user** — Podcast subscriptions per-user or shared catalog? Current Book/Series are shared. Recommend shared, matching existing pattern.
-3. **Rate limiting RSS endpoint** — Feed readers can be aggressive. Need per-token rate limiting?
-4. **Walled garden adapters** — Libation is the supported bridge path for proprietary catalogs; avoid in-app auth adapters.
-
-### Milestone 2
-5. **Whisper model size** — `base.en` (141MB) vs `small.en` (466MB)? Accuracy vs. speed tradeoff. Recommend `base.en` default, configurable.
-6. **LLM model** — Which Ollama model for ad classification? `llama3.2:3b` should suffice for structured extraction.
-7. **Sanitization opt-in default** — `autoSanitize` default `true` or `false` for new subscriptions? Recommend `false` until pipeline is proven reliable.
+Planned. MinusPod sidecar integration for ad removal from podcast episodes.

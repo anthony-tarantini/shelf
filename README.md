@@ -51,7 +51,7 @@ Shelf is a modern, type-safe book management backend built with **Kotlin**, **Kt
 
 ## 🏁 Quick Start
 
-For detailed installation and usage instructions, please refer to the [Deployment Guide](docs/Deployment-Guide.md).
+For detailed installation and usage instructions, please refer to the [Quickstart Guide](docs/getting-started/quickstart.md).
 
 ### Prerequisites
 - JDK 21+
@@ -218,9 +218,6 @@ In hybrid mode, the backend entrypoint injects the JVM agent and disables agent-
 - backend readiness: `http://localhost:8080/readiness`
 - backend metrics: `http://localhost:8080/metrics`
 - Grafana LGTM: `http://localhost:3001`
-- Libation container: `http://localhost:5299`
-
-The `libation` service is built from the local `./libation` directory by default (tag: `LIBATION_IMAGE`, default `tarantini-io/shelf/libation:local`).
 
 Frontend waits for backend health before starting. Backend health is based on `/readiness`.
 
@@ -234,17 +231,13 @@ Keep plain `localhost` only for host-facing URLs such as browser access to the f
 
 ### Libation Import Contract
 
-Shelf treats Libation as a containerized producer and consumes files from a shared drop directory.
+Shelf consumes Libation export manifests from a shared drop directory via the backend scanner.
 
 - `docker-compose.yaml` mounts `./data/libation-export` into backend at `/storage/libation-import`
 - backend env defaults:
   - `LIBATION_IMPORT_ENABLED=true`
   - `LIBATION_DROP_DIR=/storage/libation-import`
   - `LIBATION_SCAN_INTERVAL_SECONDS=300`
-- `libation` service mounts:
-  - `./data/libation` as Libation config/state
-  - `./data/libation-export` as export output
-  - optional runtime overrides: `LIBATION_PUID`, `LIBATION_PGID`, `LIBATION_TZ`
 
 Manual and status endpoints:
 
