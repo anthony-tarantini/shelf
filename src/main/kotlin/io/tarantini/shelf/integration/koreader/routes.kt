@@ -114,7 +114,12 @@ private fun Route.registerProgressReadRoute(deps: Dependencies) {
             either { deps.koreaderSyncService.getProgress(auth.userId, documentId) }
                 .fold(
                     {
-                        logger.warn("KOReader progress read failed error={}", it::class.simpleName)
+                        logger.warn(
+                            "KOReader progress read failed userId={} document={} error={}",
+                            auth.userId.value,
+                            documentId.documentId,
+                            it::class.simpleName,
+                        )
                         deps.observability
                             .counter("shelf.koreader.progress_reads", "result", "failure")
                             .increment()
@@ -122,10 +127,18 @@ private fun Route.registerProgressReadRoute(deps: Dependencies) {
                     },
                     { progress ->
                         if (progress == null) {
-                            logger.info("KOReader progress read miss")
+                            logger.info(
+                                "KOReader progress read miss userId={} document={}",
+                                auth.userId.value,
+                                documentId.documentId,
+                            )
                             call.respond(HttpStatusCode.NotFound)
                         } else {
-                            logger.info("KOReader progress read hit")
+                            logger.info(
+                                "KOReader progress read hit userId={} document={}",
+                                auth.userId.value,
+                                documentId.documentId,
+                            )
                             deps.observability
                                 .counter("shelf.koreader.progress_reads", "result", "success")
                                 .increment()
@@ -144,7 +157,8 @@ private fun Route.registerProgressUpdateRoute(deps: Dependencies) {
                 runCatching { call.receive<ProgressPayload>() }
                     .getOrElse {
                         logger.warn(
-                            "KOReader progress update invalid payload error={}",
+                            "KOReader progress update invalid payload userId={} error={}",
+                            auth.userId.value,
                             it::class.simpleName,
                         )
                         deps.observability
@@ -160,7 +174,11 @@ private fun Route.registerProgressUpdateRoute(deps: Dependencies) {
                     }
             val command = payload.toCommand()
             if (command == null) {
-                logger.warn("KOReader progress update invalid payload reason=missing_document")
+                logger.warn(
+                    "KOReader progress update invalid payload userId={} reason=missing_document rawDocument={}",
+                    auth.userId.value,
+                    payload.document,
+                )
                 deps.observability
                     .counter(
                         "shelf.koreader.progress_updates",
@@ -176,7 +194,11 @@ private fun Route.registerProgressUpdateRoute(deps: Dependencies) {
                 .fold(
                     {
                         logger.warn(
-                            "KOReader progress update failed error={}",
+                            "KOReader progress update failed userId={} document={} percentage={} device={} error={}",
+                            auth.userId.value,
+                            payload.document,
+                            payload.percentage,
+                            payload.device,
                             it::class.simpleName,
                         )
                         deps.observability
@@ -185,7 +207,13 @@ private fun Route.registerProgressUpdateRoute(deps: Dependencies) {
                         call.respond(it.toHttpResponse().first, it.toHttpResponse().second)
                     },
                     {
-                        logger.info("KOReader progress update success")
+                        logger.info(
+                            "KOReader progress update success userId={} document={} percentage={} device={}",
+                            auth.userId.value,
+                            payload.document,
+                            payload.percentage,
+                            payload.device,
+                        )
                         deps.observability
                             .counter("shelf.koreader.progress_updates", "result", "success")
                             .increment()
@@ -212,9 +240,10 @@ private fun Route.registerWebdavHandler(deps: Dependencies) {
             userStorageDir.createDirectories()
             val statsFile = userStorageDir.resolve("statistics.sqlite")
             logger.info(
-                "KOReader webdav request method={} uri={} statsFileExists={}",
+                "KOReader webdav request method={} uri={} userId={} statsFileExists={}",
                 call.request.local.method.value,
                 call.request.uri,
+                auth.userId.value,
                 statsFile.exists(),
             )
 
@@ -245,14 +274,20 @@ private fun RoutingContext.triggerStatsIngest(deps: Dependencies, userId: UserId
         either { deps.koreaderStatsService.ingest(IngestKoreaderStatsCommand(userId, statsFile)) }
             .fold(
                 { error ->
-                    logger.warn("KOReader stats ingest failed error={}", error::class.simpleName)
+                    logger.warn(
+                        "KOReader stats ingest failed userId={} statsFile={} error={}",
+                        userId.value,
+                        statsFile,
+                        error::class.simpleName,
+                    )
                     deps.observability
                         .counter("shelf.koreader.stats_ingest", "result", "failure")
                         .increment()
                 },
                 { summary ->
                     logger.info(
-                        "KOReader stats ingest success books={} matched={} unmatched={} pages={} sessions={}",
+                        "KOReader stats ingest success userId={} books={} matched={} unmatched={} pages={} sessions={}",
+                        userId.value,
                         summary.booksSeen,
                         summary.booksMatched,
                         summary.booksUnmatched,

@@ -52,10 +52,16 @@ internal suspend fun RoutingContext.respondWebdavGet(statsFile: java.nio.file.Pa
 }
 
 internal suspend fun RoutingContext.respondWebdavPut(statsFile: java.nio.file.Path) {
-    call.receiveStream().use { input ->
-        statsFile.outputStream().use { output -> input.copyTo(output) }
-    }
-    logger.info("KOReader webdav PUT stored statistics.sqlite")
+    val bytesWritten =
+        call.receiveStream().use { input ->
+            statsFile.outputStream().use { output -> input.copyTo(output) }
+        }
+    val finalSize = if (statsFile.exists()) statsFile.toFile().length() else -1
+    logger.info(
+        "KOReader webdav PUT stored statistics.sqlite bytesWritten={} fileSizeOnDisk={}",
+        bytesWritten,
+        finalSize,
+    )
     call.respond(HttpStatusCode.Created)
 }
 

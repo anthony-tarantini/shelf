@@ -12,6 +12,7 @@ import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.parseAuthorizationHeader
 import io.ktor.server.request.httpMethod
+import io.ktor.server.request.uri
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
@@ -98,8 +99,9 @@ suspend inline fun RoutingContext.koreaderTokenAuth(
         val reason =
             if (rawUsername.isNullOrBlank()) "missing_user_header" else "missing_key_header"
         logger.warn(
-            "KOReader auth failed method={} reason={}",
+            "KOReader auth failed method={} uri={} reason={}",
             call.request.httpMethod.value,
+            call.request.uri,
             reason,
         )
         observability
@@ -115,8 +117,10 @@ suspend inline fun RoutingContext.koreaderTokenAuth(
 
     if (userId == null) {
         logger.warn(
-            "KOReader auth failed method={} reason=invalid_credentials",
+            "KOReader auth failed method={} uri={} username={} reason=invalid_credentials",
             call.request.httpMethod.value,
+            call.request.uri,
+            username,
         )
         observability
             .counter("shelf.koreader.auth", "result", "failure", "reason", "invalid_credentials")
