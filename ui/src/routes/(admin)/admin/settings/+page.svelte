@@ -1,5 +1,20 @@
 <script lang="ts">
     import { t } from '$lib/i18n';
+    import { api } from '$lib/api/client';
+    import { toast } from '$lib/state/toast.svelte';
+
+    let isRehashing = $state(false);
+
+    async function recomputeKoreaderHashes() {
+        isRehashing = true;
+        const result = await api.post('/admin/koreader/recompute-hashes', {});
+        isRehashing = false;
+        if (result.left) {
+            toast.error(result.left.message || 'Failed to queue rehash job');
+        } else {
+            toast.success('KOReader hash recompute queued. Progress logged on the backend.');
+        }
+    }
 </script>
 
 <div class="space-y-6">
@@ -53,6 +68,29 @@
                 </div>
                 <button class="px-4 py-2 bg-muted text-muted-foreground rounded-md text-sm font-medium w-full mt-4 cursor-not-allowed" disabled>
                     {$t('admin.settings.providers.edit')}
+                </button>
+            </div>
+        </div>
+
+        <!-- KOReader Maintenance -->
+        <div class="bg-card border border-border rounded-[1.5rem] shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-border bg-muted/30">
+                <h3 class="font-bold text-lg flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/><path d="M9 4v16"/></svg>
+                    KOReader Maintenance
+                </h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-sm text-muted-foreground">
+                    Recompute KOReader partial-MD5 hashes for every ebook in the library. Use this after upgrading if KOReader progress sync stops matching books. Runs in the background; check backend logs for completion.
+                </p>
+                <button
+                    type="button"
+                    disabled={isRehashing}
+                    onclick={recomputeKoreaderHashes}
+                    class="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-bold w-full transition-all hover:bg-primary/90 disabled:opacity-50"
+                >
+                    {isRehashing ? 'Queuing...' : 'Recompute KOReader hashes'}
                 </button>
             </div>
         </div>

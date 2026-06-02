@@ -35,7 +35,7 @@ fun Application.routes(deps: Dependencies) = routing {
     }
     observabilityRoutes(deps.observability)
     userRoutes(deps.userService, deps.jwtService)
-    adminRoutes(deps.userService, deps.jwtService)
+    adminRoutes(deps.userService, deps.jwtService, deps.koreaderRehashService)
     tokenRoutes(deps.tokenService, deps.jwtService)
     authorRoutes(
         deps.authorService,

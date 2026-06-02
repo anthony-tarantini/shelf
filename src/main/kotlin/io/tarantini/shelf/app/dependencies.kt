@@ -96,6 +96,7 @@ class Dependencies(
         io.tarantini.shelf.catalog.podcast.upstream.PodcastUpstreamFeedService,
     val podcastMappingService: io.tarantini.shelf.catalog.podcast.upstream.PodcastMappingService,
     val podcastReadRepository: io.tarantini.shelf.catalog.podcast.PodcastReadRepository,
+    val koreaderRehashService: io.tarantini.shelf.integration.koreader.KoreaderRehashService,
     val libraryService: LibraryService,
     val storageService: StorageService,
     val activityService: ActivityService,
@@ -170,6 +171,11 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         val metadataSyncStatusRepository = metadataSyncStatusRepository(metadataSyncStatusQueries)
         val koreaderStatsRepository = koreaderStatsRepository(koreaderStatsQueries)
         val koreaderStatsService = koreaderStatsService(koreaderStatsRepository, metadataRepository)
+        val koreaderRehashService =
+            io.tarantini.shelf.integration.koreader.koreaderRehashService(
+                metadataQueries,
+                storageService,
+            )
         val metadataService =
             metadataService(
                 externalMetadataProvider,
@@ -412,6 +418,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             podcastUpstreamFeedService,
             podcastMappingService,
             podcastReadRepository,
+            koreaderRehashService,
             libraryService,
             storageService,
             activityService,

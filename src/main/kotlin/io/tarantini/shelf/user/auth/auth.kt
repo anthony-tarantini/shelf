@@ -87,13 +87,29 @@ suspend inline fun RoutingContext.sharedCatalogMutation(
     }
 }
 
+@OptIn(ExperimentalEncodingApi::class)
 suspend inline fun RoutingContext.koreaderTokenAuth(
     koreaderAuthService: KoreaderAuthService,
     observability: Observability,
     crossinline body: suspend RoutingContext.(KoreaderContext) -> Unit,
 ) {
-    val rawUsername = call.request.headers["x-auth-user"]
-    val rawKey = call.request.headers["x-auth-key"]
+    var rawUsername = call.request.headers["x-auth-user"]
+    var rawKey = call.request.headers["x-auth-key"]
+
+    if (rawUsername.isNullOrBlank() || rawKey.isNullOrBlank()) {
+        val authorization = call.request.headers[HttpHeaders.Authorization]
+        if (authorization != null && authorization.startsWith("Basic ", ignoreCase = true)) {
+            val encoded = authorization.substringAfter(' ').trim()
+            val decoded =
+                runCatching { Base64.Default.decode(encoded).decodeToString() }.getOrNull()
+            val separator = decoded?.indexOf(':') ?: -1
+            if (decoded != null && separator >= 0) {
+                rawUsername = decoded.substring(0, separator)
+                val password = decoded.substring(separator + 1)
+                rawKey = md5HexLowercase(password)
+            }
+        }
+    }
 
     if (rawUsername.isNullOrBlank() || rawKey.isNullOrBlank()) {
         val reason =
@@ -135,6 +151,11 @@ suspend inline fun RoutingContext.koreaderTokenAuth(
 }
 
 fun stripKoreaderDomain(username: String): String = username.removeSuffix("@koreader.local")
+
+fun md5HexLowercase(value: String): String =
+    java.security.MessageDigest.getInstance("MD5").digest(value.toByteArray()).joinToString("") {
+        "%02x".format(it)
+    }
 
 fun Route.sharedCatalogFeedAuth(build: Route.() -> Unit) {
     authenticate("opds-auth", build = build)

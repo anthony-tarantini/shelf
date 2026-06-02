@@ -19,4 +19,9 @@ data class AdminResource(val parent: RootResource = RootResource) {
             @Resource("role") data class Role(val parent: ById)
         }
     }
+
+    @Resource("koreader")
+    data class Koreader(val parent: AdminResource = AdminResource()) {
+        @Resource("recompute-hashes") data class RecomputeHashes(val parent: Koreader = Koreader())
+    }
 }

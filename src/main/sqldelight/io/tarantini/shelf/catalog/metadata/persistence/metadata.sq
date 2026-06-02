@@ -90,6 +90,9 @@ LEFT JOIN book_moods moods ON moods.book = metadata.book_id
 WHERE book_id IN :bookIds
 GROUP BY metadata.id;
 
+selectAllEbookEditions:
+SELECT id, path, file_hash FROM editions WHERE format = 'EBOOK';
+
 selectEditionsByBookId:
 SELECT * FROM editions WHERE book_id = :bookId;
 

@@ -20,7 +20,10 @@ suspend fun Path.koreaderHash(): String? =
                 val buffer = ByteBuffer.allocate(chunkSize)
 
                 for (i in -1..10) {
-                    val offset = if (i == -1) 0L else (1024L shl (2 * i))
+                    // KOReader partial MD5 reads at offsets step << (2*i) where step=1024.
+                    // For i=-1, this is 1024 >> 2 = 256 (Lua right-shifts on negative count).
+                    val shift = 2 * i
+                    val offset = if (shift >= 0) 1024L shl shift else 1024L shr -shift
 
                     if (offset >= fileSize) break
 
