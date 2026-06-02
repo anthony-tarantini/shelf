@@ -9,6 +9,7 @@ import io.tarantini.shelf.app.toOffsetDateTimeUtc
 import io.tarantini.shelf.catalog.podcast.domain.CachedUpstreamFeed
 import io.tarantini.shelf.catalog.podcast.domain.EpisodeEntry
 import io.tarantini.shelf.catalog.podcast.domain.EpisodeMapping
+import io.tarantini.shelf.catalog.podcast.domain.EpisodePage
 import io.tarantini.shelf.catalog.podcast.domain.FeedFlavor
 import io.tarantini.shelf.catalog.podcast.domain.FeedToken
 import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
@@ -193,6 +194,60 @@ fun PodcastQueries.getEpisodesByPodcastId(podcastId: PodcastId): List<EpisodeEnt
             publishedAt = it.published_at.toKotlinInstant(),
         )
     }
+
+context(_: RaiseContext)
+fun PodcastQueries.getEpisodesPagedByPodcastId(
+    podcastId: PodcastId,
+    page: Int,
+    size: Int,
+    sortDesc: Boolean,
+): EpisodePage {
+    val safeSize = size.coerceIn(1, 200)
+    val safePage = page.coerceAtLeast(0)
+    val offset = safePage.toLong() * safeSize.toLong()
+    val rows =
+        if (sortDesc) {
+            selectEpisodesByPodcastIdPagedDesc(
+                    podcastId = podcastId,
+                    limit = safeSize.toLong(),
+                    offset = offset,
+                )
+                .executeAsList()
+                .map {
+                    EpisodeEntry(
+                        id = it.id,
+                        title = it.title,
+                        season = it.season,
+                        episode = it.episode,
+                        sanitizationStatus = SanitizationStatus.SKIPPED,
+                        coverPath = it.cover_path,
+                        totalTime = it.total_time,
+                        publishedAt = it.published_at.toKotlinInstant(),
+                    )
+                }
+        } else {
+            selectEpisodesByPodcastIdPagedAsc(
+                    podcastId = podcastId,
+                    limit = safeSize.toLong(),
+                    offset = offset,
+                )
+                .executeAsList()
+                .map {
+                    EpisodeEntry(
+                        id = it.id,
+                        title = it.title,
+                        season = it.season,
+                        episode = it.episode,
+                        sanitizationStatus = SanitizationStatus.SKIPPED,
+                        coverPath = it.cover_path,
+                        totalTime = it.total_time,
+                        publishedAt = it.published_at.toKotlinInstant(),
+                    )
+                }
+        }
+    val total = countEpisodesByPodcastId(podcastId).executeAsOne()
+    return EpisodePage(items = rows, totalCount = total, page = safePage, size = safeSize)
+}
 
 context(_: RaiseContext)
 fun io.tarantini.shelf.integration.persistence.CredentialsQueries.hasCredentials(

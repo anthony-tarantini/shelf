@@ -12,6 +12,7 @@ import io.tarantini.shelf.catalog.podcast.domain.SavedPodcastRoot
 import io.tarantini.shelf.catalog.podcast.persistence.PodcastQueries
 import io.tarantini.shelf.integration.podcast.PodcastCredentialService
 import io.tarantini.shelf.integration.podcast.feed.EpisodeAudioFetchAdapter
+import io.tarantini.shelf.integration.podcast.feed.EpisodeImageFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.FeedFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.FeedParser
 import io.tarantini.shelf.integration.podcast.feed.ParsedEpisode
@@ -31,6 +32,9 @@ interface PodcastFeedFetchService {
     suspend fun fetchPodcast(podcastId: PodcastId)
 
     context(_: RaiseContext)
+    suspend fun backfillCovers(podcastId: PodcastId): Int
+
+    context(_: RaiseContext)
     suspend fun getDuePodcasts(): List<SavedPodcastRoot>
 }
 
@@ -43,6 +47,7 @@ fun podcastFeedFetchService(
     feedFetchAdapter: FeedFetchAdapter,
     feedParser: FeedParser,
     audioFetchAdapter: EpisodeAudioFetchAdapter,
+    imageFetchAdapter: EpisodeImageFetchAdapter,
 ): PodcastFeedFetchService =
     DefaultPodcastFeedFetchService(
         readRepository = readRepository,
@@ -53,6 +58,7 @@ fun podcastFeedFetchService(
         feedFetchAdapter = feedFetchAdapter,
         feedParser = feedParser,
         audioFetchAdapter = audioFetchAdapter,
+        imageFetchAdapter = imageFetchAdapter,
     )
 
 private class DefaultPodcastFeedFetchService(
@@ -64,6 +70,7 @@ private class DefaultPodcastFeedFetchService(
     private val feedFetchAdapter: FeedFetchAdapter,
     private val feedParser: FeedParser,
     private val audioFetchAdapter: EpisodeAudioFetchAdapter,
+    private val imageFetchAdapter: EpisodeImageFetchAdapter,
 ) : PodcastFeedFetchService {
     context(_: RaiseContext)
     override suspend fun getDuePodcasts(): List<SavedPodcastRoot> = readRepository.getDuePodcasts()
@@ -77,7 +84,7 @@ private class DefaultPodcastFeedFetchService(
 
         var ingested = 0
         parsed.episodes.forEach { episode ->
-            val result = either { ingestEpisode(podcast, episode) }
+            val result = either { ingestEpisode(podcast, episode, parsed.imageUrl) }
             result.fold(
                 { err ->
                     logger.warn { "Podcast episode ingestion skipped: ${err::class.simpleName}" }
@@ -93,17 +100,65 @@ private class DefaultPodcastFeedFetchService(
     }
 
     context(_: RaiseContext)
-    private suspend fun ingestEpisode(podcast: SavedPodcastRoot, episode: ParsedEpisode): Boolean {
+    override suspend fun backfillCovers(podcastId: PodcastId): Int {
+        val podcast = mutationRepository.getPodcastById(podcastId)
+        val credentials = credentialService.getFeedCredentials(podcast.id.id)
+        val xml = feedFetchAdapter.fetch(podcast.feedUrl, credentials)
+        val parsed = feedParser.parse(xml)
+
+        var updated = 0
+        parsed.episodes.forEach { parsedEpisode ->
+            val coverUrl = parsedEpisode.imageUrl ?: parsed.imageUrl ?: return@forEach
+            val episodeId =
+                withContext(Dispatchers.IO) {
+                    podcastQueries
+                        .selectEpisodeIdByPodcastAndGuid(podcast.id.id, parsedEpisode.guid)
+                        .executeAsOneOrNull()
+                } ?: return@forEach
+            val existing =
+                withContext(Dispatchers.IO) {
+                    podcastQueries.selectEpisodeById(episodeId).executeAsOneOrNull()
+                } ?: return@forEach
+            if (existing.cover_path != null) return@forEach
+
+            val coverPath = fetchAndSaveCover(podcast, parsedEpisode, coverUrl)
+            if (coverPath != null) {
+                withContext(Dispatchers.IO) {
+                    podcastQueries.updateEpisodeCoverPath(
+                        coverPath = coverPath,
+                        episodeId = episodeId,
+                    )
+                }
+                updated += 1
+            }
+        }
+
+        if (updated > 0) {
+            mutationRepository.bumpVersion(podcast.id.id)
+        }
+        return updated
+    }
+
+    context(_: RaiseContext)
+    private suspend fun ingestEpisode(
+        podcast: SavedPodcastRoot,
+        episode: ParsedEpisode,
+        feedImageUrl: String?,
+    ): Boolean {
         if (readRepository.guidExists(podcast.id.id, episode.guid)) {
             return false
         }
 
         val downloaded = audioFetchAdapter.fetch(episode.audioUrl)
         var savedPath: StoragePath? = null
+        var savedCoverPath: StoragePath? = null
         try {
             val path = episodeAudioStoragePath(podcast, episode, downloaded.extension)
             storageService.save(path, downloaded.path)
             savedPath = path
+
+            val coverUrl = episode.imageUrl ?: feedImageUrl
+            savedCoverPath = coverUrl?.let { fetchAndSaveCover(podcast, episode, it) }
 
             val inserted =
                 withContext(Dispatchers.IO) {
@@ -126,7 +181,7 @@ private class DefaultPodcastFeedFetchService(
                                 .insertEpisode(
                                     podcastId = podcast.id.id,
                                     title = episode.title,
-                                    coverPath = null,
+                                    coverPath = savedCoverPath,
                                     audioPath = path,
                                     audioSize = downloaded.size,
                                     totalTime =
@@ -161,15 +216,61 @@ private class DefaultPodcastFeedFetchService(
             if (!inserted) {
                 storageService.delete(path)
                 savedPath = null
+                savedCoverPath?.let { runCatching { storageService.delete(it) } }
+                savedCoverPath = null
             }
 
             return inserted
         } catch (e: Exception) {
             savedPath?.let { runCatching { storageService.delete(it) } }
+            savedCoverPath?.let { runCatching { storageService.delete(it) } }
             throw e
         } finally {
             runCatching { Files.deleteIfExists(downloaded.path) }
         }
+    }
+
+    private suspend fun fetchAndSaveCover(
+        podcast: SavedPodcastRoot,
+        episode: ParsedEpisode,
+        imageUrl: String,
+    ): StoragePath? {
+        val downloaded =
+            either { imageFetchAdapter.fetch(imageUrl) }
+                .fold(
+                    { err ->
+                        logger.warn { "Podcast cover download failed: ${err::class.simpleName}" }
+                        null
+                    },
+                    { it },
+                ) ?: return null
+        return try {
+            val coverPath = episodeCoverStoragePath(podcast, episode, downloaded.extension)
+            val saved =
+                either { storageService.save(coverPath, downloaded.path) }.fold({ false }, { true })
+            if (!saved) {
+                logger.warn { "Failed to persist podcast cover to managed storage." }
+                return null
+            }
+            either { storageService.generateThumbnail(coverPath) }
+            coverPath
+        } finally {
+            runCatching { Files.deleteIfExists(downloaded.path) }
+        }
+    }
+
+    private fun episodeCoverStoragePath(
+        podcast: SavedPodcastRoot,
+        episode: ParsedEpisode,
+        extension: String,
+    ): StoragePath {
+        val base =
+            StoragePath.fromRaw(
+                "podcasts/${podcast.seriesId.value}/${podcast.id.id.value}/episodes"
+            )
+        val title = StoragePath.safeSegment(episode.title, "episode")
+        val guidHash = guidHash(episode.guid)
+        return base.resolve("$title-$guidHash-cover.$extension")
     }
 
     private fun episodeAudioStoragePath(

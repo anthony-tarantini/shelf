@@ -2,9 +2,7 @@ name: shelf-dev
 
 services:
   database:
-    build:
-      context: .
-      dockerfile: database.Dockerfile
+    image: shelf-postgres:test
     restart: always
     ports:
       - "5432:5432"

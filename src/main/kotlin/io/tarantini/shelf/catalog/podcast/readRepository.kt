@@ -56,6 +56,14 @@ interface PodcastReadRepository {
 
     context(_: RaiseContext)
     suspend fun listEpisodes(podcastId: PodcastId): List<EpisodeEntry>
+
+    context(_: RaiseContext)
+    suspend fun listEpisodesPaged(
+        podcastId: PodcastId,
+        page: Int,
+        size: Int,
+        sortDesc: Boolean,
+    ): EpisodePage
 }
 
 fun podcastReadRepository(
@@ -143,4 +151,15 @@ private class SqlDelightPodcastReadRepository(
     context(_: RaiseContext)
     override suspend fun listEpisodes(podcastId: PodcastId): List<EpisodeEntry> =
         withContext(Dispatchers.IO) { queries.getEpisodesByPodcastId(podcastId) }
+
+    context(_: RaiseContext)
+    override suspend fun listEpisodesPaged(
+        podcastId: PodcastId,
+        page: Int,
+        size: Int,
+        sortDesc: Boolean,
+    ): EpisodePage =
+        withContext(Dispatchers.IO) {
+            queries.getEpisodesPagedByPodcastId(podcastId, page, size, sortDesc)
+        }
 }

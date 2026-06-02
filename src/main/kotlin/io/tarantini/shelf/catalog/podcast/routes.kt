@@ -20,6 +20,7 @@ import io.tarantini.shelf.app.AppError
 import io.tarantini.shelf.app.Request
 import io.tarantini.shelf.app.respond
 import io.tarantini.shelf.catalog.podcast.domain.*
+import io.tarantini.shelf.processing.jobs.JobQueue
 import io.tarantini.shelf.processing.storage.StorageService
 import io.tarantini.shelf.user.auth.JwtService
 import io.tarantini.shelf.user.auth.sharedCatalogMutation
@@ -33,6 +34,7 @@ fun Route.podcastRoutes(
     upstreamFeedService: io.tarantini.shelf.catalog.podcast.upstream.PodcastUpstreamFeedService,
     mappingService: io.tarantini.shelf.catalog.podcast.upstream.PodcastMappingService,
     readRepository: PodcastReadRepository,
+    jobQueue: JobQueue,
 ) {
     post<PodcastsResource> {
         sharedCatalogMutation(jwtService) {
@@ -53,6 +55,19 @@ fun Route.podcastRoutes(
     get<PodcastsResource.Id> { resource ->
         sharedCatalogRead(jwtService) {
             respond({ podcastService.getPodcastAggregate(PodcastId(resource.id)) })
+        }
+    }
+
+    get<PodcastsResource.Id.Episodes> { resource ->
+        sharedCatalogRead(jwtService) {
+            respond({
+                podcastService.getEpisodesPage(
+                    id = PodcastId(resource.parent.id),
+                    page = resource.page,
+                    size = resource.size,
+                    sortDesc = !resource.sortDir.equals("ASC", ignoreCase = true),
+                )
+            })
         }
     }
 
@@ -137,6 +152,15 @@ fun Route.podcastRoutes(
     post<PodcastsResource.Id.Reprobe> { resource ->
         sharedCatalogMutation(jwtService) {
             respond({ podcastService.reprobeEpisodes(PodcastId(resource.parent.id)) })
+        }
+    }
+
+    post<PodcastsResource.Id.BackfillCovers> { resource ->
+        sharedCatalogMutation(jwtService) {
+            respond(
+                { jobQueue.enqueueBackfillCoversJob(PodcastId(resource.parent.id)) },
+                HttpStatusCode.Accepted,
+            )
         }
     }
 

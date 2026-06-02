@@ -7,7 +7,9 @@ import org.testcontainers.utility.DockerImageName
 object ProjectConfig : AbstractProjectConfig() {
 
     val postgres =
-        PostgreSQLContainer(DockerImageName.parse("shelf-postgres:test").asCompatibleSubstituteFor("postgres"))
+        PostgreSQLContainer(
+                DockerImageName.parse("shelf-postgres:test").asCompatibleSubstituteFor("postgres")
+            )
             .withDatabaseName("shelf")
             .withUsername("shelf")
             .withPassword("shelf")

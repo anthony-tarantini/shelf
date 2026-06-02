@@ -13,6 +13,7 @@ import io.tarantini.shelf.catalog.podcast.domain.FeedUrl
 import io.tarantini.shelf.catalog.podcast.domain.PodcastRoot
 import io.tarantini.shelf.integration.podcast.feed.FeedFetchCredentials
 import io.tarantini.shelf.integration.podcast.feed.episodeAudioFetchAdapter
+import io.tarantini.shelf.integration.podcast.feed.episodeImageFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.feedFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.feedParser
 import io.tarantini.shelf.integration.podcast.podcastCredentialService
@@ -64,6 +65,7 @@ class PodcastFeedFetchServiceTest :
                                 feedFetchAdapter = feedFetchAdapter(),
                                 feedParser = feedParser(),
                                 audioFetchAdapter = episodeAudioFetchAdapter(),
+                                imageFetchAdapter = episodeImageFetchAdapter(),
                             )
 
                         val seriesId =
@@ -172,6 +174,7 @@ class PodcastFeedFetchServiceTest :
                                 feedFetchAdapter = feedFetchAdapter(),
                                 feedParser = feedParser(),
                                 audioFetchAdapter = episodeAudioFetchAdapter(),
+                                imageFetchAdapter = episodeImageFetchAdapter(),
                             )
 
                         val seriesId =

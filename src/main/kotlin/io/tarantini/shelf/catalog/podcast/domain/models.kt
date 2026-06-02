@@ -150,6 +150,14 @@ data class EpisodeEntry(
 )
 
 @Serializable
+data class EpisodePage(
+    val items: List<EpisodeEntry>,
+    val totalCount: Long,
+    val page: Int,
+    val size: Int,
+)
+
+@Serializable
 enum class CredentialStatus {
     HAS_CREDENTIAL,
     NO_CREDENTIAL,

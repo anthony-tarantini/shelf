@@ -12,6 +12,8 @@ interface JobQueue {
     suspend fun enqueueSyncMetadataJob(bookId: BookId)
 
     suspend fun enqueueFeedFetchJob(podcastId: PodcastId)
+
+    suspend fun enqueueBackfillCoversJob(podcastId: PodcastId)
 }
 
 class ValkeyJobQueue(private val connection: StatefulRedisConnection<String, String>) : JobQueue {
@@ -30,11 +32,19 @@ class ValkeyJobQueue(private val connection: StatefulRedisConnection<String, Str
             commands.lpush("jobs:feed_fetch", podcastId.value.toString()).get()
         }
     }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override suspend fun enqueueBackfillCoversJob(podcastId: PodcastId) {
+        withContext(Dispatchers.IO) {
+            commands.lpush("jobs:backfill_covers", podcastId.value.toString()).get()
+        }
+    }
 }
 
 class InMemoryJobQueue(
     private val syncMetadataChannel: Channel<BookId>,
     private val feedFetchChannel: Channel<PodcastId>,
+    private val backfillCoversChannel: Channel<PodcastId>,
 ) : JobQueue {
     override suspend fun enqueueSyncMetadataJob(bookId: BookId) {
         syncMetadataChannel.send(bookId)
@@ -42,5 +52,9 @@ class InMemoryJobQueue(
 
     override suspend fun enqueueFeedFetchJob(podcastId: PodcastId) {
         feedFetchChannel.send(podcastId)
+    }
+
+    override suspend fun enqueueBackfillCoversJob(podcastId: PodcastId) {
+        backfillCoversChannel.send(podcastId)
     }
 }

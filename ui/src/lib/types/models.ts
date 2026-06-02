@@ -337,6 +337,13 @@ export interface EpisodeEntry {
   publishedAt?: string;
 }
 
+export interface EpisodePage {
+  items: EpisodeEntry[];
+  totalCount: number;
+  page: number;
+  size: number;
+}
+
 export interface PodcastDashboard {
   podcasts: PodcastSummary[];
 }

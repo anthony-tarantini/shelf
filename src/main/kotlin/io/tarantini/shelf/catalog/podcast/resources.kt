@@ -9,6 +9,14 @@ data class PodcastsResource(val parent: RootResource = RootResource) {
     data class Id(val parent: PodcastsResource = PodcastsResource(), val id: String) {
         @Resource("cover") data class Cover(val parent: Id)
 
+        @Resource("episodes")
+        data class Episodes(
+            val parent: Id,
+            val page: Int = 0,
+            val size: Int = 50,
+            val sortDir: String = "DESC",
+        )
+
         @Resource("episodes/{episodeId}/cover")
         data class EpisodeCover(val parent: Id, val episodeId: String)
 
@@ -19,6 +27,8 @@ data class PodcastsResource(val parent: RootResource = RootResource) {
         @Resource("credentials") data class Credentials(val parent: Id)
 
         @Resource("reprobe") data class Reprobe(val parent: Id)
+
+        @Resource("backfill-covers") data class BackfillCovers(val parent: Id)
 
         @Resource("upstream/refresh") data class UpstreamRefresh(val parent: Id)
 

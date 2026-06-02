@@ -16,6 +16,7 @@
 	let isRotating = $state(false);
 	let isRevoking = $state(false);
 	let isReprobing = $state(false);
+	let isBackfilling = $state(false);
 	let showRotateConfirm = $state(false);
 	let showRevokeConfirm = $state(false);
 	let error = $state<string | null>(null);
@@ -55,6 +56,19 @@
 		isReprobing = false;
 		if (result.right) {
 			successMessage = `Reprobed ${result.right.updatedCount} episode(s); ${result.right.skippedCount} skipped.`;
+			setTimeout(() => (successMessage = null), 5000);
+		} else if (result.left) {
+			error = result.left.message;
+		}
+	}
+
+	async function backfillCovers() {
+		isBackfilling = true;
+		error = null;
+		const result = await api.post(`/podcasts/${podcast.id}/backfill-covers`, {});
+		isBackfilling = false;
+		if (result.right !== undefined) {
+			successMessage = 'Cover backfill queued. Covers will appear as they download.';
 			setTimeout(() => (successMessage = null), 5000);
 		} else if (result.left) {
 			error = result.left.message;
@@ -129,6 +143,19 @@
 					class="mt-2 rounded-lg border border-border bg-background px-4 py-2 text-xs font-bold text-foreground transition-all hover:bg-accent disabled:opacity-50"
 				>
 					{isReprobing ? '...' : 'Reprobe episodes'}
+				</button>
+			</div>
+
+			<div class="flex flex-col gap-2 rounded-xl border border-border p-4">
+				<h3 class="text-sm font-bold text-foreground">Backfill covers</h3>
+				<p class="text-xs text-muted-foreground">Queue a background job to download episode artwork from the RSS feed for episodes missing a cover. Audio files are not re-downloaded.</p>
+				<button
+					type="button"
+					disabled={isBackfilling}
+					onclick={backfillCovers}
+					class="mt-2 rounded-lg border border-border bg-background px-4 py-2 text-xs font-bold text-foreground transition-all hover:bg-accent disabled:opacity-50"
+				>
+					{isBackfilling ? '...' : 'Backfill covers'}
 				</button>
 			</div>
 

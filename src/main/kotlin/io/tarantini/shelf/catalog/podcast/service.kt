@@ -24,6 +24,9 @@ interface PodcastProvider {
 
     context(_: RaiseContext)
     suspend fun getPodcastAggregate(id: PodcastId): SavedPodcastAggregate
+
+    context(_: RaiseContext)
+    suspend fun getEpisodesPage(id: PodcastId, page: Int, size: Int, sortDesc: Boolean): EpisodePage
 }
 
 interface PodcastModifier {
@@ -93,6 +96,14 @@ private class PodcastAggregateService(
     context(_: RaiseContext)
     override suspend fun getPodcastAggregate(id: PodcastId): SavedPodcastAggregate =
         withContext(Dispatchers.IO) { readRepository.getPodcastAggregateById(id) }
+
+    context(_: RaiseContext)
+    override suspend fun getEpisodesPage(
+        id: PodcastId,
+        page: Int,
+        size: Int,
+        sortDesc: Boolean,
+    ): EpisodePage = readRepository.listEpisodesPaged(id, page, size, sortDesc)
 
     context(_: RaiseContext)
     override suspend fun createPodcast(command: CreatePodcastCommand): SavedPodcastRoot =

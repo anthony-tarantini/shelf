@@ -70,6 +70,7 @@ fun Application.routes(deps: Dependencies) = routing {
         deps.podcastUpstreamFeedService,
         deps.podcastMappingService,
         deps.podcastReadRepository,
+        deps.jobQueue,
     )
     podcastRssRoutes(deps.podcastRssService, deps.storageService)
     seriesRoutes(

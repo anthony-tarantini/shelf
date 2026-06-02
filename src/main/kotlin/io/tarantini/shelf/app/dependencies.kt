@@ -40,6 +40,7 @@ import io.tarantini.shelf.integration.koreader.stats.KoreaderStatsService
 import io.tarantini.shelf.integration.koreader.stats.koreaderStatsRepository
 import io.tarantini.shelf.integration.koreader.stats.koreaderStatsService
 import io.tarantini.shelf.integration.podcast.feed.episodeAudioFetchAdapter
+import io.tarantini.shelf.integration.podcast.feed.episodeImageFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.feedFetchAdapter
 import io.tarantini.shelf.integration.podcast.feed.feedParser
 import io.tarantini.shelf.integration.podcast.libation.LibationManifestParser
@@ -182,6 +183,9 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
         var inMemoryChannel: Channel<BookId>? = null
         var inMemoryPodcastChannel: Channel<io.tarantini.shelf.catalog.podcast.domain.PodcastId>? =
             null
+        var inMemoryBackfillCoversChannel:
+            Channel<io.tarantini.shelf.catalog.podcast.domain.PodcastId>? =
+            null
 
         val (stagedStore, authCache, jobQueue) =
             if (valkeyUrl != null) {
@@ -204,13 +208,16 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 val metadataChannel = Channel<BookId>(Channel.UNLIMITED)
                 val podcastChannel =
                     Channel<io.tarantini.shelf.catalog.podcast.domain.PodcastId>(Channel.UNLIMITED)
+                val backfillCoversChannel =
+                    Channel<io.tarantini.shelf.catalog.podcast.domain.PodcastId>(Channel.UNLIMITED)
                 inMemoryChannel = metadataChannel
                 inMemoryPodcastChannel = podcastChannel
+                inMemoryBackfillCoversChannel = backfillCoversChannel
 
                 Triple(
                     inMemoryStagedBookStore(),
                     InMemoryAuthCache(),
-                    InMemoryJobQueue(metadataChannel, podcastChannel),
+                    InMemoryJobQueue(metadataChannel, podcastChannel, backfillCoversChannel),
                 )
             }
 
@@ -296,6 +303,7 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 feedFetchAdapter = sharedFeedFetchAdapter,
                 feedParser = sharedFeedParser,
                 audioFetchAdapter = episodeAudioFetchAdapter(),
+                imageFetchAdapter = episodeImageFetchAdapter(),
             )
 
         val podcastUpstreamFeedService =
@@ -380,6 +388,15 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
                 inMemoryChannel = inMemoryPodcastChannel,
             )
         podcastWorker.start()
+
+        val podcastCoverBackfillWorker =
+            io.tarantini.shelf.processing.jobs.PodcastCoverBackfillWorker(
+                scope = scope,
+                feedFetchService = podcastFeedFetchService,
+                valkeyConnection = workerValkeyConnection,
+                inMemoryChannel = inMemoryBackfillCoversChannel,
+            )
+        podcastCoverBackfillWorker.start()
 
         val podcastScheduler =
             PodcastFeedScheduler(

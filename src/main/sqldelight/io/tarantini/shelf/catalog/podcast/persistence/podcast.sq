@@ -205,6 +205,37 @@ WHERE pe.podcast_id = :podcastId
   AND pe.id = :episodeId
 LIMIT 1;
 
+selectEpisodesByPodcastIdPagedAsc:
+SELECT
+    pe.id,
+    pe.title,
+    pe.season,
+    pe.episode,
+    pe.published_at,
+    pe.cover_path,
+    pe.total_time
+FROM podcast_episodes pe
+WHERE pe.podcast_id = :podcastId
+ORDER BY pe.season ASC, pe.episode ASC
+LIMIT :limit OFFSET :offset;
+
+selectEpisodesByPodcastIdPagedDesc:
+SELECT
+    pe.id,
+    pe.title,
+    pe.season,
+    pe.episode,
+    pe.published_at,
+    pe.cover_path,
+    pe.total_time
+FROM podcast_episodes pe
+WHERE pe.podcast_id = :podcastId
+ORDER BY pe.season DESC, pe.episode DESC
+LIMIT :limit OFFSET :offset;
+
+countEpisodesByPodcastId:
+SELECT COUNT(*) FROM podcast_episodes WHERE podcast_id = :podcastId;
+
 selectEpisodesByPodcastId:
 SELECT
     pe.id,

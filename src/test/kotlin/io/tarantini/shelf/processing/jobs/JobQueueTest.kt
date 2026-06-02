@@ -15,7 +15,8 @@ class JobQueueTest :
         "InMemoryJobQueue should send bookId to channel" {
             val metadataChannel = Channel<BookId>(1)
             val feedFetchChannel = Channel<PodcastId>(1)
-            val queue = InMemoryJobQueue(metadataChannel, feedFetchChannel)
+            val backfillCoversChannel = Channel<PodcastId>(1)
+            val queue = InMemoryJobQueue(metadataChannel, feedFetchChannel, backfillCoversChannel)
             val bookId = BookId.fromRaw(Uuid.random())
 
             queue.enqueueSyncMetadataJob(bookId)
@@ -26,11 +27,24 @@ class JobQueueTest :
         "InMemoryJobQueue should send podcastId to feed-fetch channel" {
             val metadataChannel = Channel<BookId>(1)
             val feedFetchChannel = Channel<PodcastId>(1)
-            val queue = InMemoryJobQueue(metadataChannel, feedFetchChannel)
+            val backfillCoversChannel = Channel<PodcastId>(1)
+            val queue = InMemoryJobQueue(metadataChannel, feedFetchChannel, backfillCoversChannel)
             val podcastId = PodcastId.fromRaw(Uuid.random())
 
             queue.enqueueFeedFetchJob(podcastId)
 
             feedFetchChannel.receive() shouldBe podcastId
+        }
+
+        "InMemoryJobQueue should send podcastId to backfill-covers channel" {
+            val metadataChannel = Channel<BookId>(1)
+            val feedFetchChannel = Channel<PodcastId>(1)
+            val backfillCoversChannel = Channel<PodcastId>(1)
+            val queue = InMemoryJobQueue(metadataChannel, feedFetchChannel, backfillCoversChannel)
+            val podcastId = PodcastId.fromRaw(Uuid.random())
+
+            queue.enqueueBackfillCoversJob(podcastId)
+
+            backfillCoversChannel.receive() shouldBe podcastId
         }
     })
