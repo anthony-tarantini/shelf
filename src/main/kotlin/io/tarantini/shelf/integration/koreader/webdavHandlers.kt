@@ -14,26 +14,65 @@ import kotlin.io.path.inputStream
 import kotlin.io.path.outputStream
 
 internal suspend fun RoutingContext.respondWebdavPropfind(statsFile: java.nio.file.Path) {
-    val depth = call.request.headers["Depth"] ?: "<missing>"
-    logger.info("KOReader webdav PROPFIND depth={}", depth)
-    val xml =
+    val depth = call.request.headers["Depth"] ?: "1"
+    val requestUri = call.request.uri
+    val dirHref = if (requestUri.endsWith("/")) requestUri else "$requestUri/"
+    val fileHref = "${dirHref}statistics.sqlite"
+    val fileExists = statsFile.exists()
+    val fileLength = if (fileExists) statsFile.toFile().length() else 0
+    val fileLastModified =
+        if (fileExists) java.time.Instant.ofEpochMilli(statsFile.toFile().lastModified()).toString()
+        else java.time.Instant.EPOCH.toString()
+
+    logger.info("KOReader webdav PROPFIND depth={} uri={}", depth, requestUri)
+
+    val dirResponse =
         """
-        <?xml version="1.0" encoding="utf-8" ?>
-        <D:multistatus xmlns:D="DAV:">
+        <D:response>
+            <D:href>$dirHref</D:href>
+            <D:propstat>
+                <D:prop>
+                    <D:displayname>koreader</D:displayname>
+                    <D:resourcetype><D:collection/></D:resourcetype>
+                    <D:getlastmodified>$fileLastModified</D:getlastmodified>
+                </D:prop>
+                <D:status>HTTP/1.1 200 OK</D:status>
+            </D:propstat>
+        </D:response>
+        """
+            .trimIndent()
+
+    val fileResponse =
+        if (fileExists) {
+            """
             <D:response>
-                <D:href>${call.request.uri}</D:href>
+                <D:href>$fileHref</D:href>
                 <D:propstat>
                     <D:prop>
                         <D:displayname>statistics.sqlite</D:displayname>
-                        <D:getcontentlength>${if (statsFile.exists()) statsFile.toFile().length() else 0}</D:getcontentlength>
                         <D:resourcetype/>
+                        <D:getcontentlength>$fileLength</D:getcontentlength>
+                        <D:getcontenttype>application/x-sqlite3</D:getcontenttype>
+                        <D:getlastmodified>$fileLastModified</D:getlastmodified>
                     </D:prop>
                     <D:status>HTTP/1.1 200 OK</D:status>
                 </D:propstat>
             </D:response>
-        </D:multistatus>
-    """
-            .trimIndent()
+            """
+                .trimIndent()
+        } else {
+            ""
+        }
+
+    val body = if (depth == "0") dirResponse else "$dirResponse\n$fileResponse"
+
+    val xml =
+        """<?xml version="1.0" encoding="utf-8" ?>
+<D:multistatus xmlns:D="DAV:">
+$body
+</D:multistatus>
+"""
+
     call.respondText(xml, ContentType.parse("application/xml"), HttpStatusCode.MultiStatus)
     logger.info("KOReader webdav PROPFIND responded 207")
 }
