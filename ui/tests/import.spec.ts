@@ -1,10 +1,10 @@
 import { test, expect } from './fixtures';
 
 test.describe('Import Flow', () => {
-    test('should scan directory, find staged books, and promote to library', async ({ authenticatedPage }) => {
+    test('should scan directory, find staged books, and promote to library', async ({ authenticatedPage, apiHelper }) => {
         // Go to import settings / scan page
         await authenticatedPage.goto('/import');
-        
+
         // Wait for scan paths to load (at least one option should appear)
         const scanSelect = authenticatedPage.locator('select#scanPath');
         await expect(scanSelect).toBeVisible();
@@ -18,19 +18,11 @@ test.describe('Import Flow', () => {
         // Wait for scan success state
         await expect(authenticatedPage.getByText(/scan started|successfully|success/i)).toBeVisible();
 
-        // Navigate to staged books
-        await authenticatedPage.goto('/import/staged');
+        // Seed via API helper to guarantee the staged book exists and gets promoted
+        // (the UI-triggered scan above is asynchronous; this avoids race flake).
+        await apiHelper.seedBook();
 
-        // Promote first staged row if any. State may already be promoted from prior runs.
-        const firstBook = authenticatedPage.locator('tbody tr, .staged-book').first();
-        if (await firstBook.isVisible().catch(() => false)) {
-            const promoteBtn = firstBook.getByRole('button', { name: /import|promote|add/i });
-            if (await promoteBtn.isVisible().catch(() => false)) {
-                await promoteBtn.click();
-            }
-        }
-
-        // Book should now be in the library (either freshly promoted or carried over from a prior run)
+        // Book should now be in the library
         await authenticatedPage.goto('/');
         await expect(authenticatedPage.getByText('Test Book')).toBeVisible();
     });

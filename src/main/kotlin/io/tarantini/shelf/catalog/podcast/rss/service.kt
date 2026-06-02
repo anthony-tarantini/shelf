@@ -258,19 +258,30 @@ private fun rewriteUpstreamFeed(
     val doc = parseFeedDocument(rawXml)
     val items = doc.getElementsByTagName("item")
     for (i in 0 until items.length) {
-        val item = items.item(i) as? Element ?: continue
-        val guidText = firstChildText(item, "guid") ?: continue
-        val mapping = mappings[guidText] ?: continue
-        val hostedId = mapping.hostedEpisodeId ?: continue
-        val hosted = hostedById[hostedId] ?: continue
-        val enclosure = firstChildElement(item, "enclosure") ?: continue
-        val rewrittenUrl =
-            "$baseUrl/api/rss/podcasts/${token.value}/episodes/${hostedId.value}/audio"
-        enclosure.setAttribute("url", rewrittenUrl)
-        enclosure.setAttribute("length", hosted.audio_size.toString())
-        enclosure.setAttribute("type", audioMimeType(hosted.audio_path.value))
+        val item = items.item(i) as? Element
+        if (item != null) {
+            rewriteItemEnclosure(item, token, baseUrl, mappings, hostedById)
+        }
     }
     return serializeDocument(doc)
+}
+
+private fun rewriteItemEnclosure(
+    item: Element,
+    token: FeedToken,
+    baseUrl: String,
+    mappings: Map<String, EpisodeMapping>,
+    hostedById: Map<PodcastEpisodeId, SelectRssEpisodesByPodcastId>,
+) {
+    val guidText = firstChildText(item, "guid") ?: return
+    val mapping = mappings[guidText] ?: return
+    val hostedId = mapping.hostedEpisodeId ?: return
+    val hosted = hostedById[hostedId] ?: return
+    val enclosure = firstChildElement(item, "enclosure") ?: return
+    val rewrittenUrl = "$baseUrl/api/rss/podcasts/${token.value}/episodes/${hostedId.value}/audio"
+    enclosure.setAttribute("url", rewrittenUrl)
+    enclosure.setAttribute("length", hosted.audio_size.toString())
+    enclosure.setAttribute("type", audioMimeType(hosted.audio_path.value))
 }
 
 private fun firstChildElement(parent: Element, name: String): Element? {

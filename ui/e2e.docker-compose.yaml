@@ -2,8 +2,9 @@ name: shelf-e2e
 
 services:
   database:
+    image: shelf-postgres:test
     build:
-      context: ../
+      context: ..
       dockerfile: database.Dockerfile
     ports:
       - "5433:5432"

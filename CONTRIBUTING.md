@@ -34,6 +34,10 @@ This project follows a strict **Domain-Driven Design (DDD)** approach. Before ma
 ### 3. Testing
 -   Every new feature or bug fix **must** include automated tests.
 -   We use **Kotest** for our test suite.
+-   The backend test suite uses Testcontainers with a pre-built Postgres image. Build it once per checkout (or whenever `database.Dockerfile`/`init-db.sql` change) before running tests:
+    ```
+    docker build -f database.Dockerfile -t shelf-postgres:test .
+    ```
 -   Run all tests using `./gradlew test` before submitting a pull request.
 -   After Kotlin changes, run `./gradlew spotlessApply classes`.
 -   Use the [Test Ownership Matrix](https://anthony-tarantini.github.io/shelf/contributing/testing/) to keep each decision rule tested in one primary layer and avoid duplicate assertions.

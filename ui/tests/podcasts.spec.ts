@@ -8,7 +8,7 @@ test.describe('Podcasts', () => {
         await expect(emptyStateOrList.first()).toBeVisible({ timeout: 10000 });
 
         // Navigate to subscribe page
-        const subscribeLink = authenticatedPage.getByRole('link', { name: /subscribe|add/i });
+        const subscribeLink = authenticatedPage.getByRole('link', { name: /subscribe|add/i }).first();
         await expect(subscribeLink).toBeVisible();
         await subscribeLink.click();
         await expect(authenticatedPage).toHaveURL(/\/podcasts\/subscribe/);

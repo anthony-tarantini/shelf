@@ -380,32 +380,15 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             )
         worker.start()
 
-        val podcastWorker =
-            PodcastFeedWorker(
-                scope = scope,
-                feedFetchService = podcastFeedFetchService,
-                valkeyConnection = workerValkeyConnection,
-                inMemoryChannel = inMemoryPodcastChannel,
-            )
-        podcastWorker.start()
-
-        val podcastCoverBackfillWorker =
-            io.tarantini.shelf.processing.jobs.PodcastCoverBackfillWorker(
-                scope = scope,
-                feedFetchService = podcastFeedFetchService,
-                valkeyConnection = workerValkeyConnection,
-                inMemoryChannel = inMemoryBackfillCoversChannel,
-            )
-        podcastCoverBackfillWorker.start()
-
-        val podcastScheduler =
-            PodcastFeedScheduler(
-                scope = scope,
-                feedFetchService = podcastFeedFetchService,
-                jobQueue = jobQueue,
-                intervalSeconds = env.integration.podcastScheduleIntervalSeconds,
-            )
-        podcastScheduler.start()
+        startPodcastWorkers(
+            scope = scope,
+            feedFetchService = podcastFeedFetchService,
+            jobQueue = jobQueue,
+            workerValkeyConnection = workerValkeyConnection,
+            inMemoryPodcastChannel = inMemoryPodcastChannel,
+            inMemoryBackfillCoversChannel = inMemoryBackfillCoversChannel,
+            scheduleIntervalSeconds = env.integration.podcastScheduleIntervalSeconds,
+        )
 
         val libationScheduler =
             LibationScanScheduler(
@@ -452,4 +435,37 @@ suspend fun ResourceScope.dependencies(env: Env): Dependencies {
             jobQueue,
         )
     }
+}
+
+private fun startPodcastWorkers(
+    scope: kotlinx.coroutines.CoroutineScope,
+    feedFetchService: io.tarantini.shelf.catalog.podcast.PodcastFeedFetchService,
+    jobQueue: io.tarantini.shelf.processing.jobs.JobQueue,
+    workerValkeyConnection: StatefulRedisConnection<String, String>?,
+    inMemoryPodcastChannel: Channel<io.tarantini.shelf.catalog.podcast.domain.PodcastId>?,
+    inMemoryBackfillCoversChannel: Channel<io.tarantini.shelf.catalog.podcast.domain.PodcastId>?,
+    scheduleIntervalSeconds: Long,
+) {
+    PodcastFeedWorker(
+            scope = scope,
+            feedFetchService = feedFetchService,
+            valkeyConnection = workerValkeyConnection,
+            inMemoryChannel = inMemoryPodcastChannel,
+        )
+        .start()
+    io.tarantini.shelf.processing.jobs
+        .PodcastCoverBackfillWorker(
+            scope = scope,
+            feedFetchService = feedFetchService,
+            valkeyConnection = workerValkeyConnection,
+            inMemoryChannel = inMemoryBackfillCoversChannel,
+        )
+        .start()
+    PodcastFeedScheduler(
+            scope = scope,
+            feedFetchService = feedFetchService,
+            jobQueue = jobQueue,
+            intervalSeconds = scheduleIntervalSeconds,
+        )
+        .start()
 }

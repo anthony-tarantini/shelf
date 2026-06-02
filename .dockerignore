@@ -1,0 +1,79 @@
+# Secrets and env
+.env
+.env.*
+.envrc
+!example.env
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*.crt
+*.csr
+*.der
+
+# Local databases, dumps, logs
+*.sqlite
+*.sqlite3
+*.db
+*.rdb
+*.bak
+*.log
+
+# Runtime data (managed storage, app data)
+data/
+storage/
+
+# Build outputs
+build/
+out/
+dist/
+coverage/
+test-results/
+site/
+
+# Gradle / Kotlin caches
+.gradle/
+.kotlin/
+
+# Node / Bun / SvelteKit caches and outputs
+ui/node_modules/
+ui/.svelte-kit/
+ui/build/
+ui/dist/
+ui/coverage/
+ui/test-results/
+ui/playwright-report/
+ui/.turbo/
+ui/.vite/
+
+# Git, CI, editor metadata
+.git/
+.github/
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.DS_Store
+
+# LLM / tooling state
+.claude/
+.gemini/
+.junie/
+.agents/
+.opencode/
+.air/
+
+# Dev-only docker assets (not needed for production image builds)
+backend.dev.Dockerfile
+frontend.dev.Dockerfile
+dev.docker-compose.yaml
+
+# Docs
+docs/
+mkdocs.yml
+
+# Misc
+local.properties
+.output.txt
